@@ -1,0 +1,3357 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BMA Software Procurement Intelligence Platform | แพลตฟอร์มข่าวกรองการจัดซื้อจัดจ้างซอฟต์แวร์ กทม.</title>
+  <meta name="description" content="ค้นหาและวิเคราะห์โอกาสการจัดซื้อจัดจ้างซอฟต์แวร์จากกรุงเทพมหานคร - BMA Software Procurement Intelligence Platform">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    /* ========== CSS CUSTOM PROPERTIES ========== */
+    :root {
+      --primary-900: #0a1628;
+      --primary-800: #0f2342;
+      --primary-700: #1a365d;
+      --primary-600: #234e80;
+      --primary-500: #2c6fad;
+      --primary-400: #3b8ad4;
+      --primary-300: #6aadea;
+      --primary-200: #a3cdf2;
+      --primary-100: #d4e8fa;
+      --primary-50: #edf5fd;
+
+      --teal-700: #0f766e;
+      --teal-600: #0d9488;
+      --teal-500: #14b8a6;
+      --teal-400: #2dd4bf;
+      --teal-300: #5eead4;
+      --teal-200: #99f6e4;
+      --teal-100: #ccfbf1;
+      --teal-50: #f0fdfa;
+
+      --gray-900: #0f172a;
+      --gray-800: #1e293b;
+      --gray-700: #334155;
+      --gray-600: #475569;
+      --gray-500: #64748b;
+      --gray-400: #94a3b8;
+      --gray-300: #cbd5e1;
+      --gray-200: #e2e8f0;
+      --gray-100: #f1f5f9;
+      --gray-50: #f8fafc;
+
+      --amber-600: #d97706;
+      --amber-500: #f59e0b;
+      --amber-400: #fbbf24;
+      --amber-100: #fef3c7;
+      --amber-50: #fffbeb;
+
+      --green-600: #059669;
+      --green-500: #10b981;
+      --green-400: #34d399;
+      --green-100: #d1fae5;
+      --green-50: #ecfdf5;
+
+      --red-600: #dc2626;
+      --red-500: #ef4444;
+      --red-100: #fee2e2;
+      --red-50: #fef2f2;
+
+      --purple-600: #7c3aed;
+      --purple-100: #ede9fe;
+
+      --sidebar-width: 260px;
+      --topbar-height: 64px;
+      --border-radius: 12px;
+      --border-radius-sm: 8px;
+      --border-radius-xs: 6px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+      --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.06);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== RESET & BASE ========== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Noto Sans Thai', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ========== SCROLLBAR ========== */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--gray-300);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--gray-400);
+    }
+
+    /* ========== LAYOUT ========== */
+    .app-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ========== SIDEBAR ========== */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: linear-gradient(195deg, var(--primary-900) 0%, var(--primary-800) 40%, #0e2f54 100%);
+      color: white;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transition: var(--transition-slow);
+      overflow-y: auto;
+    }
+
+    .sidebar-brand {
+      padding: 24px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: white;
+      cursor: pointer;
+    }
+
+    .sidebar-brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--teal-500), var(--teal-400));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+    }
+
+    .sidebar-brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+
+    .sidebar-brand-name {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .sidebar-brand-sub {
+      font-size: 10px;
+      color: var(--primary-300);
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 12px;
+    }
+
+    .sidebar-section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--primary-400);
+      padding: 12px 12px 8px;
+      font-weight: 600;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: var(--border-radius-sm);
+      color: var(--primary-200);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      margin-bottom: 2px;
+    }
+
+    .sidebar-link:hover {
+      background: rgba(255,255,255,0.07);
+      color: white;
+    }
+
+    .sidebar-link.active {
+      background: rgba(255,255,255,0.12);
+      color: white;
+      font-weight: 600;
+    }
+
+    .sidebar-link.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      background: var(--teal-400);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .sidebar-link svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
+
+    .sidebar-link.active svg {
+      opacity: 1;
+    }
+
+    .sidebar-badge {
+      margin-left: auto;
+      background: var(--teal-500);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      min-width: 22px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      padding: 16px 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .lang-toggle {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.06);
+      border-radius: var(--border-radius-sm);
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .lang-btn {
+      flex: 1;
+      padding: 7px 12px;
+      border: none;
+      border-radius: var(--border-radius-xs);
+      background: transparent;
+      color: var(--primary-300);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+
+    .lang-btn.active {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    /* ========== MAIN CONTENT ========== */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      min-height: 100vh;
+    }
+
+    /* ========== TOP BAR ========== */
+    .topbar {
+      height: var(--topbar-height);
+      background: white;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      gap: 16px;
+    }
+
+    .topbar-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--gray-500);
+    }
+
+    .topbar-breadcrumb span {
+      color: var(--gray-800);
+      font-weight: 600;
+    }
+
+    .topbar-breadcrumb svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .topbar-spacer {
+      flex: 1;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--border-radius-sm);
+      border: 1px solid var(--gray-200);
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--gray-500);
+      position: relative;
+    }
+
+    .topbar-icon-btn:hover {
+      background: var(--gray-50);
+      border-color: var(--gray-300);
+      color: var(--gray-700);
+    }
+
+    .topbar-icon-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .topbar-icon-btn .notif-dot {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 8px;
+      height: 8px;
+      background: var(--red-500);
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    .topbar-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-500), var(--teal-500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ========== PAGE CONTENT ========== */
+    .page-content {
+      padding: 28px;
+      max-width: 1400px;
+      animation: fadeInUp 0.3s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--gray-500);
+      font-weight: 400;
+    }
+
+    /* ========== STAT CARDS ROW ========== */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 20px;
+      border: 1px solid var(--gray-200);
+      transition: var(--transition);
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .stat-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .stat-card-label {
+      font-size: 12.5px;
+      color: var(--gray-500);
+      font-weight: 500;
+    }
+
+    .stat-card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--border-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-card-icon.blue { background: var(--primary-50); color: var(--primary-500); }
+    .stat-card-icon.teal { background: var(--teal-50); color: var(--teal-600); }
+    .stat-card-icon.amber { background: var(--amber-50); color: var(--amber-600); }
+    .stat-card-icon.green { background: var(--green-50); color: var(--green-600); }
+
+    .stat-card-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .stat-card-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--gray-900);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-card-change {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .stat-card-change.positive { color: var(--green-600); }
+    .stat-card-change.neutral { color: var(--gray-500); }
+
+    /* ========== SEARCH & FILTERS ========== */
+    .search-filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: stretch;
+    }
+
+    .search-input-wrapper {
+      flex: 1;
+      min-width: 280px;
+      position: relative;
+    }
+
+    .search-input-wrapper svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      color: var(--gray-400);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 14px 10px 42px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--border-radius-sm);
+      font-size: 13.5px;
+      font-family: inherit;
+      background: white;
+      transition: var(--transition);
+      color: var(--gray-800);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary-400);
+      box-shadow: 0 0 0 3px rgba(59, 138, 212, 0.1);
+    }
+
+    .search-input::placeholder {
+      color: var(--gray-400);
+    }
+
+    .filter-select {
+      padding: 10px 36px 10px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--border-radius-sm);
+      font-size: 13px;
+      font-family: inherit;
+      background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+      appearance: none;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--gray-700);
+      min-width: 140px;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--primary-400);
+      box-shadow: 0 0 0 3px rgba(59, 138, 212, 0.1);
+    }
+
+    .filter-btn {
+      padding: 10px 18px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--border-radius-sm);
+      background: white;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--gray-600);
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+
+    .filter-btn:hover {
+      background: var(--gray-50);
+      border-color: var(--gray-300);
+    }
+
+    .filter-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .active-filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .active-filter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--primary-50);
+      color: var(--primary-600);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--primary-100);
+    }
+
+    .active-filter-tag button {
+      background: none;
+      border: none;
+      color: var(--primary-400);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    /* ========== PROJECT CARDS ========== */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));
+      gap: 16px;
+    }
+
+    .project-card {
+      background: white;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--gray-200);
+      padding: 22px;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+      border-color: var(--primary-200);
+    }
+
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary-500), var(--teal-500));
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .project-card:hover::before {
+      opacity: 1;
+    }
+
+    .project-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .project-card-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+
+    .tag.software { background: var(--primary-50); color: var(--primary-600); border: 1px solid var(--primary-100); }
+    .tag.closing-soon { background: var(--amber-50); color: var(--amber-600); border: 1px solid var(--amber-100); }
+    .tag.new { background: var(--green-50); color: var(--green-600); border: 1px solid var(--green-100); }
+    .tag.category { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
+
+    .tag.ai { background: var(--purple-100); color: var(--purple-600); border: 1px solid #ddd6fe; }
+    .tag.website { background: var(--teal-50); color: var(--teal-700); border: 1px solid var(--teal-100); }
+    .tag.mobile { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .tag.database { background: #fce7f3; color: #be185d; border: 1px solid #fbcfe8; }
+
+    .bookmark-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--gray-300);
+      transition: var(--transition);
+      padding: 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .bookmark-btn:hover {
+      color: var(--amber-500);
+    }
+
+    .bookmark-btn.active {
+      color: var(--amber-500);
+    }
+
+    .bookmark-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .project-card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .project-card-dept {
+      font-size: 12.5px;
+      color: var(--gray-500);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .project-card-dept svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .project-card-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      color: var(--gray-400);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .meta-value {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+
+    .meta-value.budget {
+      color: var(--teal-700);
+    }
+
+    .meta-value.deadline-soon {
+      color: var(--amber-600);
+    }
+
+    /* ========== NO RESULTS ========== */
+    .no-results {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-400);
+    }
+
+    .no-results svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .no-results h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gray-500);
+      margin-bottom: 6px;
+    }
+
+    .no-results p {
+      font-size: 13px;
+    }
+
+    /* ========== DETAIL PAGE ========== */
+    .detail-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--border-radius-sm);
+      background: white;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--gray-600);
+      transition: var(--transition);
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .detail-back-btn:hover {
+      background: var(--gray-50);
+      border-color: var(--gray-300);
+    }
+
+    .detail-back-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 24px;
+    }
+
+    .detail-main {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .detail-sidebar-col {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .detail-card {
+      background: white;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--gray-200);
+      padding: 24px;
+    }
+
+    .detail-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .detail-card-title svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .detail-hero {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .detail-hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-500), var(--teal-500));
+    }
+
+    .detail-hero-tags {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .detail-hero-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .detail-hero-dept {
+      font-size: 14px;
+      color: var(--gray-500);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .detail-hero-dept svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .detail-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding-top: 20px;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .detail-meta-item {
+      text-align: center;
+      padding: 12px;
+      background: var(--gray-50);
+      border-radius: var(--border-radius-sm);
+    }
+
+    .detail-meta-item .meta-label {
+      margin-bottom: 6px;
+    }
+
+    .detail-meta-item .meta-value {
+      font-size: 15px;
+    }
+
+    .detail-hero-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--border-radius-sm);
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+      color: white;
+      box-shadow: 0 2px 6px rgba(44, 111, 173, 0.25);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 4px 12px rgba(44, 111, 173, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--gray-700);
+      border: 1px solid var(--gray-200);
+    }
+
+    .btn-secondary:hover {
+      background: var(--gray-50);
+      border-color: var(--gray-300);
+    }
+
+    .btn-bookmark {
+      background: white;
+      color: var(--gray-500);
+      border: 1px solid var(--gray-200);
+    }
+
+    .btn-bookmark:hover {
+      border-color: var(--amber-400);
+      color: var(--amber-500);
+    }
+
+    .btn-bookmark.active {
+      background: var(--amber-50);
+      border-color: var(--amber-400);
+      color: var(--amber-600);
+    }
+
+    /* ========== QUALIFICATIONS SECTION ========== */
+    .qualifications-card {
+      border: 2px solid var(--amber-400) !important;
+      background: linear-gradient(to bottom, var(--amber-50), white) !important;
+      position: relative;
+    }
+
+    .qualifications-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--amber-400), var(--amber-500));
+    }
+
+    .qualifications-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: var(--amber-100);
+      color: var(--amber-600);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .qualification-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .qualification-item {
+      display: flex;
+      gap: 10px;
+      padding: 12px 14px;
+      background: white;
+      border-radius: var(--border-radius-sm);
+      border: 1px solid var(--amber-100);
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--gray-700);
+    }
+
+    .qualification-item .qi-num {
+      width: 24px;
+      height: 24px;
+      background: var(--amber-100);
+      color: var(--amber-600);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ========== BUDGET COMPARISON ========== */
+    .budget-comparison {
+      padding: 20px;
+    }
+
+    .budget-comparison-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-radius: var(--border-radius-sm);
+      margin-bottom: 16px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .budget-comparison-indicator.above {
+      background: var(--amber-50);
+      color: var(--amber-600);
+      border: 1px solid var(--amber-100);
+    }
+
+    .budget-comparison-indicator.normal {
+      background: var(--green-50);
+      color: var(--green-600);
+      border: 1px solid var(--green-100);
+    }
+
+    .budget-comparison-indicator.below {
+      background: var(--primary-50);
+      color: var(--primary-600);
+      border: 1px solid var(--primary-100);
+    }
+
+    .budget-comparison-indicator svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .budget-bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .budget-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .budget-bar-label {
+      width: 80px;
+      font-size: 11px;
+      color: var(--gray-500);
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .budget-bar-track {
+      flex: 1;
+      height: 24px;
+      background: var(--gray-100);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .budget-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s ease-out;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+      white-space: nowrap;
+    }
+
+    .budget-bar-fill.current {
+      background: linear-gradient(90deg, var(--teal-500), var(--teal-400));
+    }
+
+    .budget-bar-fill.avg {
+      background: linear-gradient(90deg, var(--gray-400), var(--gray-300));
+    }
+
+    /* ========== DESCRIPTION SECTION ========== */
+    .description-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--gray-600);
+    }
+
+    .scope-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .scope-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--gray-50);
+      border-radius: var(--border-radius-sm);
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--gray-700);
+    }
+
+    .scope-item .scope-bullet {
+      color: var(--teal-500);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ========== HISTORICAL PAGE ========== */
+    .chart-container {
+      background: white;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--gray-200);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .chart-container canvas {
+      max-height: 350px;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gray-900);
+    }
+
+    .chart-filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .historical-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .historical-table th,
+    .historical-table td {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 13px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .historical-table th {
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      background: var(--gray-50);
+    }
+
+    .historical-table td {
+      color: var(--gray-700);
+    }
+
+    .historical-table tr:hover td {
+      background: var(--gray-50);
+    }
+
+    .outlier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .outlier-badge.high {
+      background: var(--red-100);
+      color: var(--red-600);
+    }
+
+    .outlier-badge.normal {
+      background: var(--green-100);
+      color: var(--green-600);
+    }
+
+    .outlier-badge.low {
+      background: var(--primary-100);
+      color: var(--primary-600);
+    }
+
+    /* ========== SETTINGS PAGE ========== */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .settings-card {
+      background: white;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--gray-200);
+      padding: 24px;
+    }
+
+    .settings-card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+    }
+
+    .settings-card-desc {
+      font-size: 12.5px;
+      color: var(--gray-500);
+      margin-bottom: 20px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .toggle-row:last-child {
+      border-bottom: none;
+    }
+
+    .toggle-label {
+      font-size: 13.5px;
+      color: var(--gray-700);
+      font-weight: 500;
+    }
+
+    .toggle-sublabel {
+      font-size: 11.5px;
+      color: var(--gray-400);
+      margin-top: 2px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--gray-300);
+      border-radius: 12px;
+      transition: var(--transition);
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: var(--transition);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: var(--teal-500);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+    }
+
+    .interest-tags-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .interest-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid var(--gray-200);
+      background: white;
+      color: var(--gray-600);
+      font-family: inherit;
+    }
+
+    .interest-tag:hover {
+      border-color: var(--teal-300);
+      color: var(--teal-700);
+    }
+
+    .interest-tag.active {
+      background: var(--teal-50);
+      border-color: var(--teal-400);
+      color: var(--teal-700);
+      font-weight: 600;
+    }
+
+    .budget-range-inputs {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .budget-range-inputs input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--border-radius-sm);
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--gray-700);
+    }
+
+    .budget-range-inputs input:focus {
+      outline: none;
+      border-color: var(--primary-400);
+      box-shadow: 0 0 0 3px rgba(59, 138, 212, 0.1);
+    }
+
+    .budget-range-inputs span {
+      color: var(--gray-400);
+      font-weight: 500;
+    }
+
+    .settings-save-btn {
+      margin-top: 20px;
+    }
+
+    /* ========== SAVED PAGE ========== */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+    }
+
+    .empty-state-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: var(--gray-100);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-400);
+    }
+
+    .empty-state-icon svg {
+      width: 36px;
+      height: 36px;
+    }
+
+    .empty-state h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 13.5px;
+      color: var(--gray-500);
+      max-width: 340px;
+      margin: 0 auto;
+    }
+
+    /* ========== TOAST ========== */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      padding: 14px 22px;
+      background: var(--gray-900);
+      color: white;
+      border-radius: var(--border-radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-xl);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: var(--transition-slow);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast svg {
+      width: 18px;
+      height: 18px;
+      color: var(--teal-400);
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 1200px) {
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .main-content {
+        margin-left: 0;
+      }
+      .projects-grid {
+        grid-template-columns: 1fr;
+      }
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+      .detail-meta-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .page-content {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout" id="app"></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== ICONS (SVG) ==========
+    const ICONS = {
+      dashboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+      chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+      bookmark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+      bookmarkFilled: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+      bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+      search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+      building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>',
+      arrowLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+      download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+      file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+      check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+      alertTriangle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      trendUp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+      trendDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
+      clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+      shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+      settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+      filter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
+      calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+      x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+      info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+      target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+      dollarSign: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    };
+
+    // ========== LABELS (TH/EN) ==========
+    const LABELS = {
+      th: {
+        appName: 'BMA Procurement',
+        appSub: 'Intelligence Platform',
+        navDashboard: 'ภาพรวมโอกาส',
+        navHistorical: 'วิเคราะห์ราคาย้อนหลัง',
+        navSaved: 'รายการที่บันทึก',
+        navSettings: 'ตั้งค่าการแจ้งเตือน',
+        sectionMain: 'เมนูหลัก',
+        sectionTools: 'เครื่องมือ',
+        dashboardTitle: 'โอกาสการจัดซื้อจัดจ้างซอฟต์แวร์',
+        dashboardSub: 'รวบรวมประกาศจัดซื้อจัดจ้างซอฟต์แวร์จากกรุงเทพมหานคร',
+        searchPlaceholder: 'ค้นหาโครงการ, หน่วยงาน...',
+        filterDept: 'หน่วยงาน',
+        filterCategory: 'ประเภทโครงการ',
+        filterBudget: 'งบประมาณ',
+        filterDeadline: 'กำหนดส่ง',
+        allDepts: 'ทุกหน่วยงาน',
+        allCategories: 'ทุกประเภท',
+        allBudgets: 'ทุกงบประมาณ',
+        allDeadlines: 'ทุกกำหนดส่ง',
+        totalOpps: 'โอกาสทั้งหมด',
+        closingSoon: 'ใกล้ปิดรับ',
+        newPublished: 'เพิ่งประกาศ',
+        totalBudget: 'งบประมาณรวม',
+        budget: 'งบประมาณ',
+        publishDate: 'วันประกาศ',
+        deadline: 'กำหนดส่ง',
+        department: 'หน่วยงาน',
+        softwareProject: 'โครงการซอฟต์แวร์',
+        closingSoonTag: 'ใกล้ปิดรับ',
+        newTag: 'ใหม่',
+        viewDetail: 'ดูรายละเอียด',
+        backToList: 'กลับไปรายการ',
+        projectDetail: 'รายละเอียดโครงการ',
+        procurementType: 'ประเภทการจัดซื้อ',
+        projectDesc: 'รายละเอียดโครงการ',
+        scopeOfWork: 'ขอบเขตงาน',
+        bidderQualifications: 'คุณสมบัติของผู้เสนอราคา',
+        qualImportant: 'สำคัญ — กรุณาตรวจสอบก่อนยื่นข้อเสนอ',
+        downloadTOR: 'ดาวน์โหลดเอกสาร TOR',
+        saveBookmark: 'บันทึก',
+        saved: 'บันทึกแล้ว',
+        budgetComparison: 'เปรียบเทียบงบประมาณ',
+        currentProject: 'โครงการนี้',
+        historicalAvg: 'ค่าเฉลี่ย',
+        aboveAvg: 'สูงกว่าค่าเฉลี่ยย้อนหลัง',
+        withinRange: 'อยู่ในช่วงปกติ',
+        belowAvg: 'ต่ำกว่าค่าเฉลี่ย',
+        historicalTitle: 'วิเคราะห์ราคาย้อนหลัง',
+        historicalSub: 'เปรียบเทียบงบประมาณกับโครงการที่ผ่านมา',
+        budgetChart: 'แผนภูมิเปรียบเทียบงบประมาณ',
+        projectName: 'ชื่อโครงการ',
+        year: 'ปี',
+        category: 'ประเภท',
+        budgetAnalysis: 'การวิเคราะห์',
+        savedTitle: 'รายการที่บันทึกไว้',
+        savedSub: 'โอกาสที่คุณสนใจและบันทึกไว้',
+        noSaved: 'ยังไม่มีรายการที่บันทึก',
+        noSavedDesc: 'กดปุ่มบันทึกในหน้ารายละเอียดเพื่อเก็บโอกาสที่สนใจ',
+        noResults: 'ไม่พบผลลัพธ์',
+        noResultsDesc: 'ลองปรับตัวกรองหรือคำค้นหาใหม่',
+        settingsTitle: 'ตั้งค่าการแจ้งเตือน',
+        settingsSub: 'กำหนดความสนใจเพื่อรับการแจ้งเตือนที่ตรงจุด',
+        emailNotif: 'การแจ้งเตือนทางอีเมล',
+        emailNotifDesc: 'รับอีเมลเมื่อมีประกาศใหม่ที่ตรงกับความสนใจ',
+        dailyDigest: 'สรุปรายวัน',
+        dailyDigestDesc: 'รับสรุปประกาศใหม่ทุกวัน 08:00 น.',
+        closingAlert: 'แจ้งเตือนใกล้ปิด',
+        closingAlertDesc: '3 วันก่อนหมดเวลายื่นข้อเสนอ',
+        newProjectAlert: 'ประกาศโครงการใหม่',
+        newProjectAlertDesc: 'แจ้งเตือนทันทีที่มีโครงการใหม่ตรงความสนใจ',
+        interestTags: 'ความสนใจ',
+        interestTagsDesc: 'เลือกประเภทโครงการที่คุณสนใจ',
+        budgetPref: 'ช่วงงบประมาณที่สนใจ',
+        budgetPrefDesc: 'กรองเฉพาะโครงการในช่วงงบประมาณที่ต้องการ',
+        budgetMin: 'ต่ำสุด (บาท)',
+        budgetMax: 'สูงสุด (บาท)',
+        saveSettings: 'บันทึกการตั้งค่า',
+        settingsSaved: 'บันทึกการตั้งค่าเรียบร้อย',
+        bookmarkAdded: 'เพิ่มในรายการบันทึกแล้ว',
+        bookmarkRemoved: 'ลบออกจากรายการบันทึกแล้ว',
+        thb: 'บาท',
+        million: 'ล้าน',
+        filterDeptAll: 'ทุกหน่วยงาน',
+        under5m: 'ต่ำกว่า 5 ล้าน',
+        range5to10: '5-10 ล้าน',
+        range10to20: '10-20 ล้าน',
+        above20m: 'มากกว่า 20 ล้าน',
+        within7days: 'ภายใน 7 วัน',
+        within30days: 'ภายใน 30 วัน',
+        moreThan30: 'มากกว่า 30 วัน',
+        allYears: 'ทุกปี',
+        breadcrumbHome: 'หน้าแรก',
+      },
+      en: {
+        appName: 'BMA Procurement',
+        appSub: 'Intelligence Platform',
+        navDashboard: 'Opportunities',
+        navHistorical: 'Price Analysis',
+        navSaved: 'Saved Items',
+        navSettings: 'Notifications',
+        sectionMain: 'Main Menu',
+        sectionTools: 'Tools',
+        dashboardTitle: 'Software Procurement Opportunities',
+        dashboardSub: 'Aggregated software procurement listings from Bangkok Metropolitan Administration',
+        searchPlaceholder: 'Search projects, departments...',
+        filterDept: 'Department',
+        filterCategory: 'Category',
+        filterBudget: 'Budget',
+        filterDeadline: 'Deadline',
+        allDepts: 'All Departments',
+        allCategories: 'All Categories',
+        allBudgets: 'All Budgets',
+        allDeadlines: 'All Deadlines',
+        totalOpps: 'Total Opportunities',
+        closingSoon: 'Closing Soon',
+        newPublished: 'Newly Published',
+        totalBudget: 'Total Budget',
+        budget: 'Budget',
+        publishDate: 'Published',
+        deadline: 'Deadline',
+        department: 'Department',
+        softwareProject: 'Software Project',
+        closingSoonTag: 'Closing Soon',
+        newTag: 'New',
+        viewDetail: 'View Details',
+        backToList: 'Back to List',
+        projectDetail: 'Project Details',
+        procurementType: 'Procurement Type',
+        projectDesc: 'Project Description',
+        scopeOfWork: 'Scope of Work',
+        bidderQualifications: 'Bidder Qualifications',
+        qualImportant: 'Important — Please verify before submitting a bid',
+        downloadTOR: 'Download TOR Document',
+        saveBookmark: 'Save',
+        saved: 'Saved',
+        budgetComparison: 'Budget Comparison',
+        currentProject: 'This Project',
+        historicalAvg: 'Average',
+        aboveAvg: 'Above Historical Average',
+        withinRange: 'Within Normal Range',
+        belowAvg: 'Below Average',
+        historicalTitle: 'Historical Price Analysis',
+        historicalSub: 'Compare budgets against past similar projects',
+        budgetChart: 'Budget Comparison Chart',
+        projectName: 'Project Name',
+        year: 'Year',
+        category: 'Category',
+        budgetAnalysis: 'Analysis',
+        savedTitle: 'Saved Opportunities',
+        savedSub: 'Bookmarked procurement opportunities',
+        noSaved: 'No Saved Items',
+        noSavedDesc: 'Click the save button on a project detail page to bookmark it',
+        noResults: 'No Results Found',
+        noResultsDesc: 'Try adjusting your search or filters',
+        settingsTitle: 'Notification Preferences',
+        settingsSub: 'Configure alerts for relevant procurement opportunities',
+        emailNotif: 'Email Notifications',
+        emailNotifDesc: 'Receive emails when matching opportunities are published',
+        dailyDigest: 'Daily Digest',
+        dailyDigestDesc: 'Receive a daily summary at 08:00',
+        closingAlert: 'Closing Soon Alert',
+        closingAlertDesc: '3 days before submission deadline',
+        newProjectAlert: 'New Project Alert',
+        newProjectAlertDesc: 'Instant notification for matching new projects',
+        interestTags: 'Interest Tags',
+        interestTagsDesc: 'Select project categories you are interested in',
+        budgetPref: 'Budget Range Preference',
+        budgetPrefDesc: 'Filter projects within your preferred budget range',
+        budgetMin: 'Minimum (THB)',
+        budgetMax: 'Maximum (THB)',
+        saveSettings: 'Save Settings',
+        settingsSaved: 'Settings saved successfully',
+        bookmarkAdded: 'Added to saved items',
+        bookmarkRemoved: 'Removed from saved items',
+        thb: 'THB',
+        million: 'M',
+        filterDeptAll: 'All Departments',
+        under5m: 'Under 5M',
+        range5to10: '5-10M',
+        range10to20: '10-20M',
+        above20m: 'Above 20M',
+        within7days: 'Within 7 days',
+        within30days: 'Within 30 days',
+        moreThan30: 'More than 30 days',
+        allYears: 'All Years',
+        breadcrumbHome: 'Home',
+      }
+    };
+
+    // ========== MOCK DATA ==========
+    const CATEGORIES = ['Website', 'Mobile App', 'AI', 'Database'];
+    const CATEGORY_LABELS = {
+      th: { 'Website': 'เว็บไซต์', 'Mobile App': 'แอปมือถือ', 'AI': 'AI / ปัญญาประดิษฐ์', 'Database': 'ฐานข้อมูล' },
+      en: { 'Website': 'Website', 'Mobile App': 'Mobile App', 'AI': 'AI / ML', 'Database': 'Database' }
+    };
+
+    const DEPARTMENTS = [
+      { th: 'สำนักการจราจรและขนส่ง', en: 'Traffic and Transport Dept.' },
+      { th: 'สำนักสิ่งแวดล้อม', en: 'Environment Dept.' },
+      { th: 'สำนักการแพทย์', en: 'Medical Services Dept.' },
+      { th: 'สำนักยุทธศาสตร์และประเมินผล', en: 'Strategy and Evaluation Dept.' },
+      { th: 'สำนักการคลัง', en: 'Finance Dept.' },
+      { th: 'สำนักพัฒนาสังคม', en: 'Social Development Dept.' },
+      { th: 'สำนักวัฒนธรรม กีฬา และการท่องเที่ยว', en: 'Culture, Sports & Tourism Dept.' },
+      { th: 'สำนักการศึกษา', en: 'Education Dept.' },
+    ];
+
+    const PROJECTS = [
+      {
+        id: 1,
+        title: { th: 'ระบบบริหารจัดการข้อมูลการจราจรอัจฉริยะ', en: 'Smart Traffic Data Management System' },
+        department: DEPARTMENTS[0],
+        budget: 15500000,
+        publishDate: '2026-07-28',
+        deadline: '2026-08-15',
+        category: 'AI',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'พัฒนาระบบบริหารจัดการข้อมูลการจราจรโดยใช้เทคโนโลยี AI สำหรับวิเคราะห์ปริมาณจราจรแบบ Real-time เพื่อปรับปรุงการจัดการสัญญาณไฟจราจรและลดปัญหาจราจรติดขัดในพื้นที่กรุงเทพมหานคร',
+          en: 'Develop a smart traffic data management system using AI technology for real-time traffic volume analysis to improve traffic signal management and reduce congestion in Bangkok.'
+        },
+        scope: {
+          th: [
+            'พัฒนาระบบ AI วิเคราะห์ข้อมูลจราจร Real-time จากกล้อง CCTV จำนวน 500 จุด',
+            'ออกแบบและพัฒนา Dashboard แสดงผลข้อมูลจราจรแบบ Real-time',
+            'พัฒนา Algorithm สำหรับปรับสัญญาณไฟจราจรอัตโนมัติ',
+            'จัดทำ API สำหรับเชื่อมต่อกับระบบจราจรเดิม',
+            'ฝึกอบรมเจ้าหน้าที่ผู้ใช้งานจำนวน 50 คน'
+          ],
+          en: [
+            'Develop AI system for real-time traffic analysis from 500 CCTV points',
+            'Design and develop real-time traffic visualization dashboard',
+            'Develop algorithms for automatic traffic signal adjustment',
+            'Create APIs for integration with existing traffic systems',
+            'Train 50 staff members on system operation'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลที่จดทะเบียนในประเทศไทย มีทุนจดทะเบียนไม่น้อยกว่า 5,000,000 บาท',
+            'มีผลงานพัฒนาระบบ AI หรือ Machine Learning ให้กับหน่วยงานราชการ มูลค่าไม่น้อยกว่า 5,000,000 บาท ภายใน 5 ปีที่ผ่านมา',
+            'มีบุคลากรที่มีใบรับรอง AI/ML Certification อย่างน้อย 3 คน',
+            'มีประสบการณ์ในการพัฒนาระบบ Real-time Data Processing',
+            'ไม่เป็นผู้ที่ถูกระบุชื่อไว้ในบัญชีรายชื่อผู้ทิ้งงานของกรุงเทพมหานคร'
+          ],
+          en: [
+            'Must be a legal entity registered in Thailand with registered capital of at least 5,000,000 THB',
+            'Must have AI/ML system development experience for government agencies worth at least 5,000,000 THB within the past 5 years',
+            'Must have at least 3 personnel with AI/ML certifications',
+            'Must have experience in real-time data processing system development',
+            'Must not be listed in the BMA blacklist for contract abandonment'
+          ]
+        },
+        historicalAvg: 13000000,
+      },
+      {
+        id: 2,
+        title: { th: 'เว็บไซต์ศูนย์ข้อมูลสิ่งแวดล้อม กทม.', en: 'BMA Environmental Data Center Website' },
+        department: DEPARTMENTS[1],
+        budget: 3200000,
+        publishDate: '2026-08-08',
+        deadline: '2026-08-25',
+        category: 'Website',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'พัฒนาเว็บไซต์ศูนย์ข้อมูลสิ่งแวดล้อมกรุงเทพมหานคร สำหรับเผยแพร่ข้อมูลคุณภาพอากาศ น้ำ และขยะ ให้ประชาชนเข้าถึงข้อมูลได้สะดวก',
+          en: 'Develop the BMA Environmental Data Center website for publishing air quality, water quality, and waste management data for public access.'
+        },
+        scope: {
+          th: [
+            'ออกแบบและพัฒนาเว็บไซต์แบบ Responsive Design',
+            'พัฒนาระบบแสดงผลข้อมูลคุณภาพอากาศ PM2.5 แบบ Real-time',
+            'สร้างแผนที่แสดงจุดตรวจวัดคุณภาพสิ่งแวดล้อม',
+            'พัฒนา CMS สำหรับจัดการเนื้อหา',
+            'รองรับการใช้งาน 2 ภาษา (ไทย/อังกฤษ)'
+          ],
+          en: [
+            'Design and develop responsive website',
+            'Develop real-time PM2.5 air quality display system',
+            'Create environmental monitoring station map',
+            'Develop CMS for content management',
+            'Support bilingual usage (Thai/English)'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย',
+            'มีผลงานพัฒนาเว็บไซต์ให้กับหน่วยงานราชการ มูลค่าไม่น้อยกว่า 1,000,000 บาท',
+            'มีทีมพัฒนาที่มีประสบการณ์ไม่น้อยกว่า 3 ปี',
+            'สามารถให้บริการ Maintenance หลังส่งมอบไม่น้อยกว่า 1 ปี'
+          ],
+          en: [
+            'Must be a legal entity registered in Thailand',
+            'Must have government website development experience worth at least 1,000,000 THB',
+            'Development team must have at least 3 years of experience',
+            'Must provide post-delivery maintenance for at least 1 year'
+          ]
+        },
+        historicalAvg: 3800000,
+      },
+      {
+        id: 3,
+        title: { th: 'แอปพลิเคชันมือถือระบบนัดหมายออนไลน์โรงพยาบาลในสังกัด กทม.', en: 'BMA Hospital Online Appointment Mobile App' },
+        department: DEPARTMENTS[2],
+        budget: 8700000,
+        publishDate: '2026-08-01',
+        deadline: '2026-09-05',
+        category: 'Mobile App',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'พัฒนาแอปพลิเคชันมือถือสำหรับระบบนัดหมายออนไลน์ของโรงพยาบาลในสังกัดกรุงเทพมหานคร ทั้ง iOS และ Android เพื่อลดเวลาการรอคอยของผู้ป่วย',
+          en: 'Develop a mobile application for the online appointment system of BMA hospitals on both iOS and Android to reduce patient waiting times.'
+        },
+        scope: {
+          th: [
+            'พัฒนาแอปพลิเคชัน iOS และ Android (Native หรือ Cross-platform)',
+            'ระบบจองนัดหมาย, ตรวจสอบคิว, แจ้งเตือน',
+            'เชื่อมต่อกับระบบ HIS ของโรงพยาบาลในสังกัด 11 แห่ง',
+            'ระบบยืนยันตัวตนด้วยบัตรประชาชน',
+            'รองรับผู้ใช้งานพร้อมกัน 10,000 คน'
+          ],
+          en: [
+            'Develop iOS and Android applications (Native or Cross-platform)',
+            'Appointment booking, queue checking, and notification system',
+            'Integration with HIS systems of 11 BMA hospitals',
+            'National ID card identity verification',
+            'Support 10,000 concurrent users'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย มีทุนจดทะเบียนไม่น้อยกว่า 3,000,000 บาท',
+            'มีผลงานพัฒนาแอปพลิเคชันมือถือที่มีผู้ใช้งานจริงไม่น้อยกว่า 10,000 คน',
+            'มีประสบการณ์เชื่อมต่อกับระบบ Hospital Information System (HIS)',
+            'มีใบรับรอง ISO 27001 หรือเทียบเท่า',
+            'สามารถให้บริการ Support 24/7 ตลอดระยะเวลาสัญญา'
+          ],
+          en: [
+            'Legal entity registered in Thailand with capital of at least 3,000,000 THB',
+            'Must have mobile app development experience with at least 10,000 active users',
+            'Experience with Hospital Information System (HIS) integration',
+            'ISO 27001 certification or equivalent required',
+            'Must provide 24/7 support during contract period'
+          ]
+        },
+        historicalAvg: 7500000,
+      },
+      {
+        id: 4,
+        title: { th: 'ระบบฐานข้อมูลบุคลากรกรุงเทพมหานคร (BMA HR Database)', en: 'BMA Human Resources Database System' },
+        department: DEPARTMENTS[3],
+        budget: 12000000,
+        publishDate: '2026-07-20',
+        deadline: '2026-08-17',
+        category: 'Database',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'พัฒนาระบบฐานข้อมูลบุคลากรแบบรวมศูนย์สำหรับกรุงเทพมหานคร เพื่อบริหารจัดการข้อมูลเจ้าหน้าที่กว่า 80,000 คน ครอบคลุมข้อมูลตำแหน่ง เงินเดือน การฝึกอบรม และการประเมินผล',
+          en: 'Develop a centralized HR database system for BMA managing over 80,000 personnel records including positions, salaries, training, and performance evaluations.'
+        },
+        scope: {
+          th: [
+            'ออกแบบและพัฒนาฐานข้อมูลรวมศูนย์ รองรับข้อมูลบุคลากร 80,000+ คน',
+            'พัฒนา Web Application สำหรับจัดการข้อมูลบุคลากร',
+            'ระบบรายงานสถิติบุคลากรแบบ Interactive Dashboard',
+            'Migration ข้อมูลจากระบบเดิม',
+            'ระบบสำรองข้อมูลอัตโนมัติและกู้คืนข้อมูล'
+          ],
+          en: [
+            'Design centralized database supporting 80,000+ personnel records',
+            'Develop web application for HR data management',
+            'Interactive dashboard for personnel statistics reporting',
+            'Data migration from legacy systems',
+            'Automated backup and disaster recovery system'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย',
+            'มีผลงานพัฒนาระบบฐานข้อมูลขนาดใหญ่ (50,000 Records+) ให้หน่วยงานราชการ',
+            'มีบุคลากรที่มี Oracle/PostgreSQL Certification',
+            'ผ่านการรับรองมาตรฐาน CMMI Level 3 หรือเทียบเท่า',
+            'มีแผนรักษาความมั่นคงปลอดภัยข้อมูลส่วนบุคคลตาม PDPA'
+          ],
+          en: [
+            'Legal entity registered in Thailand',
+            'Large-scale database development experience (50,000+ records) for government',
+            'Staff with Oracle/PostgreSQL certification required',
+            'CMMI Level 3 certification or equivalent',
+            'PDPA-compliant personal data security plan required'
+          ]
+        },
+        historicalAvg: 11000000,
+      },
+      {
+        id: 5,
+        title: { th: 'ระบบ AI วิเคราะห์ข้อมูลสุขภาพประชาชน กทม.', en: 'AI Public Health Data Analysis System' },
+        department: DEPARTMENTS[2],
+        budget: 22000000,
+        publishDate: '2026-08-09',
+        deadline: '2026-09-15',
+        category: 'AI',
+        procurementType: 'ประกวดราคา',
+        description: {
+          th: 'พัฒนาระบบปัญญาประดิษฐ์สำหรับวิเคราะห์ข้อมูลสุขภาพประชาชนในพื้นที่กรุงเทพมหานคร เพื่อคาดการณ์การระบาดของโรคและวางแผนจัดสรรทรัพยากรสาธารณสุข',
+          en: 'Develop an AI system for analyzing public health data in Bangkok to predict disease outbreaks and plan healthcare resource allocation.'
+        },
+        scope: {
+          th: [
+            'พัฒนา AI Model สำหรับคาดการณ์การระบาดของโรค',
+            'วิเคราะห์ข้อมูลสุขภาพจากโรงพยาบาลในสังกัด 11 แห่ง',
+            'สร้าง Predictive Dashboard สำหรับผู้บริหาร',
+            'พัฒนาระบบแจ้งเตือนอัตโนมัติเมื่อพบความผิดปกติ',
+            'ฝึกอบรมบุคลากรสาธารณสุขจำนวน 100 คน',
+            'จัดทำเอกสารและคู่มือการใช้งาน'
+          ],
+          en: [
+            'Develop AI model for disease outbreak prediction',
+            'Analyze health data from 11 BMA hospitals',
+            'Create predictive dashboard for executives',
+            'Develop automatic alert system for anomaly detection',
+            'Train 100 public health personnel',
+            'Prepare documentation and user manuals'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย มีทุนจดทะเบียนไม่น้อยกว่า 10,000,000 บาท',
+            'มีผลงาน AI/ML ด้านสาธารณสุข (Healthcare AI) มูลค่าไม่น้อยกว่า 10,000,000 บาท',
+            'มีทีม Data Scientist ไม่น้อยกว่า 5 คน',
+            'มีใบรับรอง ISO 27001 และ ISO 27799 (Health Informatics)',
+            'มีประสบการณ์จัดการข้อมูลส่วนบุคคลด้านสุขภาพตามมาตรฐาน PDPA',
+            'ไม่เป็นผู้ที่ถูกระบุชื่อไว้ในบัญชีรายชื่อผู้ทิ้งงานของทางราชการ'
+          ],
+          en: [
+            'Legal entity with registered capital of at least 10,000,000 THB',
+            'Healthcare AI/ML experience worth at least 10,000,000 THB',
+            'Team of at least 5 Data Scientists',
+            'ISO 27001 and ISO 27799 (Health Informatics) certification',
+            'PDPA-compliant health data management experience',
+            'Must not be listed on any government contractor blacklist'
+          ]
+        },
+        historicalAvg: 16000000,
+      },
+      {
+        id: 6,
+        title: { th: 'ปรับปรุงเว็บไซต์ระบบจัดซื้อจัดจ้างอิเล็กทรอนิกส์ กทม.', en: 'BMA E-Procurement Website Upgrade' },
+        department: DEPARTMENTS[4],
+        budget: 5800000,
+        publishDate: '2026-08-05',
+        deadline: '2026-08-30',
+        category: 'Website',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'ปรับปรุงระบบเว็บไซต์จัดซื้อจัดจ้างอิเล็กทรอนิกส์ของกรุงเทพมหานคร ให้ทันสมัย ใช้งานง่าย และรองรับมาตรฐาน WCAG 2.1',
+          en: 'Upgrade the BMA e-procurement website to modern standards with improved usability and WCAG 2.1 accessibility compliance.'
+        },
+        scope: {
+          th: [
+            'ปรับปรุง UI/UX ให้ทันสมัยและใช้งานง่าย',
+            'รองรับมาตรฐาน WCAG 2.1 Level AA',
+            'ปรับปรุงระบบค้นหาและกรองข้อมูลจัดซื้อจัดจ้าง',
+            'เพิ่มระบบแจ้งเตือนผ่านอีเมลและ LINE',
+            'ปรับปรุงประสิทธิภาพให้รองรับ 50,000 ผู้ใช้งานพร้อมกัน'
+          ],
+          en: [
+            'Modernize UI/UX for improved usability',
+            'WCAG 2.1 Level AA accessibility compliance',
+            'Improve procurement search and filtering system',
+            'Add email and LINE notification system',
+            'Performance optimization for 50,000 concurrent users'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย',
+            'มีผลงานพัฒนา/ปรับปรุงเว็บไซต์ระบบจัดซื้อจัดจ้างหรือ e-Government มูลค่าไม่น้อยกว่า 2,000,000 บาท',
+            'มีประสบการณ์ด้าน Web Accessibility (WCAG)',
+            'มีทีม UX/UI Designer ที่มีประสบการณ์ไม่น้อยกว่า 3 ปี'
+          ],
+          en: [
+            'Legal entity registered in Thailand',
+            'E-procurement or e-Government website development experience worth at least 2,000,000 THB',
+            'Web accessibility (WCAG) experience required',
+            'UX/UI design team with at least 3 years of experience'
+          ]
+        },
+        historicalAvg: 4500000,
+      },
+      {
+        id: 7,
+        title: { th: 'ระบบจัดการฐานข้อมูลสวัสดิการสังคม กทม.', en: 'BMA Social Welfare Database Management System' },
+        department: DEPARTMENTS[5],
+        budget: 9500000,
+        publishDate: '2026-08-07',
+        deadline: '2026-09-10',
+        category: 'Database',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'พัฒนาระบบฐานข้อมูลรวมศูนย์สำหรับบริหารจัดการข้อมูลสวัสดิการสังคม ครอบคลุมข้อมูลผู้สูงอายุ ผู้พิการ และผู้ด้อยโอกาสในพื้นที่ กทม.',
+          en: 'Develop a centralized database for managing social welfare data covering elderly, disabled, and underprivileged populations in Bangkok.'
+        },
+        scope: {
+          th: [
+            'ออกแบบฐานข้อมูลรวมศูนย์สำหรับข้อมูลสวัสดิการสังคม',
+            'พัฒนาระบบลงทะเบียนผู้รับสวัสดิการออนไลน์',
+            'สร้างระบบรายงานและ Dashboard สำหรับผู้บริหาร',
+            'เชื่อมต่อกับระบบทะเบียนราษฎร',
+            'พัฒนาระบบติดตามการจ่ายสวัสดิการ'
+          ],
+          en: [
+            'Design centralized social welfare database',
+            'Develop online welfare registration system',
+            'Create executive reporting dashboard',
+            'Integration with civil registration system',
+            'Develop welfare payment tracking system'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย',
+            'มีผลงานพัฒนาระบบฐานข้อมูลให้กับหน่วยงานราชการ มูลค่าไม่น้อยกว่า 3,000,000 บาท',
+            'มีประสบการณ์ในระบบงานด้านสวัสดิการสังคมหรือระบบทะเบียน',
+            'ผ่านการรับรอง ISO 27001',
+            'มีแผนการรักษาความมั่นคงปลอดภัยของข้อมูลส่วนบุคคล'
+          ],
+          en: [
+            'Legal entity registered in Thailand',
+            'Government database development experience worth at least 3,000,000 THB',
+            'Experience with social welfare or civil registration systems',
+            'ISO 27001 certified',
+            'Personal data security plan required'
+          ]
+        },
+        historicalAvg: 8500000,
+      },
+      {
+        id: 8,
+        title: { th: 'แอปพลิเคชันท่องเที่ยวกรุงเทพมหานคร (Discover Bangkok)', en: 'Discover Bangkok Tourism Application' },
+        department: DEPARTMENTS[6],
+        budget: 6300000,
+        publishDate: '2026-08-10',
+        deadline: '2026-09-20',
+        category: 'Mobile App',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'พัฒนาแอปพลิเคชันมือถือสำหรับส่งเสริมการท่องเที่ยวในพื้นที่กรุงเทพมหานคร รองรับทั้งนักท่องเที่ยวไทยและต่างชาติ พร้อมระบบนำทางและแนะนำสถานที่',
+          en: 'Develop a mobile tourism application for Bangkok supporting both Thai and international tourists with navigation and place recommendation features.'
+        },
+        scope: {
+          th: [
+            'พัฒนาแอปพลิเคชัน iOS และ Android รองรับ 4 ภาษา (ไทย/อังกฤษ/จีน/ญี่ปุ่น)',
+            'ระบบแนะนำสถานที่ท่องเที่ยวตาม AI Personalization',
+            'แผนที่ Offline พร้อมระบบนำทาง',
+            'ระบบรีวิวและให้คะแนนสถานที่',
+            'เชื่อมต่อกับข้อมูลระบบขนส่งสาธารณะ (BTS, MRT, เรือ)',
+            'ระบบ AR (Augmented Reality) สำหรับสถานที่สำคัญ'
+          ],
+          en: [
+            'Develop iOS and Android app supporting 4 languages (TH/EN/CN/JP)',
+            'AI-powered personalized tourist attraction recommendations',
+            'Offline map with navigation system',
+            'Location review and rating system',
+            'Integration with public transit data (BTS, MRT, boat)',
+            'AR (Augmented Reality) for key landmarks'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย',
+            'มีผลงานพัฒนาแอปพลิเคชันมือถือที่เผยแพร่บน App Store และ Google Play',
+            'มีประสบการณ์พัฒนาแอปพลิเคชันด้านการท่องเที่ยวหรือ Location-based Services',
+            'มีทีมออกแบบ UX/UI ที่มีผลงานด้าน Mobile Application',
+            'สามารถให้บริการ Maintenance ไม่น้อยกว่า 2 ปี'
+          ],
+          en: [
+            'Legal entity registered in Thailand',
+            'Published mobile app on App Store and Google Play',
+            'Tourism or location-based services app development experience',
+            'UX/UI design team with mobile application portfolio',
+            'Minimum 2-year post-launch maintenance support'
+          ]
+        },
+        historicalAvg: 5500000,
+      },
+      {
+        id: 9,
+        title: { th: 'ระบบ AI วิเคราะห์ข้อมูลงบประมาณ กทม.', en: 'AI Budget Data Analysis System for BMA' },
+        department: DEPARTMENTS[3],
+        budget: 18000000,
+        publishDate: '2026-07-25',
+        deadline: '2026-08-14',
+        category: 'AI',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'พัฒนาระบบ AI สำหรับวิเคราะห์ข้อมูลงบประมาณของกรุงเทพมหานคร เพื่อตรวจจับความผิดปกติ คาดการณ์แนวโน้ม และสนับสนุนการตัดสินใจของผู้บริหาร',
+          en: 'Develop an AI system for BMA budget data analysis to detect anomalies, predict trends, and support executive decision-making.'
+        },
+        scope: {
+          th: [
+            'พัฒนา AI Model สำหรับวิเคราะห์และคาดการณ์งบประมาณ',
+            'ระบบตรวจจับความผิดปกติของการใช้จ่ายงบประมาณ (Anomaly Detection)',
+            'Dashboard สรุปผลวิเคราะห์งบประมาณสำหรับผู้บริหาร',
+            'ระบบ Natural Language Query สำหรับสอบถามข้อมูลงบประมาณ',
+            'เชื่อมต่อกับระบบ GFMIS และระบบบัญชีของ กทม.'
+          ],
+          en: [
+            'Develop AI model for budget analysis and forecasting',
+            'Budget spending anomaly detection system',
+            'Executive budget analysis dashboard',
+            'Natural language query system for budget inquiries',
+            'Integration with GFMIS and BMA accounting systems'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย มีทุนจดทะเบียนไม่น้อยกว่า 5,000,000 บาท',
+            'มีผลงาน AI สำหรับวิเคราะห์ข้อมูลทางการเงินหรืองบประมาณ มูลค่าไม่น้อยกว่า 8,000,000 บาท',
+            'มี Data Scientist ที่มีประสบการณ์ด้าน Financial Analytics',
+            'มีประสบการณ์เชื่อมต่อกับระบบ GFMIS หรือ ERP ภาครัฐ',
+            'ผ่านการรับรอง ISO 27001'
+          ],
+          en: [
+            'Legal entity with capital of at least 5,000,000 THB',
+            'Financial/budget AI analytics experience worth at least 8,000,000 THB',
+            'Data Scientists with financial analytics experience',
+            'GFMIS or government ERP integration experience',
+            'ISO 27001 certified'
+          ]
+        },
+        historicalAvg: 14000000,
+      },
+      {
+        id: 10,
+        title: { th: 'เว็บแอปพลิเคชันระบบติดตามเรื่องร้องเรียน กทม. (Traffy Fondue Enhancement)', en: 'BMA Complaint Tracking Web App Enhancement' },
+        department: DEPARTMENTS[7],
+        budget: 4500000,
+        publishDate: '2026-08-03',
+        deadline: '2026-09-01',
+        category: 'Website',
+        procurementType: 'e-Bidding',
+        description: {
+          th: 'พัฒนาเว็บแอปพลิเคชันเสริมสำหรับระบบติดตามเรื่องร้องเรียนของกรุงเทพมหานคร เพิ่มฟีเจอร์ Dashboard สำหรับเจ้าหน้าที่และระบบวิเคราะห์ข้อมูลร้องเรียน',
+          en: 'Develop an enhanced web application for BMA complaint tracking with staff dashboard and complaint data analytics features.'
+        },
+        scope: {
+          th: [
+            'พัฒนา Dashboard สำหรับเจ้าหน้าที่ติดตามเรื่องร้องเรียน',
+            'ระบบวิเคราะห์ข้อมูลร้องเรียนแยกตามพื้นที่และประเภท',
+            'ระบบจัดลำดับความสำคัญอัตโนมัติ',
+            'รายงานสถิติเรื่องร้องเรียนแบบ Real-time',
+            'ระบบแจ้งเตือนเจ้าหน้าที่เมื่อเรื่องค้างเกินกำหนด'
+          ],
+          en: [
+            'Develop staff complaint tracking dashboard',
+            'Complaint data analysis by area and category',
+            'Automatic priority ranking system',
+            'Real-time complaint statistics reporting',
+            'Overdue complaint alert system for staff'
+          ]
+        },
+        qualifications: {
+          th: [
+            'เป็นนิติบุคคลจดทะเบียนในประเทศไทย',
+            'มีผลงานพัฒนาเว็บแอปพลิเคชันให้กับหน่วยงานราชการ',
+            'มีประสบการณ์ด้าน Data Visualization และ Dashboard Development',
+            'สามารถเชื่อมต่อกับ API ของระบบเดิมได้'
+          ],
+          en: [
+            'Legal entity registered in Thailand',
+            'Government web application development experience',
+            'Data visualization and dashboard development experience',
+            'Ability to integrate with existing system APIs'
+          ]
+        },
+        historicalAvg: 3500000,
+      },
+    ];
+
+    // Historical comparison data
+    const HISTORICAL_DATA = [
+      { title: { th: 'ระบบ AI ตรวจจับอุบัติเหตุจราจร', en: 'AI Traffic Accident Detection System' }, department: DEPARTMENTS[0], year: 2025, category: 'AI', budget: 14000000 },
+      { title: { th: 'AI วิเคราะห์คุณภาพอากาศ กทม.', en: 'BMA Air Quality AI Analysis' }, department: DEPARTMENTS[1], year: 2025, category: 'AI', budget: 12000000 },
+      { title: { th: 'ระบบ AI จัดการขยะอัจฉริยะ', en: 'Smart Waste Management AI System' }, department: DEPARTMENTS[1], year: 2024, category: 'AI', budget: 18500000 },
+      { title: { th: 'AI Chatbot บริการประชาชน กทม.', en: 'BMA Public Service AI Chatbot' }, department: DEPARTMENTS[3], year: 2024, category: 'AI', budget: 8000000 },
+      { title: { th: 'เว็บไซต์ศูนย์บริการสาธารณสุข', en: 'Public Health Center Website' }, department: DEPARTMENTS[2], year: 2025, category: 'Website', budget: 2800000 },
+      { title: { th: 'เว็บไซต์ Open Data กทม.', en: 'BMA Open Data Portal' }, department: DEPARTMENTS[3], year: 2024, category: 'Website', budget: 4200000 },
+      { title: { th: 'เว็บท่าบริการประชาชน', en: 'Citizen Services Web Portal' }, department: DEPARTMENTS[4], year: 2025, category: 'Website', budget: 5500000 },
+      { title: { th: 'แอปจ่ายภาษีออนไลน์', en: 'Online Tax Payment App' }, department: DEPARTMENTS[4], year: 2025, category: 'Mobile App', budget: 7200000 },
+      { title: { th: 'แอปแจ้งเหตุฉุกเฉิน กทม.', en: 'BMA Emergency Alert App' }, department: DEPARTMENTS[2], year: 2024, category: 'Mobile App', budget: 5800000 },
+      { title: { th: 'แอปจองสนามกีฬา กทม.', en: 'BMA Sports Facility Booking App' }, department: DEPARTMENTS[6], year: 2024, category: 'Mobile App', budget: 4500000 },
+      { title: { th: 'ฐานข้อมูลทะเบียนทรัพย์สิน', en: 'Asset Registration Database' }, department: DEPARTMENTS[4], year: 2025, category: 'Database', budget: 10500000 },
+      { title: { th: 'ฐานข้อมูลภูมิสารสนเทศ กทม.', en: 'BMA GIS Database' }, department: DEPARTMENTS[3], year: 2024, category: 'Database', budget: 13000000 },
+      { title: { th: 'ฐานข้อมูลโรงเรียนในสังกัด', en: 'School Management Database' }, department: DEPARTMENTS[7], year: 2025, category: 'Database', budget: 6500000 },
+    ];
+
+    // ========== APPLICATION STATE ==========
+    const state = {
+      currentPage: 'dashboard',
+      selectedProjectId: null,
+      searchQuery: '',
+      filters: {
+        department: '',
+        category: '',
+        budget: '',
+        deadline: '',
+      },
+      historicalFilters: {
+        category: '',
+        department: '',
+        year: '',
+      },
+      bookmarks: new Set(),
+      language: 'th',
+      settings: {
+        emailNotif: true,
+        dailyDigest: true,
+        closingAlert: true,
+        newProjectAlert: false,
+        interestTags: ['Website', 'AI'],
+        budgetMin: '',
+        budgetMax: '',
+      },
+    };
+
+    // ========== UTILITY FUNCTIONS ==========
+    function L(key) {
+      return LABELS[state.language][key] || key;
+    }
+
+    function formatBudget(amount) {
+      if (amount >= 1000000) {
+        const m = (amount / 1000000).toFixed(1);
+        return `฿${m} ${L('million')}`;
+      }
+      return `฿${amount.toLocaleString()}`;
+    }
+
+    function formatBudgetFull(amount) {
+      return `${amount.toLocaleString()} ${L('thb')}`;
+    }
+
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      const months = state.language === 'th' 
+        ? ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+        : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const year = state.language === 'th' ? d.getFullYear() + 543 : d.getFullYear();
+      return `${d.getDate()} ${months[d.getMonth()]} ${year}`;
+    }
+
+    function daysUntil(dateStr) {
+      const now = new Date('2026-08-10');
+      const deadline = new Date(dateStr);
+      return Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+    }
+
+    function isClosingSoon(dateStr) {
+      const d = daysUntil(dateStr);
+      return d >= 0 && d <= 7;
+    }
+
+    function isNew(publishDate) {
+      const d = daysUntil(publishDate);
+      return d >= -3 && d <= 0;
+    }
+
+    function getLocalizedText(obj) {
+      if (typeof obj === 'string') return obj;
+      return obj[state.language] || obj.th;
+    }
+
+    function getCategoryClass(cat) {
+      return cat === 'AI' ? 'ai' : cat === 'Website' ? 'website' : cat === 'Mobile App' ? 'mobile' : 'database';
+    }
+
+    function getBudgetStatus(budget, historicalAvg) {
+      const ratio = budget / historicalAvg;
+      if (ratio > 1.25) return 'above';
+      if (ratio < 0.75) return 'below';
+      return 'normal';
+    }
+
+    // ========== FILTER LOGIC ==========
+    function getFilteredProjects() {
+      let projects = [...PROJECTS];
+
+      if (state.searchQuery) {
+        const q = state.searchQuery.toLowerCase();
+        projects = projects.filter(p => 
+          getLocalizedText(p.title).toLowerCase().includes(q) ||
+          getLocalizedText(p.department).toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q)
+        );
+      }
+
+      if (state.filters.department) {
+        projects = projects.filter(p => p.department.th === state.filters.department);
+      }
+
+      if (state.filters.category) {
+        projects = projects.filter(p => p.category === state.filters.category);
+      }
+
+      if (state.filters.budget) {
+        projects = projects.filter(p => {
+          switch (state.filters.budget) {
+            case 'under5m': return p.budget < 5000000;
+            case '5to10': return p.budget >= 5000000 && p.budget <= 10000000;
+            case '10to20': return p.budget >= 10000000 && p.budget <= 20000000;
+            case 'above20m': return p.budget > 20000000;
+            default: return true;
+          }
+        });
+      }
+
+      if (state.filters.deadline) {
+        projects = projects.filter(p => {
+          const d = daysUntil(p.deadline);
+          switch (state.filters.deadline) {
+            case 'within7': return d >= 0 && d <= 7;
+            case 'within30': return d >= 0 && d <= 30;
+            case 'moreThan30': return d > 30;
+            default: return true;
+          }
+        });
+      }
+
+      return projects;
+    }
+
+    function getFilteredHistorical() {
+      let data = [...HISTORICAL_DATA];
+      if (state.historicalFilters.category) {
+        data = data.filter(d => d.category === state.historicalFilters.category);
+      }
+      if (state.historicalFilters.department) {
+        data = data.filter(d => d.department.th === state.historicalFilters.department);
+      }
+      if (state.historicalFilters.year) {
+        data = data.filter(d => d.year === parseInt(state.historicalFilters.year));
+      }
+      return data;
+    }
+
+    // ========== NAVIGATION ==========
+    function navigate(page, projectId) {
+      state.currentPage = page;
+      state.selectedProjectId = projectId || null;
+      render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleBookmark(id, e) {
+      if (e) e.stopPropagation();
+      if (state.bookmarks.has(id)) {
+        state.bookmarks.delete(id);
+        showToast(L('bookmarkRemoved'), ICONS.bookmark);
+      } else {
+        state.bookmarks.add(id);
+        showToast(L('bookmarkAdded'), ICONS.bookmarkFilled);
+      }
+      render();
+    }
+
+    function toggleLanguage(lang) {
+      state.language = lang;
+      document.documentElement.lang = lang;
+      render();
+    }
+
+    function showToast(message, icon) {
+      const toast = document.getElementById('toast');
+      toast.innerHTML = `${icon || ''}<span>${message}</span>`;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // ========== RENDER FUNCTIONS ==========
+    function render() {
+      const app = document.getElementById('app');
+      app.innerHTML = renderSidebar() + `<div class="main-content">${renderTopbar()}${renderPage()}</div>`;
+      attachEventListeners();
+      if (state.currentPage === 'historical') {
+        setTimeout(renderCharts, 100);
+      }
+    }
+
+    function renderSidebar() {
+      const bookmarkCount = state.bookmarks.size;
+      return `
+        <aside class="sidebar">
+          <div class="sidebar-brand">
+            <div class="sidebar-brand-logo" onclick="navigate('dashboard')">
+              <div class="sidebar-brand-icon">B</div>
+              <div class="sidebar-brand-text">
+                <div class="sidebar-brand-name">${L('appName')}</div>
+                <div class="sidebar-brand-sub">${L('appSub')}</div>
+              </div>
+            </div>
+          </div>
+          <nav class="sidebar-nav">
+            <div class="sidebar-section-label">${L('sectionMain')}</div>
+            <a class="sidebar-link ${state.currentPage === 'dashboard' ? 'active' : ''}" onclick="navigate('dashboard')">
+              ${ICONS.dashboard}
+              <span>${L('navDashboard')}</span>
+            </a>
+            <a class="sidebar-link ${state.currentPage === 'historical' ? 'active' : ''}" onclick="navigate('historical')">
+              ${ICONS.chart}
+              <span>${L('navHistorical')}</span>
+            </a>
+            <a class="sidebar-link ${state.currentPage === 'saved' ? 'active' : ''}" onclick="navigate('saved')">
+              ${ICONS.bookmark}
+              <span>${L('navSaved')}</span>
+              ${bookmarkCount > 0 ? `<span class="sidebar-badge">${bookmarkCount}</span>` : ''}
+            </a>
+            <div class="sidebar-section-label">${L('sectionTools')}</div>
+            <a class="sidebar-link ${state.currentPage === 'notifications' ? 'active' : ''}" onclick="navigate('notifications')">
+              ${ICONS.bell}
+              <span>${L('navSettings')}</span>
+            </a>
+          </nav>
+          <div class="sidebar-footer">
+            <div class="lang-toggle">
+              <button class="lang-btn ${state.language === 'th' ? 'active' : ''}" onclick="toggleLanguage('th')">🇹🇭 ไทย</button>
+              <button class="lang-btn ${state.language === 'en' ? 'active' : ''}" onclick="toggleLanguage('en')">🇺🇸 EN</button>
+            </div>
+          </div>
+        </aside>
+      `;
+    }
+
+    function renderTopbar() {
+      const pages = {
+        dashboard: L('navDashboard'),
+        detail: L('projectDetail'),
+        historical: L('navHistorical'),
+        saved: L('navSaved'),
+        notifications: L('navSettings'),
+      };
+      return `
+        <header class="topbar">
+          <div class="topbar-breadcrumb">
+            <span style="cursor:pointer" onclick="navigate('dashboard')">${L('breadcrumbHome')}</span>
+            ${state.currentPage !== 'dashboard' ? `${ICONS.chevronRight}<span>${pages[state.currentPage]}</span>` : ''}
+          </div>
+          <div class="topbar-spacer"></div>
+          <div class="topbar-actions">
+            <button class="topbar-icon-btn" onclick="navigate('notifications')" title="${L('navSettings')}">
+              ${ICONS.bell}
+              <span class="notif-dot"></span>
+            </button>
+            <div class="topbar-avatar">BM</div>
+          </div>
+        </header>
+      `;
+    }
+
+    function renderPage() {
+      switch (state.currentPage) {
+        case 'dashboard': return renderDashboard();
+        case 'detail': return renderDetail();
+        case 'historical': return renderHistorical();
+        case 'saved': return renderSaved();
+        case 'notifications': return renderNotifications();
+        default: return renderDashboard();
+      }
+    }
+
+    // ========== DASHBOARD ==========
+    function renderDashboard() {
+      const projects = getFilteredProjects();
+      const closingCount = PROJECTS.filter(p => isClosingSoon(p.deadline)).length;
+      const newCount = PROJECTS.filter(p => isNew(p.publishDate)).length;
+      const totalBudget = PROJECTS.reduce((s, p) => s + p.budget, 0);
+
+      const depts = [...new Set(PROJECTS.map(p => p.department.th))];
+
+      return `
+        <div class="page-content" id="dashboard-page">
+          <div class="page-header">
+            <h1 class="page-title">${L('dashboardTitle')}</h1>
+            <p class="page-subtitle">${L('dashboardSub')}</p>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">${L('totalOpps')}</span>
+                <div class="stat-card-icon blue">${ICONS.target}</div>
+              </div>
+              <div class="stat-card-value">${PROJECTS.length}</div>
+              <div class="stat-card-change positive">+${newCount} ${state.language === 'th' ? 'รายการใหม่สัปดาห์นี้' : 'new this week'}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">${L('closingSoon')}</span>
+                <div class="stat-card-icon amber">${ICONS.clock}</div>
+              </div>
+              <div class="stat-card-value">${closingCount}</div>
+              <div class="stat-card-change neutral">${state.language === 'th' ? 'ภายใน 7 วัน' : 'within 7 days'}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">${L('newPublished')}</span>
+                <div class="stat-card-icon green">${ICONS.star}</div>
+              </div>
+              <div class="stat-card-value">${newCount}</div>
+              <div class="stat-card-change positive">${state.language === 'th' ? 'ใน 3 วันที่ผ่านมา' : 'in the past 3 days'}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">${L('totalBudget')}</span>
+                <div class="stat-card-icon teal">${ICONS.dollarSign}</div>
+              </div>
+              <div class="stat-card-value">${formatBudget(totalBudget)}</div>
+              <div class="stat-card-change neutral">${PROJECTS.length} ${state.language === 'th' ? 'โครงการ' : 'projects'}</div>
+            </div>
+          </div>
+
+          <div class="search-filter-bar">
+            <div class="search-input-wrapper">
+              ${ICONS.search}
+              <input type="text" class="search-input" id="searchInput" placeholder="${L('searchPlaceholder')}" value="${state.searchQuery}">
+            </div>
+            <select class="filter-select" id="filterDept">
+              <option value="">${L('allDepts')}</option>
+              ${depts.map(d => `<option value="${d}" ${state.filters.department === d ? 'selected' : ''}>${d}</option>`).join('')}
+            </select>
+            <select class="filter-select" id="filterCategory">
+              <option value="">${L('allCategories')}</option>
+              ${CATEGORIES.map(c => `<option value="${c}" ${state.filters.category === c ? 'selected' : ''}>${CATEGORY_LABELS[state.language][c]}</option>`).join('')}
+            </select>
+            <select class="filter-select" id="filterBudget">
+              <option value="">${L('allBudgets')}</option>
+              <option value="under5m" ${state.filters.budget === 'under5m' ? 'selected' : ''}>${L('under5m')}</option>
+              <option value="5to10" ${state.filters.budget === '5to10' ? 'selected' : ''}>${L('range5to10')}</option>
+              <option value="10to20" ${state.filters.budget === '10to20' ? 'selected' : ''}>${L('range10to20')}</option>
+              <option value="above20m" ${state.filters.budget === 'above20m' ? 'selected' : ''}>${L('above20m')}</option>
+            </select>
+            <select class="filter-select" id="filterDeadline">
+              <option value="">${L('allDeadlines')}</option>
+              <option value="within7" ${state.filters.deadline === 'within7' ? 'selected' : ''}>${L('within7days')}</option>
+              <option value="within30" ${state.filters.deadline === 'within30' ? 'selected' : ''}>${L('within30days')}</option>
+              <option value="moreThan30" ${state.filters.deadline === 'moreThan30' ? 'selected' : ''}>${L('moreThan30')}</option>
+            </select>
+          </div>
+
+          ${projects.length === 0 ? `
+            <div class="no-results">
+              ${ICONS.search}
+              <h3>${L('noResults')}</h3>
+              <p>${L('noResultsDesc')}</p>
+            </div>
+          ` : `
+            <div class="projects-grid">
+              ${projects.map(p => renderProjectCard(p)).join('')}
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function renderProjectCard(project) {
+      const isBookmarked = state.bookmarks.has(project.id);
+      const closing = isClosingSoon(project.deadline);
+      const isNewItem = isNew(project.publishDate);
+      const days = daysUntil(project.deadline);
+      const catClass = getCategoryClass(project.category);
+      const catLabel = CATEGORY_LABELS[state.language][project.category];
+
+      return `
+        <div class="project-card" onclick="navigate('detail', ${project.id})">
+          <div class="project-card-header">
+            <div class="project-card-tags">
+              <span class="tag software">${L('softwareProject')}</span>
+              <span class="tag ${catClass}">${catLabel}</span>
+              ${closing ? `<span class="tag closing-soon">⏰ ${L('closingSoonTag')}</span>` : ''}
+              ${isNewItem ? `<span class="tag new">✨ ${L('newTag')}</span>` : ''}
+            </div>
+            <button class="bookmark-btn ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(${project.id}, event)">
+              ${isBookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
+            </button>
+          </div>
+          <h3 class="project-card-title">${getLocalizedText(project.title)}</h3>
+          <div class="project-card-dept">
+            ${ICONS.building}
+            ${getLocalizedText(project.department)}
+          </div>
+          <div class="project-card-meta">
+            <div class="meta-item">
+              <span class="meta-label">${L('budget')}</span>
+              <span class="meta-value budget">${formatBudget(project.budget)}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">${L('deadline')}</span>
+              <span class="meta-value ${closing ? 'deadline-soon' : ''}">${formatDate(project.deadline)}${closing ? ` (${days}${state.language === 'th' ? ' วัน' : 'd'})` : ''}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">${L('publishDate')}</span>
+              <span class="meta-value">${formatDate(project.publishDate)}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">${L('procurementType')}</span>
+              <span class="meta-value">${project.procurementType}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ========== DETAIL PAGE ==========
+    function renderDetail() {
+      const project = PROJECTS.find(p => p.id === state.selectedProjectId);
+      if (!project) return '<div class="page-content"><p>Project not found</p></div>';
+
+      const isBookmarked = state.bookmarks.has(project.id);
+      const catClass = getCategoryClass(project.category);
+      const catLabel = CATEGORY_LABELS[state.language][project.category];
+      const closing = isClosingSoon(project.deadline);
+      const isNewItem = isNew(project.publishDate);
+      const budgetStatus = getBudgetStatus(project.budget, project.historicalAvg);
+      const budgetPct = (project.budget / Math.max(project.budget, project.historicalAvg) * 100);
+      const avgPct = (project.historicalAvg / Math.max(project.budget, project.historicalAvg) * 100);
+
+      const statusLabel = budgetStatus === 'above' ? L('aboveAvg') : budgetStatus === 'below' ? L('belowAvg') : L('withinRange');
+      const statusIcon = budgetStatus === 'above' ? ICONS.trendUp : budgetStatus === 'below' ? ICONS.trendDown : ICONS.check;
+
+      return `
+        <div class="page-content">
+          <button class="detail-back-btn" onclick="navigate('dashboard')">
+            ${ICONS.arrowLeft}
+            ${L('backToList')}
+          </button>
+
+          <div class="detail-grid">
+            <div class="detail-main">
+              <!-- Hero Card -->
+              <div class="detail-card detail-hero">
+                <div class="detail-hero-tags">
+                  <span class="tag software">${L('softwareProject')}</span>
+                  <span class="tag ${catClass}">${catLabel}</span>
+                  ${closing ? `<span class="tag closing-soon">⏰ ${L('closingSoonTag')}</span>` : ''}
+                  ${isNewItem ? `<span class="tag new">✨ ${L('newTag')}</span>` : ''}
+                </div>
+                <h1 class="detail-hero-title">${getLocalizedText(project.title)}</h1>
+                <div class="detail-hero-dept">
+                  ${ICONS.building}
+                  ${getLocalizedText(project.department)}
+                </div>
+                <div class="detail-meta-grid">
+                  <div class="detail-meta-item">
+                    <div class="meta-label">${L('budget')}</div>
+                    <div class="meta-value budget">${formatBudgetFull(project.budget)}</div>
+                  </div>
+                  <div class="detail-meta-item">
+                    <div class="meta-label">${L('procurementType')}</div>
+                    <div class="meta-value">${project.procurementType}</div>
+                  </div>
+                  <div class="detail-meta-item">
+                    <div class="meta-label">${L('publishDate')}</div>
+                    <div class="meta-value">${formatDate(project.publishDate)}</div>
+                  </div>
+                  <div class="detail-meta-item">
+                    <div class="meta-label">${L('deadline')}</div>
+                    <div class="meta-value ${closing ? 'deadline-soon' : ''}">${formatDate(project.deadline)}</div>
+                  </div>
+                </div>
+                <div class="detail-hero-actions">
+                  <button class="btn btn-primary" onclick="alert('${state.language === 'th' ? 'กำลังดาวน์โหลดเอกสาร TOR (Demo)' : 'Downloading TOR document (Demo)'}')">
+                    ${ICONS.download}
+                    ${L('downloadTOR')}
+                  </button>
+                  <button class="btn btn-bookmark ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(${project.id})">
+                    ${isBookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
+                    ${isBookmarked ? L('saved') : L('saveBookmark')}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div class="detail-card">
+                <h2 class="detail-card-title">
+                  ${ICONS.file}
+                  ${L('projectDesc')}
+                </h2>
+                <p class="description-text">${getLocalizedText(project.description)}</p>
+              </div>
+
+              <!-- Scope of Work -->
+              <div class="detail-card">
+                <h2 class="detail-card-title">
+                  ${ICONS.target}
+                  ${L('scopeOfWork')}
+                </h2>
+                <ul class="scope-list">
+                  ${getLocalizedText(project.scope).map(item => `
+                    <li class="scope-item">
+                      <span class="scope-bullet">●</span>
+                      <span>${item}</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+
+              <!-- Qualifications (Prominent) -->
+              <div class="detail-card qualifications-card">
+                <div class="qualifications-badge">
+                  ${ICONS.alertTriangle}
+                  ${L('qualImportant')}
+                </div>
+                <h2 class="detail-card-title" style="color: var(--amber-600)">
+                  ${ICONS.shield}
+                  ${L('bidderQualifications')} (คุณสมบัติของผู้เสนอราคา)
+                </h2>
+                <ul class="qualification-list">
+                  ${getLocalizedText(project.qualifications).map((q, i) => `
+                    <li class="qualification-item">
+                      <span class="qi-num">${i + 1}</span>
+                      <span>${q}</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="detail-sidebar-col">
+              <!-- Budget Comparison -->
+              <div class="detail-card budget-comparison">
+                <h2 class="detail-card-title">
+                  ${ICONS.chart}
+                  ${L('budgetComparison')}
+                </h2>
+                <div class="budget-comparison-indicator ${budgetStatus}">
+                  ${statusIcon}
+                  <span>${statusLabel}</span>
+                </div>
+                <div class="budget-bar-chart">
+                  <div class="budget-bar-row">
+                    <div class="budget-bar-label">${L('currentProject')}</div>
+                    <div class="budget-bar-track">
+                      <div class="budget-bar-fill current" style="width:${budgetPct}%">${formatBudget(project.budget)}</div>
+                    </div>
+                  </div>
+                  <div class="budget-bar-row">
+                    <div class="budget-bar-label">${L('historicalAvg')}</div>
+                    <div class="budget-bar-track">
+                      <div class="budget-bar-fill avg" style="width:${avgPct}%">${formatBudget(project.historicalAvg)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:16px; text-align:center">
+                  <button class="btn btn-secondary" onclick="navigate('historical')" style="width:100%; justify-content: center;">
+                    ${ICONS.chart}
+                    ${state.language === 'th' ? 'ดูวิเคราะห์ราคาย้อนหลัง' : 'View Historical Analysis'}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Info -->
+              <div class="detail-card">
+                <h2 class="detail-card-title">
+                  ${ICONS.info}
+                  ${state.language === 'th' ? 'ข้อมูลสรุป' : 'Quick Summary'}
+                </h2>
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                  <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+                    <span style="font-size:12.5px;color:var(--gray-500)">${L('category')}</span>
+                    <span class="tag ${catClass}">${catLabel}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+                    <span style="font-size:12.5px;color:var(--gray-500)">${L('procurementType')}</span>
+                    <span style="font-size:13px;font-weight:600">${project.procurementType}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+                    <span style="font-size:12.5px;color:var(--gray-500)">${state.language === 'th' ? 'เหลือเวลา' : 'Time Left'}</span>
+                    <span style="font-size:13px;font-weight:600;${closing ? 'color:var(--amber-600)' : ''}">${daysUntil(project.deadline)} ${state.language === 'th' ? 'วัน' : 'days'}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                    <span style="font-size:12.5px;color:var(--gray-500)">${state.language === 'th' ? 'สถานะ' : 'Status'}</span>
+                    <span style="font-size:13px;font-weight:600;color:var(--green-600)">${state.language === 'th' ? 'เปิดรับข้อเสนอ' : 'Open for Bids'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ========== HISTORICAL PAGE ==========
+    function renderHistorical() {
+      const historicalData = getFilteredHistorical();
+      const allCurrent = PROJECTS;
+      const depts = [...new Set(HISTORICAL_DATA.map(d => d.department.th))];
+      const years = [...new Set(HISTORICAL_DATA.map(d => d.year))].sort((a, b) => b - a);
+
+      return `
+        <div class="page-content">
+          <div class="page-header">
+            <h1 class="page-title">${L('historicalTitle')}</h1>
+            <p class="page-subtitle">${L('historicalSub')}</p>
+          </div>
+
+          <!-- Budget Comparison Chart -->
+          <div class="chart-container">
+            <div class="chart-header">
+              <h2 class="chart-title">${L('budgetChart')}</h2>
+              <div class="chart-filters">
+                <select class="filter-select" id="histFilterCategory">
+                  <option value="">${L('allCategories')}</option>
+                  ${CATEGORIES.map(c => `<option value="${c}" ${state.historicalFilters.category === c ? 'selected' : ''}>${CATEGORY_LABELS[state.language][c]}</option>`).join('')}
+                </select>
+                <select class="filter-select" id="histFilterDept">
+                  <option value="">${L('allDepts')}</option>
+                  ${depts.map(d => `<option value="${d}" ${state.historicalFilters.department === d ? 'selected' : ''}>${d}</option>`).join('')}
+                </select>
+                <select class="filter-select" id="histFilterYear">
+                  <option value="">${L('allYears')}</option>
+                  ${years.map(y => `<option value="${y}" ${state.historicalFilters.year == y ? 'selected' : ''}>${y + (state.language === 'th' ? + 543 : 0)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <canvas id="budgetChart" height="300"></canvas>
+          </div>
+
+          <!-- Current Projects vs Historical Average -->
+          <div class="chart-container">
+            <h2 class="chart-title" style="margin-bottom:16px">${state.language === 'th' ? 'โครงการปัจจุบัน vs ค่าเฉลี่ยย้อนหลัง' : 'Current Projects vs Historical Average'}</h2>
+            <canvas id="comparisonChart" height="280"></canvas>
+          </div>
+
+          <!-- Historical Data Table -->
+          <div class="chart-container">
+            <h2 class="chart-title" style="margin-bottom:16px">${state.language === 'th' ? 'ข้อมูลย้อนหลัง' : 'Historical Data'}</h2>
+            <div style="overflow-x:auto">
+              <table class="historical-table">
+                <thead>
+                  <tr>
+                    <th>${L('projectName')}</th>
+                    <th>${L('department')}</th>
+                    <th>${L('category')}</th>
+                    <th>${L('year')}</th>
+                    <th>${L('budget')}</th>
+                    <th>${L('budgetAnalysis')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${historicalData.map(d => {
+                    const catAvg = getCategoryAvg(d.category);
+                    const ratio = d.budget / catAvg;
+                    let outlierClass = 'normal';
+                    let outlierText = state.language === 'th' ? 'ปกติ' : 'Normal';
+                    if (ratio > 1.3) { outlierClass = 'high'; outlierText = state.language === 'th' ? 'สูงกว่าค่าเฉลี่ย' : 'Above Avg'; }
+                    if (ratio < 0.7) { outlierClass = 'low'; outlierText = state.language === 'th' ? 'ต่ำกว่าค่าเฉลี่ย' : 'Below Avg'; }
+                    return `
+                      <tr>
+                        <td style="font-weight:500">${getLocalizedText(d.title)}</td>
+                        <td>${getLocalizedText(d.department)}</td>
+                        <td><span class="tag ${getCategoryClass(d.category)}">${CATEGORY_LABELS[state.language][d.category]}</span></td>
+                        <td>${d.year + (state.language === 'th' ? 543 : 0)}</td>
+                        <td style="font-weight:600">${formatBudget(d.budget)}</td>
+                        <td><span class="outlier-badge ${outlierClass}">${outlierText}</span></td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getCategoryAvg(category) {
+      const items = HISTORICAL_DATA.filter(d => d.category === category);
+      if (items.length === 0) return 0;
+      return items.reduce((s, d) => s + d.budget, 0) / items.length;
+    }
+
+    function renderCharts() {
+      // Destroy existing charts
+      Chart.helpers.each(Chart.instances, (instance) => instance.destroy());
+
+      const historicalData = getFilteredHistorical();
+
+      // Chart 1: Historical budgets bar chart
+      const ctx1 = document.getElementById('budgetChart');
+      if (ctx1) {
+        new Chart(ctx1.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: historicalData.map(d => {
+              const text = getLocalizedText(d.title);
+              return text.length > 30 ? text.substring(0, 30) + '...' : text;
+            }),
+            datasets: [{
+              label: state.language === 'th' ? 'งบประมาณ (ล้านบาท)' : 'Budget (M THB)',
+              data: historicalData.map(d => d.budget / 1000000),
+              backgroundColor: historicalData.map(d => {
+                const avg = getCategoryAvg(d.category);
+                const ratio = d.budget / avg;
+                if (ratio > 1.3) return 'rgba(239, 68, 68, 0.7)';
+                if (ratio < 0.7) return 'rgba(59, 130, 246, 0.7)';
+                return 'rgba(16, 185, 129, 0.7)';
+              }),
+              borderColor: historicalData.map(d => {
+                const avg = getCategoryAvg(d.category);
+                const ratio = d.budget / avg;
+                if (ratio > 1.3) return 'rgb(239, 68, 68)';
+                if (ratio < 0.7) return 'rgb(59, 130, 246)';
+                return 'rgb(16, 185, 129)';
+              }),
+              borderWidth: 1,
+              borderRadius: 6,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.parsed.y.toFixed(1)}M THB`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: state.language === 'th' ? 'งบประมาณ (ล้านบาท)' : 'Budget (M THB)',
+                  font: { family: 'Noto Sans Thai, Inter, sans-serif' }
+                },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              },
+              x: {
+                grid: { display: false },
+                ticks: {
+                  font: { size: 10, family: 'Noto Sans Thai, Inter, sans-serif' },
+                  maxRotation: 45
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Chart 2: Current vs historical average
+      const ctx2 = document.getElementById('comparisonChart');
+      if (ctx2) {
+        new Chart(ctx2.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: PROJECTS.map(p => {
+              const text = getLocalizedText(p.title);
+              return text.length > 25 ? text.substring(0, 25) + '...' : text;
+            }),
+            datasets: [
+              {
+                label: state.language === 'th' ? 'งบประมาณโครงการ' : 'Project Budget',
+                data: PROJECTS.map(p => p.budget / 1000000),
+                backgroundColor: 'rgba(20, 184, 166, 0.7)',
+                borderColor: 'rgb(20, 184, 166)',
+                borderWidth: 1,
+                borderRadius: 6,
+              },
+              {
+                label: state.language === 'th' ? 'ค่าเฉลี่ยย้อนหลัง' : 'Historical Average',
+                data: PROJECTS.map(p => p.historicalAvg / 1000000),
+                backgroundColor: 'rgba(148, 163, 184, 0.5)',
+                borderColor: 'rgb(148, 163, 184)',
+                borderWidth: 1,
+                borderRadius: 6,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  font: { family: 'Noto Sans Thai, Inter, sans-serif', size: 12 },
+                  usePointStyle: true,
+                  pointStyle: 'rectRounded'
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}M THB`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: state.language === 'th' ? 'ล้านบาท' : 'M THB',
+                  font: { family: 'Noto Sans Thai, Inter, sans-serif' }
+                },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              },
+              x: {
+                grid: { display: false },
+                ticks: {
+                  font: { size: 9, family: 'Noto Sans Thai, Inter, sans-serif' },
+                  maxRotation: 45
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // ========== SAVED PAGE ==========
+    function renderSaved() {
+      const savedProjects = PROJECTS.filter(p => state.bookmarks.has(p.id));
+
+      return `
+        <div class="page-content">
+          <div class="page-header">
+            <h1 class="page-title">${L('savedTitle')}</h1>
+            <p class="page-subtitle">${L('savedSub')}</p>
+          </div>
+
+          ${savedProjects.length === 0 ? `
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                ${ICONS.bookmark}
+              </div>
+              <h3>${L('noSaved')}</h3>
+              <p>${L('noSavedDesc')}</p>
+              <button class="btn btn-primary" onclick="navigate('dashboard')" style="margin-top:20px">
+                ${ICONS.dashboard}
+                ${state.language === 'th' ? 'ดูโอกาสทั้งหมด' : 'Browse Opportunities'}
+              </button>
+            </div>
+          ` : `
+            <div class="projects-grid">
+              ${savedProjects.map(p => renderProjectCard(p)).join('')}
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    // ========== NOTIFICATIONS PAGE ==========
+    function renderNotifications() {
+      return `
+        <div class="page-content">
+          <div class="page-header">
+            <h1 class="page-title">${L('settingsTitle')}</h1>
+            <p class="page-subtitle">${L('settingsSub')}</p>
+          </div>
+
+          <div class="settings-grid">
+            <!-- Email Notifications -->
+            <div class="settings-card">
+              <h3 class="settings-card-title">${L('emailNotif')}</h3>
+              <p class="settings-card-desc">${L('emailNotifDesc')}</p>
+
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">${L('dailyDigest')}</div>
+                  <div class="toggle-sublabel">${L('dailyDigestDesc')}</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="toggleDailyDigest" ${state.settings.dailyDigest ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">${L('closingAlert')}</div>
+                  <div class="toggle-sublabel">${L('closingAlertDesc')}</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="toggleClosingAlert" ${state.settings.closingAlert ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">${L('newProjectAlert')}</div>
+                  <div class="toggle-sublabel">${L('newProjectAlertDesc')}</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="toggleNewProject" ${state.settings.newProjectAlert ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Budget Preference -->
+            <div class="settings-card">
+              <h3 class="settings-card-title">${L('budgetPref')}</h3>
+              <p class="settings-card-desc">${L('budgetPrefDesc')}</p>
+              <div class="budget-range-inputs">
+                <input type="number" id="budgetMin" placeholder="${L('budgetMin')}" value="${state.settings.budgetMin}">
+                <span>—</span>
+                <input type="number" id="budgetMax" placeholder="${L('budgetMax')}" value="${state.settings.budgetMax}">
+              </div>
+            </div>
+
+            <!-- Interest Tags (Full Width) -->
+            <div class="settings-card" style="grid-column: 1 / -1;">
+              <h3 class="settings-card-title">${L('interestTags')}</h3>
+              <p class="settings-card-desc">${L('interestTagsDesc')}</p>
+              <div class="interest-tags-grid">
+                ${CATEGORIES.map(c => `
+                  <button class="interest-tag ${state.settings.interestTags.includes(c) ? 'active' : ''}" data-tag="${c}">
+                    ${state.settings.interestTags.includes(c) ? '✓ ' : ''}${CATEGORY_LABELS[state.language][c]}
+                  </button>
+                `).join('')}
+                <button class="interest-tag ${state.settings.interestTags.includes('Cloud') ? 'active' : ''}" data-tag="Cloud">
+                  ${state.settings.interestTags.includes('Cloud') ? '✓ ' : ''}${state.language === 'th' ? 'ระบบ Cloud' : 'Cloud'}
+                </button>
+                <button class="interest-tag ${state.settings.interestTags.includes('Security') ? 'active' : ''}" data-tag="Security">
+                  ${state.settings.interestTags.includes('Security') ? '✓ ' : ''}${state.language === 'th' ? 'ความปลอดภัย' : 'Security'}
+                </button>
+                <button class="interest-tag ${state.settings.interestTags.includes('IoT') ? 'active' : ''}" data-tag="IoT">
+                  ${state.settings.interestTags.includes('IoT') ? '✓ ' : ''}IoT
+                </button>
+                <button class="interest-tag ${state.settings.interestTags.includes('Blockchain') ? 'active' : ''}" data-tag="Blockchain">
+                  ${state.settings.interestTags.includes('Blockchain') ? '✓ ' : ''}Blockchain
+                </button>
+              </div>
+              <div class="settings-save-btn">
+                <button class="btn btn-primary" onclick="saveSettings()">
+                  ${ICONS.check}
+                  ${L('saveSettings')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function saveSettings() {
+      showToast(L('settingsSaved'), ICONS.check);
+    }
+
+    // ========== EVENT LISTENERS ==========
+    function attachEventListeners() {
+      // Search
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          state.searchQuery = e.target.value;
+          debounceRenderCards();
+        });
+      }
+
+      // Filters
+      ['filterDept', 'filterCategory', 'filterBudget', 'filterDeadline'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('change', (e) => {
+            const key = id.replace('filter', '').toLowerCase();
+            const keyMap = { dept: 'department', category: 'category', budget: 'budget', deadline: 'deadline' };
+            state.filters[keyMap[key]] = e.target.value;
+            render();
+          });
+        }
+      });
+
+      // Historical filters
+      ['histFilterCategory', 'histFilterDept', 'histFilterYear'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('change', (e) => {
+            const key = id.replace('histFilter', '').toLowerCase();
+            state.historicalFilters[key] = e.target.value;
+            render();
+          });
+        }
+      });
+
+      // Settings toggles
+      const toggleMap = {
+        toggleDailyDigest: 'dailyDigest',
+        toggleClosingAlert: 'closingAlert',
+        toggleNewProject: 'newProjectAlert',
+      };
+      Object.entries(toggleMap).forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('change', (e) => {
+            state.settings[key] = e.target.checked;
+          });
+        }
+      });
+
+      // Budget inputs
+      const budgetMin = document.getElementById('budgetMin');
+      const budgetMax = document.getElementById('budgetMax');
+      if (budgetMin) budgetMin.addEventListener('input', (e) => { state.settings.budgetMin = e.target.value; });
+      if (budgetMax) budgetMax.addEventListener('input', (e) => { state.settings.budgetMax = e.target.value; });
+
+      // Interest tags
+      document.querySelectorAll('.interest-tag').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tag = btn.dataset.tag;
+          const idx = state.settings.interestTags.indexOf(tag);
+          if (idx > -1) {
+            state.settings.interestTags.splice(idx, 1);
+          } else {
+            state.settings.interestTags.push(tag);
+          }
+          render();
+        });
+      });
+    }
+
+    // Debounce for search
+    let renderTimer;
+    function debounceRenderCards() {
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(() => {
+        const projects = getFilteredProjects();
+        const grid = document.querySelector('.projects-grid');
+        const noResults = document.querySelector('.no-results');
+        if (grid) {
+          if (projects.length === 0) {
+            grid.style.display = 'none';
+            if (!noResults) {
+              grid.insertAdjacentHTML('afterend', `
+                <div class="no-results">
+                  ${ICONS.search}
+                  <h3>${L('noResults')}</h3>
+                  <p>${L('noResultsDesc')}</p>
+                </div>
+              `);
+            }
+          } else {
+            grid.style.display = '';
+            grid.innerHTML = projects.map(p => renderProjectCard(p)).join('');
+            if (noResults) noResults.remove();
+            // Re-attach card click listeners
+            grid.querySelectorAll('.project-card').forEach(card => {
+              card.addEventListener('click', () => {
+                const id = parseInt(card.querySelector('.bookmark-btn')?.getAttribute('onclick')?.match(/\d+/)?.[0]);
+              });
+            });
+          }
+        }
+      }, 200);
+    }
+
+    // ========== INITIAL RENDER ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      render();
+    });
+  </script>
+</body>
+</html>
