@@ -1,5 +1,5 @@
 // ==========================================================================
-// BMA SOFTWARE PROCUREMENT INTELLIGENCE PLATFORM - JAVASCRIPT (WITH DARK MODE)
+// BMA SOFTWARE PROCUREMENT INTELLIGENCE PLATFORM - GLOBAL APP ORCHESTRATOR
 // ==========================================================================
 
 // ========== ICONS (SVG) ==========
@@ -31,7 +31,6 @@ const ICONS = {
   target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
   dollarSign: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
   externalLink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
-  // Theme Toggle Icons
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
   moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
 };
@@ -42,7 +41,7 @@ const LABELS = {
     appName: 'BMA Procurement',
     appSub: 'Intelligence Platform',
     navHome: 'หน้าหลัก',
-    navDashboard: 'ภาพรวมโอกาส',
+    navDashboard: 'โอกาสการจัดซื้อ',
     navHistorical: 'วิเคราะห์ราคาย้อนหลัง',
     navSaved: 'รายการที่บันทึก',
     navSettings: 'ตั้งค่าการแจ้งเตือน',
@@ -132,16 +131,15 @@ const LABELS = {
     moreThan30: 'มากกว่า 30 วัน',
     allYears: 'ทุกปี',
     breadcrumbHome: 'หน้าแรก',
-    // Landing specific translation strings
     heroBadge: 'ระบบอัตโนมัติ (AI-ASSISTED PORTAL)',
     heroTitle: 'วิเคราะห์และกลั่นกรองประกาศจัดซื้อจัดจ้างซอฟต์แวร์ กทม.',
     heroSubtitle: 'แพลตฟอร์มข่าวกรองสำหรับการสกัดขอบเขตงาน (TOR) วิเคราะห์เปรียบเทียบราคา และประเมินคุณสมบัติสำหรับผู้ประกอบการเทคโนโลยี',
     searchBtn: 'สืบค้นข้อมูล',
     exploreTitle: 'ขีดความสามารถหลักของระบบ',
-    cap1Title: 'สกัดข้อมูลขอบเขตงาน (TOR)',
+    cap1Title: 'สกัดข้อมูล TOR',
     cap1Desc: 'ใช้ AI สกัดขอบเขตงาน งบประมาณ และกำหนดการยื่นข้อเสนออัตโนมัติจากเอกสาร PDF',
     cap1Link: 'ค้นหาประกาศจัดซื้อล่าสุด →',
-    cap2Title: 'ตรวจสอบคุณสมบัติผู้เสนอราคา',
+    cap2Title: 'ตรวจสอบคุณสมบัติ',
     cap2Desc: 'เครื่องมือตรวจสอบเกณฑ์คุณสมบัติ (Go / No-Go Checklist) ประเมินความเป็นไปได้เชิงธุรกิจ',
     cap2Link: 'เปิดเครื่องมือเช็คลิสต์ →',
     cap3Title: 'แบบจำลองเปรียบเทียบราคา',
@@ -244,16 +242,15 @@ const LABELS = {
     moreThan30: 'More than 30 days',
     allYears: 'All Years',
     breadcrumbHome: 'Home',
-    // Landing specific translation strings
     heroBadge: 'AI-ASSISTED PORTAL',
     heroTitle: 'Analyze & Filter BMA Software Procurement Opportunities',
     heroSubtitle: 'BMA intelligence portal offering automated Terms of Reference (TOR) parameter extraction, bidder qualifications checking, and historical price benchmarking models.',
     searchBtn: 'Search',
     exploreTitle: 'Core Capabilities',
-    cap1Title: 'TOR Parameters Extraction',
+    cap1Title: 'TOR Extraction',
     cap1Desc: 'Automatically extract project goals, budgets, deadlines, and requirements from scanned PDF files using AI models.',
     cap1Link: 'Browse Active Projects →',
-    cap2Title: 'Bidder Eligibility Evaluator',
+    cap2Title: 'Eligibility Evaluator',
     cap2Desc: 'Check credential metrics dynamically using checklist models to evaluate qualifications prior to bidding.',
     cap2Link: 'Open Checklist Evaluator →',
     cap3Title: 'Price Comparison Models',
@@ -756,7 +753,7 @@ const state = {
   currentPage: 'home', 
   selectedProjectId: null,
   searchQuery: '',
-  theme: 'light', // Light mode by default
+  theme: 'light', 
   filters: {
     department: '',
     category: '',
@@ -856,68 +853,6 @@ function toggleTheme() {
   render();
 }
 
-// ========== FILTER LOGIC ==========
-function getFilteredProjects() {
-  let projects = [...PROJECTS];
-
-  if (state.searchQuery) {
-    const q = state.searchQuery.toLowerCase();
-    projects = projects.filter(p => 
-      getLocalizedText(p.title).toLowerCase().includes(q) ||
-      getLocalizedText(p.department).toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q)
-    );
-  }
-
-  if (state.filters.department) {
-    projects = projects.filter(p => p.department.th === state.filters.department);
-  }
-
-  if (state.filters.category) {
-    projects = projects.filter(p => p.category === state.filters.category);
-  }
-
-  if (state.filters.budget) {
-    projects = projects.filter(p => {
-      switch (state.filters.budget) {
-        case 'under5m': return p.budget < 5000000;
-        case '5to10': return p.budget >= 5000000 && p.budget <= 10000000;
-        case '10to20': return p.budget >= 10000000 && p.budget <= 20000000;
-        case 'above20m': return p.budget > 20000000;
-        default: return true;
-      }
-    });
-  }
-
-  if (state.filters.deadline) {
-    projects = projects.filter(p => {
-      const d = daysUntil(p.deadline);
-      switch (state.filters.deadline) {
-        case 'within7': return d >= 0 && d <= 7;
-        case 'within30': return d >= 0 && d <= 30;
-        case 'moreThan30': return d > 30;
-        default: return true;
-      }
-    });
-  }
-
-  return projects;
-}
-
-function getFilteredHistorical() {
-  let data = [...HISTORICAL_DATA];
-  if (state.historicalFilters.category) {
-    data = data.filter(d => d.category === state.historicalFilters.category);
-  }
-  if (state.historicalFilters.department) {
-    data = data.filter(d => d.department.th === state.historicalFilters.department);
-  }
-  if (state.historicalFilters.year) {
-    data = data.filter(d => d.year === parseInt(state.historicalFilters.year));
-  }
-  return data;
-}
-
 // ========== NAVIGATION ==========
 function navigate(page, projectId) {
   state.currentPage = page;
@@ -951,22 +886,7 @@ function showToast(message, icon) {
   setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
-// ========== INTERACTIVE ELIGIBILITY CHECKLIST LOGIC ==========
-function toggleEligibilityCheck(projectId, index) {
-  if (!state.eligibilityChecks[projectId]) {
-    state.eligibilityChecks[projectId] = [];
-  }
-  const checks = state.eligibilityChecks[projectId];
-  const idx = checks.indexOf(index);
-  if (idx > -1) {
-    checks.splice(idx, 1);
-  } else {
-    checks.push(index);
-  }
-  render();
-}
-
-// ========== RENDER APP ==========
+// ========== GLOBAL RENDER & ORCHESTRATION ==========
 function render() {
   const app = document.getElementById('app');
   app.innerHTML = renderSidebar() + `<div class="main-content">${renderTopbar()}${renderPage()}</div>`;
@@ -1014,11 +934,8 @@ function renderSidebar() {
           <span>${L('navSettings')}</span>
         </a>
       </nav>
-      <div class="sidebar-footer">
-        <div class="lang-toggle">
-          <button class="lang-btn ${state.language === 'th' ? 'active' : ''}" onclick="toggleLanguage('th')">🇹🇭 ไทย</button>
-          <button class="lang-btn ${state.language === 'en' ? 'active' : ''}" onclick="toggleLanguage('en')">🇺🇸 EN</button>
-        </div>
+      <div class="sidebar-footer" style="text-align: center; font-size: 11px; color: var(--gray-400); padding: 12px 20px;">
+        © 2026 TORBIDD Systems
       </div>
     </aside>
   `;
@@ -1041,6 +958,11 @@ function renderTopbar() {
       </div>
       <div class="topbar-spacer"></div>
       <div class="topbar-actions">
+        <!-- Compact Language Selector at Topbar -->
+        <div class="lang-toggle" style="margin-right: 8px;">
+          <button class="lang-btn ${state.language === 'th' ? 'active' : ''}" onclick="toggleLanguage('th')">TH</button>
+          <button class="lang-btn ${state.language === 'en' ? 'active' : ''}" onclick="toggleLanguage('en')">EN</button>
+        </div>
         <button class="topbar-icon-btn" id="themeToggleBtn" onclick="toggleTheme()" title="${state.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}">
           ${state.theme === 'dark' ? ICONS.sun : ICONS.moon}
         </button>
@@ -1064,880 +986,6 @@ function renderPage() {
     case 'notifications': return renderNotifications();
     default: return renderHome();
   }
-}
-
-// ========== PREMIUM LANDING PAGE (HOME) ==========
-function renderHome() {
-  const recentProjects = PROJECTS.slice(0, 2);
-
-  return `
-    <div class="page-content" id="home-page">
-      <!-- Hero Portal Banner -->
-      <div class="hero-section">
-        <div class="hero-content">
-          <span class="hero-badge">
-            ${ICONS.shield}
-            <span>${L('heroBadge')}</span>
-          </span>
-          <h1 class="hero-title">${L('heroTitle')}</h1>
-          <p class="hero-subtitle">${L('heroSubtitle')}</p>
-          <form class="hero-search-bar" id="heroSearchForm">
-            <input type="text" id="heroSearchInput" placeholder="${L('searchPlaceholder')}">
-            <button type="submit">${L('searchBtn')}</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Core Capabilities Segment -->
-      <div class="page-header" style="margin-top: 10px; margin-bottom: 16px;">
-        <h2 class="home-section-title">${L('exploreTitle')}</h2>
-      </div>
-      
-      <div class="landing-grid">
-        <div class="landing-card">
-          <div class="landing-card-icon">
-            ${ICONS.file}
-          </div>
-          <h3 class="landing-card-title">${L('cap1Title')}</h3>
-          <p class="landing-card-desc">${L('cap1Desc')}</p>
-          <a class="landing-card-link" onclick="navigate('dashboard')">${L('cap1Link')}</a>
-        </div>
-        <div class="landing-card">
-          <div class="landing-card-icon">
-            ${ICONS.shield}
-          </div>
-          <h3 class="landing-card-title">${L('cap2Title')}</h3>
-          <p class="landing-card-desc">${L('cap2Desc')}</p>
-          <a class="landing-card-link" onclick="navigate('detail', 1)">${L('cap2Link')}</a>
-        </div>
-        <div class="landing-card">
-          <div class="landing-card-icon">
-            ${ICONS.chart}
-          </div>
-          <h3 class="landing-card-title">${L('cap3Title')}</h3>
-          <p class="landing-card-desc">${L('cap3Desc')}</p>
-          <a class="landing-card-link" onclick="navigate('historical')">${L('cap3Link')}</a>
-        </div>
-      </div>
-
-      <!-- Recent Tenders Segment -->
-      <div class="home-section-header">
-        <h2 class="home-section-title">${L('recentOpps')}</h2>
-        <a class="home-section-link" onclick="navigate('dashboard')">${L('viewAll')} (${PROJECTS.length})</a>
-      </div>
-
-      <div class="recent-projects-list">
-        ${recentProjects.map(p => renderProjectCard(p)).join('')}
-      </div>
-
-      <!-- Footer Disclaimer -->
-      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--gray-200); text-align: center;">
-        <span class="analysis-disclaimer" style="display:inline-block; max-width:800px;">
-          ${state.language === 'th'
-            ? 'ข้อมูลระบบนี้ได้มาจากการสกัดขอบเขตงานเอกสารราชการโดยใช้โมเดล AI กรุณาตรวจสอบเอกสาร TOR ต้นฉบับเพื่อความถูกต้องอย่างเป็นทางการ'
-            : 'Disclaimer: System parameters are extracted from official documents using AI. Always cross-reference against the original TOR files for validation.'}
-        </span>
-      </div>
-    </div>
-  `;
-}
-
-// ========== DASHBOARD PAGE ==========
-function renderDashboard() {
-  const projects = getFilteredProjects();
-  const closingCount = PROJECTS.filter(p => isClosingSoon(p.deadline)).length;
-  const newCount = PROJECTS.filter(p => isNew(p.publishDate)).length;
-  const totalBudget = PROJECTS.reduce((s, p) => s + p.budget, 0);
-
-  const depts = [...new Set(PROJECTS.map(p => p.department.th))];
-
-  return `
-    <div class="page-content" id="dashboard-page">
-      <div class="page-header">
-        <h1 class="page-title">${L('dashboardTitle')}</h1>
-        <p class="page-subtitle">${L('dashboardSub')}</p>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-card-header">
-            <span class="stat-card-label">${L('totalOpps')}</span>
-            <div class="stat-card-icon blue">${ICONS.target}</div>
-          </div>
-          <div class="stat-card-value">${PROJECTS.length}</div>
-          <div class="stat-card-change positive">+${newCount} ${state.language === 'th' ? 'รายการใหม่สัปดาห์นี้' : 'new this week'}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-header">
-            <span class="stat-card-label">${L('closingSoon')}</span>
-            <div class="stat-card-icon amber">${ICONS.clock}</div>
-          </div>
-          <div class="stat-card-value">${closingCount}</div>
-          <div class="stat-card-change neutral">${state.language === 'th' ? 'ภายใน 7 วัน' : 'within 7 days'}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-header">
-            <span class="stat-card-label">${L('newPublished')}</span>
-            <div class="stat-card-icon green">${ICONS.star}</div>
-          </div>
-          <div class="stat-card-value">${newCount}</div>
-          <div class="stat-card-change positive">${state.language === 'th' ? 'ใน 3 วันที่ผ่านมา' : 'in the past 3 days'}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-header">
-            <span class="stat-card-label">${L('totalBudget')}</span>
-            <div class="stat-card-icon teal">${ICONS.dollarSign}</div>
-          </div>
-          <div class="stat-card-value">${formatBudget(totalBudget)}</div>
-          <div class="stat-card-change neutral">${PROJECTS.length} ${state.language === 'th' ? 'โครงการ' : 'projects'}</div>
-        </div>
-      </div>
-
-      <div class="search-filter-bar">
-        <div class="search-input-wrapper">
-          ${ICONS.search}
-          <input type="text" class="search-input" id="searchInput" placeholder="${L('searchPlaceholder')}" value="${state.searchQuery}">
-        </div>
-        <select class="filter-select" id="filterDept">
-          <option value="">${L('allDepts')}</option>
-          ${depts.map(d => `<option value="${d}" ${state.filters.department === d ? 'selected' : ''}>${d}</option>`).join('')}
-        </select>
-        <select class="filter-select" id="filterCategory">
-          <option value="">${L('allCategories')}</option>
-          ${CATEGORIES.map(c => `<option value="${c}" ${state.filters.category === c ? 'selected' : ''}>${CATEGORY_LABELS[state.language][c]}</option>`).join('')}
-        </select>
-        <select class="filter-select" id="filterBudget">
-          <option value="">${L('allBudgets')}</option>
-          <option value="under5m" ${state.filters.budget === 'under5m' ? 'selected' : ''}>${L('under5m')}</option>
-          <option value="5to10" ${state.filters.budget === '5to10' ? 'selected' : ''}>${L('range5to10')}</option>
-          <option value="10to20" ${state.filters.budget === '10to20' ? 'selected' : ''}>${L('range10to20')}</option>
-          <option value="above20m" ${state.filters.budget === 'above20m' ? 'selected' : ''}>${L('above20m')}</option>
-        </select>
-        <select class="filter-select" id="filterDeadline">
-          <option value="">${L('allDeadlines')}</option>
-          <option value="within7" ${state.filters.deadline === 'within7' ? 'selected' : ''}>${L('within7days')}</option>
-          <option value="within30" ${state.filters.deadline === 'within30' ? 'selected' : ''}>${L('within30days')}</option>
-          <option value="moreThan30" ${state.filters.deadline === 'moreThan30' ? 'selected' : ''}>${L('moreThan30')}</option>
-        </select>
-      </div>
-
-      ${projects.length === 0 ? `
-        <div class="no-results">
-          ${ICONS.search}
-          <h3>${L('noResults')}</h3>
-          <p>${L('noResultsDesc')}</p>
-        </div>
-      ` : `
-        <div class="projects-grid">
-          ${projects.map(p => renderProjectCard(p)).join('')}
-        </div>
-      `}
-    </div>
-  `;
-}
-
-function renderProjectCard(project) {
-  const isBookmarked = state.bookmarks.has(project.id);
-  const closing = isClosingSoon(project.deadline);
-  const isNewItem = isNew(project.publishDate);
-  const days = daysUntil(project.deadline);
-  const catClass = getCategoryClass(project.category);
-  const catLabel = CATEGORY_LABELS[state.language][project.category];
-
-  // Dot Status tags
-  let statusTagClass = 'tag open-dot';
-  let statusText = state.language === 'th' ? '● เปิดรับข้อเสนอ' : '● Open';
-  if (closing) {
-    statusTagClass = 'tag closing-soon-dot';
-    statusText = state.language === 'th' ? '● ใกล้ปิดรับ' : '● Closing Soon';
-  } else if (days < 0) {
-    statusTagClass = 'tag closed-dot';
-    statusText = state.language === 'th' ? '● ปิดรับข้อเสนอ' : '● Closed';
-  }
-
-  return `
-    <div class="project-card" onclick="navigate('detail', ${project.id})">
-      <div>
-        <div class="project-card-header">
-          <div class="project-card-tags">
-            <span class="tag software">${L('softwareProject')}</span>
-            <span class="tag category ${catClass}">${catLabel}</span>
-            <span class="${statusTagClass}">${statusText}</span>
-          </div>
-          <button class="bookmark-btn ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(${project.id}, event)">
-            ${isBookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
-          </button>
-        </div>
-        <div class="ai-tag-label">AI classification · Confidence: High</div>
-        <h3 class="project-card-title" style="margin-top: 6px">${getLocalizedText(project.title)}</h3>
-        <div class="project-card-dept">
-          ${ICONS.building}
-          ${getLocalizedText(project.department)}
-        </div>
-      </div>
-      <div>
-        <div class="project-card-meta">
-          <div class="meta-item">
-            <span class="meta-label">${L('budget')}</span>
-            <span class="meta-value budget">${formatBudget(project.budget)}</span>
-            <span style="font-size:10px; color:var(--gray-500)">AI extracted</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">${L('deadline')}</span>
-            <span class="meta-value ${closing ? 'deadline-soon' : ''}">${formatDate(project.deadline)}${closing ? ` (${days}${state.language === 'th' ? ' วัน' : 'd'})` : ''}</span>
-            <span style="font-size:10px; color:var(--gray-500)">AI extracted</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">${L('publishDate')}</span>
-            <span class="meta-value">${formatDate(project.publishDate)}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">${L('procurementType')}</span>
-            <span class="meta-value">${project.procurementType}</span>
-          </div>
-        </div>
-        <div class="source-label">
-          Source: ${project.sourceDocument || 'BMA TOR'} • Updated: 11 Aug 2026
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ========== PROJECT DETAIL PAGE ==========
-function renderDetail() {
-  const project = PROJECTS.find(p => p.id === state.selectedProjectId);
-  if (!project) return '<div class="page-content"><p>Project not found</p></div>';
-
-  const isBookmarked = state.bookmarks.has(project.id);
-  const catClass = getCategoryClass(project.category);
-  const catLabel = CATEGORY_LABELS[state.language][project.category];
-  const closing = isClosingSoon(project.deadline);
-  const isNewItem = isNew(project.publishDate);
-  const days = daysUntil(project.deadline);
-  const budgetStatus = getBudgetStatus(project.budget, project.historicalAvg);
-  
-  // Budget bar scaling calculation
-  const maxVal = Math.max(project.budget, project.historicalAvg);
-  const budgetPct = Math.round((project.budget / maxVal) * 100);
-  const avgPct = Math.round((project.historicalAvg / maxVal) * 100);
-
-  const statusLabel = budgetStatus === 'above' ? L('aboveAvg') : budgetStatus === 'below' ? L('belowAvg') : L('withinRange');
-  const statusIcon = budgetStatus === 'above' ? ICONS.trendUp : budgetStatus === 'below' ? ICONS.trendDown : ICONS.check;
-
-  // Qualifications list and checklist logic
-  const quals = getLocalizedText(project.qualifications);
-  const checkedIndices = state.eligibilityChecks[project.id] || [];
-  const checkedCount = checkedIndices.length;
-  const totalCount = quals.length;
-  const matchPct = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
-  
-  let matchStatusText = '';
-  let matchStatusClass = '';
-  if (matchPct === 100) {
-    matchStatusText = state.language === 'th' ? 'ผ่านเกณฑ์ (Go)' : 'Eligible (Go)';
-    matchStatusClass = 'green';
-  } else if (matchPct >= 60) {
-    matchStatusText = state.language === 'th' ? 'ต้องพิจารณาเพิ่มเติม (Review)' : 'Needs Review';
-    matchStatusClass = 'amber';
-  } else {
-    matchStatusText = state.language === 'th' ? 'คุณสมบัติไม่ครบ (No-Go)' : 'Ineligible (No-Go)';
-    matchStatusClass = 'red';
-  }
-
-  // Dot Status tags
-  let statusTagClass = 'tag open-dot';
-  let statusText = state.language === 'th' ? '● เปิดรับข้อเสนอ' : '● Open';
-  if (closing) {
-    statusTagClass = 'tag closing-soon-dot';
-    statusText = state.language === 'th' ? '● ใกล้ปิดรับ' : '● Closing Soon';
-  } else if (days < 0) {
-    statusTagClass = 'tag closed-dot';
-    statusText = state.language === 'th' ? '● ปิดรับข้อเสนอ' : '● Closed';
-  }
-
-  return `
-    <div class="page-content">
-      <button class="detail-back-btn" onclick="navigate('dashboard')">
-        ${ICONS.arrowLeft}
-        ${L('backToList')}
-      </button>
-
-      <div class="detail-grid">
-        <div class="detail-main">
-          <!-- Hero Card -->
-          <div class="detail-card detail-hero">
-            <div class="detail-hero-tags">
-              <span class="tag software">${L('softwareProject')}</span>
-              <span class="tag category ${catClass}">${catLabel}</span>
-              <span class="${statusTagClass}">${statusText}</span>
-            </div>
-            <h1 class="detail-hero-title">${getLocalizedText(project.title)}</h1>
-            <div class="detail-hero-dept">
-              ${ICONS.building}
-              ${getLocalizedText(project.department)}
-            </div>
-            <div class="detail-meta-grid">
-              <div class="detail-meta-item">
-                <div class="meta-label">${L('budget')}</div>
-                <div class="meta-value budget" style="font-weight: 700">${formatBudgetFull(project.budget)}</div>
-                <span class="ai-extract-label">Extracted from TOR document</span>
-              </div>
-              <div class="detail-meta-item">
-                <div class="meta-label">${L('procurementType')}</div>
-                <div class="meta-value" style="font-weight: 700">${project.procurementType}</div>
-                <span class="ai-extract-label">AI extracted</span>
-              </div>
-              <div class="detail-meta-item">
-                <div class="meta-label">${L('publishDate')}</div>
-                <div class="meta-value" style="font-weight: 700">${formatDate(project.publishDate)}</div>
-                <span class="ai-extract-label">AI extracted</span>
-              </div>
-              <div class="detail-meta-item">
-                <div class="meta-label">${L('deadline')}</div>
-                <div class="meta-value ${closing ? 'deadline-soon' : ''}" style="font-weight: 700">${formatDate(project.deadline)}</div>
-                <span class="ai-extract-label">AI extracted</span>
-              </div>
-            </div>
-            <div class="detail-hero-actions">
-              <button class="btn btn-primary" onclick="alert('${state.language === 'th' ? 'ลิงก์ไปยังเอกสาร TOR กทม. (ต้นฉบับ)' : 'Redirecting to original BMA TOR document (mockup link)'}')">
-                ${ICONS.externalLink}
-                ${L('downloadTOR')}
-              </button>
-              <button class="btn btn-bookmark ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(${project.id})">
-                ${isBookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
-                <span>${isBookmarked ? L('saved') : L('saveBookmark')}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Description -->
-          <div class="detail-card">
-            <h2 class="detail-card-title">
-              ${ICONS.file}
-              <span>${L('projectDesc')}</span>
-            </h2>
-            <p class="description-text">${getLocalizedText(project.description)}</p>
-          </div>
-
-          <!-- Scope of Work -->
-          <div class="detail-card">
-            <h2 class="detail-card-title">
-              ${ICONS.target}
-              <span>${L('scopeOfWork')}</span>
-            </h2>
-            <ul class="scope-list">
-              ${getLocalizedText(project.scope).map(item => `
-                <li class="scope-item">
-                  <span class="scope-bullet">●</span>
-                  <span>${item}</span>
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-
-          <!-- Qualifications (Interactive Bidder Eligibility Checklist) -->
-          <div class="detail-card qualifications-card">
-            <div class="qualifications-badge">
-              ${ICONS.shield}
-              <span>${L('bidderQualifications')}</span>
-            </div>
-            <p style="font-size: 13px; color: var(--gray-700); margin-bottom: 16px; font-weight: 500;">
-              ${state.language === 'th' 
-                ? '💡 เครื่องมือตรวจสอบคุณสมบัติของผู้เสนอราคา: ทำเครื่องหมายคุณสมบัติที่บริษัทของคุณมี เพื่อประเมินความพร้อมเสนอราคา' 
-                : '💡 Bidder Eligibility Checklist: Check the qualifications your organization matches to evaluate proposal compatibility.'}
-            </p>
-
-            <div class="eligibility-checklist">
-              ${quals.map((q, idx) => {
-                const isChecked = checkedIndices.includes(idx);
-                return `
-                  <div class="checklist-item ${isChecked ? 'checked' : ''}" onclick="toggleEligibilityCheck(${project.id}, ${idx})">
-                    <div class="checklist-checkbox">
-                      ${ICONS.check}
-                    </div>
-                    <div class="checklist-text">${q}</div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-
-            <!-- Gauge Panel -->
-            <div class="gauge-wrapper">
-              <div class="gauge-header-text">
-                ${state.language === 'th' ? 'สรุปอัตราความสอดคล้องทางธุรกิจ (Go / No-Go)' : 'Go / No-Go Eligibility Analysis'}
-              </div>
-              <div class="gauge-container">
-                <div class="gauge-fill ${matchPct === 100 ? 'high' : matchPct >= 60 ? 'mid' : ''}" style="width: ${matchPct}%"></div>
-              </div>
-              <div class="gauge-status-row">
-                <div class="gauge-score">${matchPct}%</div>
-                <div class="gauge-badge ${matchStatusClass}">${matchStatusText}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sidebar -->
-        <div class="detail-sidebar-col">
-          <!-- Budget Comparison -->
-          <div class="detail-card budget-comparison">
-            <h2 class="detail-card-title">
-              ${ICONS.chart}
-              <span>${L('budgetComparison')}</span>
-            </h2>
-            <div class="budget-comparison-indicator ${budgetStatus}">
-              ${statusIcon}
-              <span>${statusLabel}</span>
-            </div>
-            <div class="budget-bar-chart">
-              <div class="budget-bar-row">
-                <div class="budget-bar-label">${L('currentProject')}</div>
-                <div class="budget-bar-track">
-                  <div class="budget-bar-fill current" style="width:${budgetPct}%">${formatBudget(project.budget)}</div>
-                </div>
-              </div>
-              <div class="budget-bar-row">
-                <div class="budget-bar-label">${L('historicalAvg')}</div>
-                <div class="budget-bar-track">
-                  <div class="budget-bar-fill avg" style="width:${avgPct}%">${formatBudget(project.historicalAvg)}</div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Analysis Disclaimer -->
-            <span class="analysis-disclaimer">
-              ${state.language === 'th'
-                ? 'การวิเคราะห์เปรียบเทียบงบประมาณย้อนหลังจัดทำขึ้นเพื่อให้ข้อมูลเบื้องต้นเท่านั้น ไม่ใช่การประเมินราคาอย่างเป็นทางการจากหน่วยงาน กทม.'
-                : 'Historical comparisons are indicative and should not be interpreted as an official assessment of procurement fairness, pricing, or value.'}
-            </span>
-            
-            <div style="margin-top:16px; text-align:center">
-              <button class="btn btn-secondary" onclick="navigate('historical')" style="width:100%; justify-content: center;">
-                ${ICONS.chart}
-                <span>${state.language === 'th' ? 'ดูข้อมูลเปรียบเทียบราคา' : 'View Price Comparisons'}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Quick Info -->
-          <div class="detail-card">
-            <h2 class="detail-card-title">
-              ${ICONS.info}
-              <span>${state.language === 'th' ? 'แหล่งที่มา & ความโปร่งใส' : 'Source & Transparency'}</span>
-            </h2>
-            <div style="display:flex;flex-direction:column;gap:12px;">
-              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--gray-200);">
-                <span style="font-size:12px;color:var(--gray-500)">Source Document</span>
-                <span style="font-size:12.5px;font-weight:600;color:var(--gray-900)">${project.sourceDocument || 'BMA TOR PDF'}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--gray-200);">
-                <span style="font-size:12px;color:var(--gray-500)">Last Extracted</span>
-                <span style="font-size:12.5px;font-weight:600;color:var(--gray-900)">${project.processedDate || '2026-08-11'}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--gray-200);">
-                <span style="font-size:12px;color:var(--gray-500)">Extraction Status</span>
-                <span style="font-size:12.5px;font-weight:600;color:var(--success)">✓ Verified</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;padding:4px 0;">
-                <span style="font-size:12px;color:var(--gray-500)">AI Confidence</span>
-                <span style="font-size:12.5px;font-weight:600;color:var(--primary-700)">High</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ========== HISTORICAL DATA / CHART PAGE ==========
-function renderHistorical() {
-  const historicalData = getFilteredHistorical();
-  const depts = [...new Set(HISTORICAL_DATA.map(d => d.department.th))];
-  const years = [...new Set(HISTORICAL_DATA.map(d => d.year))].sort((a, b) => b - a);
-
-  return `
-    <div class="page-content">
-      <div class="page-header">
-        <h1 class="page-title">${L('historicalTitle')}</h1>
-        <p class="page-subtitle">${L('historicalSub')}</p>
-      </div>
-
-      <!-- Budget Comparison Chart -->
-      <div class="chart-container">
-        <div class="chart-header">
-          <h2 class="chart-title">${L('budgetChart')}</h2>
-          <div class="chart-filters">
-            <select class="filter-select" id="histFilterCategory">
-              <option value="">${L('allCategories')}</option>
-              ${CATEGORIES.map(c => `<option value="${c}" ${state.historicalFilters.category === c ? 'selected' : ''}>${CATEGORY_LABELS[state.language][c]}</option>`).join('')}
-            </select>
-            <select class="filter-select" id="histFilterDept">
-              <option value="">${L('allDepts')}</option>
-              ${depts.map(d => `<option value="${d}" ${state.historicalFilters.department === d ? 'selected' : ''}>${d}</option>`).join('')}
-            </select>
-            <select class="filter-select" id="histFilterYear">
-              <option value="">${L('allYears')}</option>
-              ${years.map(y => `<option value="${y}" ${state.historicalFilters.year == y ? 'selected' : ''}>${y + (state.language === 'th' ? 543 : 0)}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-        <div style="position:relative; height:300px; width:100%;">
-          <canvas id="budgetChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Current Projects vs Historical Average -->
-      <div class="chart-container">
-        <h2 class="chart-title" style="margin-bottom:16px; border-bottom:1px solid var(--gray-200); padding-bottom:8px">
-          ${state.language === 'th' ? 'โครงการปัจจุบันเปรียบเทียบราคากลางเฉลี่ย' : 'Current Projects vs Historical Average'}
-        </h2>
-        <div style="position:relative; height:280px; width:100%;">
-          <canvas id="comparisonChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Historical Data Table -->
-      <div class="chart-container">
-        <h2 class="chart-title" style="margin-bottom:16px; border-bottom:1px solid var(--gray-200); padding-bottom:8px">
-          ${state.language === 'th' ? 'ตารางข้อมูลย้อนหลัง' : 'Historical Data'}
-        </h2>
-        <div class="historical-table-wrapper">
-          <table class="historical-table">
-            <thead>
-              <tr>
-                <th>${L('projectName')}</th>
-                <th>${L('department')}</th>
-                <th>${L('category')}</th>
-                <th>${L('year')}</th>
-                <th>${L('budget')}</th>
-                <th>${L('budgetAnalysis')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${historicalData.map(d => {
-                const catAvg = getCategoryAvg(d.category);
-                const ratio = d.budget / catAvg;
-                let outlierClass = 'normal';
-                let outlierText = state.language === 'th' ? 'ปกติ' : 'Normal';
-                if (ratio > 1.3) { outlierClass = 'high'; outlierText = state.language === 'th' ? 'สูงกว่าค่าเฉลี่ย' : 'Above Avg'; }
-                if (ratio < 0.7) { outlierClass = 'low'; outlierText = state.language === 'th' ? 'ต่ำกว่าค่าเฉลี่ย' : 'Below Avg'; }
-                return `
-                  <tr>
-                    <td style="font-weight:600; color:var(--gray-950)">${getLocalizedText(d.title)}</td>
-                    <td>${getLocalizedText(d.department)}</td>
-                    <td><span class="tag category">${CATEGORY_LABELS[state.language][d.category]}</span></td>
-                    <td>${d.year + (state.language === 'th' ? 543 : 0)}</td>
-                    <td style="font-weight:700; color:var(--gray-950)">${formatBudget(d.budget)}</td>
-                    <td><span class="outlier-badge ${outlierClass}">${outlierText}</span></td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-        
-        <!-- Global Disclaimer -->
-        <span class="analysis-disclaimer" style="margin-top: 14px">
-          ${state.language === 'th'
-            ? 'การวิเคราะห์เปรียบเทียบงบประมาณย้อนหลังจัดทำขึ้นเพื่อให้ข้อมูลเบื้องต้นเท่านั้น ไม่ใช่การประเมินราคาอย่างเป็นทางการจากหน่วยงาน กทม.'
-            : 'Historical comparisons are indicative and should not be interpreted as an official assessment of procurement fairness, pricing, or value.'}
-        </span>
-      </div>
-    </div>
-  `;
-}
-
-function getCategoryAvg(category) {
-  const items = HISTORICAL_DATA.filter(d => d.category === category);
-  if (items.length === 0) return 0;
-  return items.reduce((s, d) => s + d.budget, 0) / items.length;
-}
-
-function renderCharts() {
-  if (state.charts.budget) {
-    state.charts.budget.destroy();
-    state.charts.budget = null;
-  }
-  if (state.charts.comparison) {
-    state.charts.comparison.destroy();
-    state.charts.comparison = null;
-  }
-
-  const historicalData = getFilteredHistorical();
-  const isDark = state.theme === 'dark';
-
-  // Chart 1: Historical budgets bar chart (TORBIDD color theme)
-  const ctx1 = document.getElementById('budgetChart');
-  if (ctx1) {
-    state.charts.budget = new Chart(ctx1.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: historicalData.map(d => {
-          const text = getLocalizedText(d.title);
-          return text.length > 20 ? text.substring(0, 20) + '...' : text;
-        }),
-        datasets: [{
-          label: state.language === 'th' ? 'งบประมาณ (ล้านบาท)' : 'Budget (M THB)',
-          data: historicalData.map(d => d.budget / 1000000),
-          backgroundColor: historicalData.map(d => {
-            const avg = getCategoryAvg(d.category);
-            const ratio = d.budget / avg;
-            if (ratio > 1.3) return isDark ? 'rgba(248, 113, 113, 0.8)' : 'rgba(196, 69, 69, 0.8)'; // Red
-            if (ratio < 0.7) return isDark ? 'rgba(75, 156, 203, 0.5)' : 'rgba(39, 115, 165, 0.5)'; // Accent Tint
-            return isDark ? 'rgba(75, 156, 203, 0.8)' : 'rgba(39, 115, 165, 0.8)'; // Brand primary Blue
-          }),
-          borderColor: historicalData.map(d => {
-            const avg = getCategoryAvg(d.category);
-            const ratio = d.budget / avg;
-            if (ratio > 1.3) return isDark ? 'rgb(248, 113, 113)' : 'rgb(196, 69, 69)';
-            if (ratio < 0.7) return isDark ? 'rgb(75, 156, 203)' : 'rgb(39, 115, 165)';
-            return isDark ? 'rgb(75, 156, 203)' : 'rgb(39, 115, 165)';
-          }),
-          borderWidth: 1.5,
-          borderRadius: 3,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.parsed.y.toFixed(2)} M THB`
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: state.language === 'th' ? 'ล้านบาท (M THB)' : 'Budget (M THB)',
-              font: { family: 'Noto Sans Thai, sans-serif', weight: 'bold' },
-              color: isDark ? '#f1f5f9' : '#24313d'
-            },
-            grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
-            ticks: { color: isDark ? '#94a3b8' : '#71808c' }
-          },
-          x: {
-            grid: { display: false },
-            ticks: {
-              font: { size: 9.5, family: 'Noto Sans Thai, sans-serif' },
-              maxRotation: 20,
-              color: isDark ? '#94a3b8' : '#71808c'
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // Chart 2: Current vs historical average comparison chart
-  const ctx2 = document.getElementById('comparisonChart');
-  if (ctx2) {
-    state.charts.comparison = new Chart(ctx2.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: PROJECTS.map(p => {
-          const text = getLocalizedText(p.title);
-          return text.length > 20 ? text.substring(0, 20) + '...' : text;
-        }),
-        datasets: [
-          {
-            label: state.language === 'th' ? 'งบประมาณโครงการ' : 'Project Budget',
-            data: PROJECTS.map(p => p.budget / 1000000),
-            backgroundColor: isDark ? 'rgba(75, 156, 203, 0.85)' : 'rgba(39, 115, 165, 0.85)',
-            borderColor: isDark ? 'rgb(75, 156, 203)' : 'rgb(39, 115, 165)',
-            borderWidth: 1.5,
-            borderRadius: 3,
-          },
-          {
-            label: state.language === 'th' ? 'ค่าเฉลี่ยประเภทโครงการย้อนหลัง' : 'Historical Average',
-            data: PROJECTS.map(p => p.historicalAvg / 1000000),
-            backgroundColor: isDark ? 'rgba(148, 163, 184, 0.6)' : 'rgba(113, 128, 140, 0.6)',
-            borderColor: isDark ? 'rgb(148, 163, 184)' : 'rgb(113, 128, 140)',
-            borderWidth: 1.5,
-            borderRadius: 3,
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'top',
-            labels: {
-              font: { family: 'Noto Sans Thai, sans-serif', size: 12, weight: 'bold' },
-              usePointStyle: true,
-              pointStyle: 'rectRounded',
-              color: isDark ? '#cbd5e1' : '#4b5965'
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} M THB`
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: state.language === 'th' ? 'ล้านบาท (M THB)' : 'M THB',
-              font: { family: 'Noto Sans Thai, sans-serif', weight: 'bold' },
-              color: isDark ? '#f1f5f9' : '#24313d'
-            },
-            grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
-            ticks: { color: isDark ? '#94a3b8' : '#71808c' }
-          },
-          x: {
-            grid: { display: false },
-            ticks: {
-              font: { size: 9.5, family: 'Noto Sans Thai, sans-serif' },
-              maxRotation: 20,
-              color: isDark ? '#94a3b8' : '#71808c'
-            }
-          }
-        }
-      }
-    });
-  }
-}
-
-// ========== SAVED OPPORTUNITIES PAGE ==========
-function renderSaved() {
-  const savedProjects = PROJECTS.filter(p => state.bookmarks.has(p.id));
-
-  return `
-    <div class="page-content">
-      <div class="page-header">
-        <h1 class="page-title">${L('savedTitle')}</h1>
-        <p class="page-subtitle">${L('savedSub')}</p>
-      </div>
-
-      ${savedProjects.length === 0 ? `
-        <div class="empty-state">
-          <div class="empty-state-icon">
-            ${ICONS.bookmark}
-          </div>
-          <h3>${L('noSaved')}</h3>
-          <p>${L('noSavedDesc')}</p>
-          <button class="btn btn-primary" onclick="navigate('dashboard')" style="margin-top:20px">
-            ${ICONS.dashboard}
-            <span>${state.language === 'th' ? 'ดูโอกาสทั้งหมด' : 'Browse Opportunities'}</span>
-          </button>
-        </div>
-      ` : `
-        <div class="projects-grid">
-          ${savedProjects.map(p => renderProjectCard(p)).join('')}
-        </div>
-      `}
-    </div>
-  `;
-}
-
-// ========== NOTIFICATIONS & PREFERENCES PAGE ==========
-function renderNotifications() {
-  return `
-    <div class="page-content">
-      <div class="page-header">
-        <h1 class="page-title">${L('settingsTitle')}</h1>
-        <p class="page-subtitle">${L('settingsSub')}</p>
-      </div>
-
-      <div class="settings-grid">
-        <!-- Email Notification Panel -->
-        <div class="settings-card">
-          <h3 class="settings-card-title">${L('emailNotif')}</h3>
-          <p class="settings-card-desc">${L('emailNotifDesc')}</p>
-
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-label">${L('dailyDigest')}</div>
-              <div class="toggle-sublabel">${L('dailyDigestDesc')}</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggleDailyDigest" ${state.settings.dailyDigest ? 'checked' : ''}>
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-label">${L('closingAlert')}</div>
-              <div class="toggle-sublabel">${L('closingAlertDesc')}</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggleClosingAlert" ${state.settings.closingAlert ? 'checked' : ''}>
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-label">${L('newProjectAlert')}</div>
-              <div class="toggle-sublabel">${L('newProjectAlertDesc')}</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggleNewProject" ${state.settings.newProjectAlert ? 'checked' : ''}>
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Budget Range Selection -->
-        <div class="settings-card">
-          <h3 class="settings-card-title">${L('budgetPref')}</h3>
-          <p class="settings-card-desc">${L('budgetPrefDesc')}</p>
-          <div class="budget-range-inputs">
-            <input type="number" id="budgetMin" placeholder="${L('budgetMin')}" value="${state.settings.budgetMin}">
-            <span>—</span>
-            <input type="number" id="budgetMax" placeholder="${L('budgetMax')}" value="${state.settings.budgetMax}">
-          </div>
-        </div>
-
-        <!-- Industry/Interest Tags -->
-        <div class="settings-card" style="grid-column: 1 / -1;">
-          <h3 class="settings-card-title">${L('interestTags')}</h3>
-          <p class="settings-card-desc">${L('interestTagsDesc')}</p>
-          <div class="interest-tags-grid">
-            ${CATEGORIES.map(c => `
-              <button class="interest-tag ${state.settings.interestTags.includes(c) ? 'active' : ''}" data-tag="${c}">
-                ${state.settings.interestTags.includes(c) ? '✓ ' : ''}${CATEGORY_LABELS[state.language][c]}
-              </button>
-            `).join('')}
-            <button class="interest-tag ${state.settings.interestTags.includes('Cloud') ? 'active' : ''}" data-tag="Cloud">
-              ${state.settings.interestTags.includes('Cloud') ? '✓ ' : ''}${state.language === 'th' ? 'ระบบ Cloud' : 'Cloud'}
-            </button>
-            <button class="interest-tag ${state.settings.interestTags.includes('Security') ? 'active' : ''}" data-tag="Security">
-              ${state.settings.interestTags.includes('Security') ? '✓ ' : ''}${state.language === 'th' ? 'ความปลอดภัย' : 'Security'}
-            </button>
-            <button class="interest-tag ${state.settings.interestTags.includes('IoT') ? 'active' : ''}" data-tag="IoT">
-              ${state.settings.interestTags.includes('IoT') ? '✓ ' : ''}IoT
-            </button>
-            <button class="interest-tag ${state.settings.interestTags.includes('Blockchain') ? 'active' : ''}" data-tag="Blockchain">
-              ${state.settings.interestTags.includes('Blockchain') ? '✓ ' : ''}Blockchain
-            </button>
-          </div>
-          <div class="settings-save-btn">
-            <button class="btn btn-primary" onclick="saveSettings()">
-              ${ICONS.check}
-              <span>${L('saveSettings')}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function saveSettings() {
-  showToast(L('settingsSaved'), ICONS.check);
 }
 
 // ========== EVENT ATTACHERS & LISTENERS ==========
@@ -2021,35 +1069,6 @@ function attachEventListeners() {
       render();
     });
   });
-}
-
-// Debounce rendering logic for search
-let renderTimer;
-function debounceRenderCards() {
-  clearTimeout(renderTimer);
-  renderTimer = setTimeout(() => {
-    const projects = getFilteredProjects();
-    const grid = document.querySelector('.projects-grid');
-    const noResults = document.querySelector('.no-results');
-    if (grid) {
-      if (projects.length === 0) {
-        grid.style.display = 'none';
-        if (!noResults) {
-          grid.insertAdjacentHTML('afterend', `
-            <div class="no-results">
-              ${ICONS.search}
-              <h3>${L('noResults')}</h3>
-              <p>${L('noResultsDesc')}</p>
-            </div>
-          `);
-        }
-      } else {
-        grid.style.display = '';
-        grid.innerHTML = projects.map(p => renderProjectCard(p)).join('');
-        if (noResults) noResults.remove();
-      }
-    }
-  }, 180);
 }
 
 // ========== INITIALIZATION ==========
