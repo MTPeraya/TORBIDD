@@ -886,10 +886,20 @@ function showToast(message, icon) {
   setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
+function renderDemoBanner() {
+  return `
+    <div class="demo-banner">
+      ${state.language === 'th' 
+        ? '⚠️ นี่คือระบบสาธิต (Demo) ข้อมูลที่แสดงเป็นเพียงตัวอย่าง ไม่ใช่ข้อมูลจริง ผลิตภัณฑ์จริงอาจมีความแตกต่างจากที่แสดงนี้' 
+        : '⚠️ This is a demo system. All data shown is for illustration only and does not reflect real information. The final product may differ from what is displayed.'}
+    </div>
+  `;
+}
+
 // ========== GLOBAL RENDER & ORCHESTRATION ==========
 function render() {
   const app = document.getElementById('app');
-  app.innerHTML = renderSidebar() + `<div class="main-content">${renderTopbar()}${renderPage()}</div>`;
+  app.innerHTML = renderSidebar() + `<div class="main-content">${renderDemoBanner()}${renderTopbar()}${renderPage()}</div>`;
   attachEventListeners();
   if (state.currentPage === 'historical') {
     setTimeout(renderCharts, 100);
