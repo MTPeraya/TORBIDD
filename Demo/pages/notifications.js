@@ -55,9 +55,13 @@ function renderNotifications() {
           <h3 class="settings-card-title">${L('budgetPref')}</h3>
           <p class="settings-card-desc">${L('budgetPrefDesc')}</p>
           <div class="budget-range-inputs">
-            <input type="number" id="budgetMin" placeholder="${L('budgetMin')}" value="${state.settings.budgetMin}">
+            <input type="number" id="budgetMin" min="0" placeholder="${L('budgetMin')}" value="${state.settings.budgetMin}">
             <span>—</span>
-            <input type="number" id="budgetMax" placeholder="${L('budgetMax')}" value="${state.settings.budgetMax}">
+            <input type="number" id="budgetMax" min="${state.settings.budgetMin || 0}" placeholder="${L('budgetMax')}" value="${state.settings.budgetMax}">
+          </div>
+          <div id="budgetRangeError" class="budget-range-error" style="display: ${state.settings.budgetMin !== '' && state.settings.budgetMax !== '' && Number(state.settings.budgetMax) < Number(state.settings.budgetMin) ? 'flex' : 'none'};">
+            ${ICONS.alertTriangle}
+            <span>${L('budgetRangeError')}</span>
           </div>
         </div>
 
@@ -97,5 +101,24 @@ function renderNotifications() {
 }
 
 function saveSettings() {
+  const min = state.settings.budgetMin !== '' ? Number(state.settings.budgetMin) : null;
+  const max = state.settings.budgetMax !== '' ? Number(state.settings.budgetMax) : null;
+
+  if (min !== null && max !== null && max < min) {
+    showToast(L('budgetRangeError'), ICONS.alertTriangle, 'error');
+    const budgetMax = document.getElementById('budgetMax');
+    const errEl = document.getElementById('budgetRangeError');
+    if (budgetMax) {
+      budgetMax.focus();
+      budgetMax.classList.add('shake-anim');
+      setTimeout(() => budgetMax.classList.remove('shake-anim'), 500);
+    }
+    if (errEl) {
+      errEl.classList.add('shake-anim');
+      setTimeout(() => errEl.classList.remove('shake-anim'), 500);
+    }
+    return;
+  }
+
   showToast(L('settingsSaved'), ICONS.check);
 }

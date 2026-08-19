@@ -115,6 +115,7 @@ const LABELS = {
     budgetPrefDesc: 'รับการแจ้งเตือนเฉพาะโครงการที่มีช่วงราคากลางที่กำหนด',
     budgetMin: 'งบประมาณขั้นต่ำ (บาท)',
     budgetMax: 'งบประมาณสูงสุด (บาท)',
+    budgetRangeError: 'งบประมาณสูงสุดต้องไม่น้อยกว่างบประมาณขั้นต่ำ',
     saveSettings: 'บันทึกการตั้งค่าการแจ้งเตือน',
     settingsSaved: 'บันทึกการตั้งค่าเรียบร้อยแล้ว',
     bookmarkAdded: 'บันทึกโครงการเรียบร้อยแล้ว',
@@ -131,20 +132,27 @@ const LABELS = {
     moreThan30: 'มากกว่า 30 วัน',
     allYears: 'ทุกปี',
     breadcrumbHome: 'หน้าแรก',
-    heroBadge: 'ระบบอัตโนมัติ (AI-ASSISTED PORTAL)',
-    heroTitle: 'วิเคราะห์และกลั่นกรองประกาศจัดซื้อจัดจ้างซอฟต์แวร์ กทม.',
-    heroSubtitle: 'แพลตฟอร์มข่าวกรองสำหรับการสกัดขอบเขตงาน (TOR) วิเคราะห์เปรียบเทียบราคา และประเมินคุณสมบัติสำหรับผู้ประกอบการเทคโนโลยี',
+    heroBadge: 'ระบบข่าวกรองจัดซื้อจัดจ้างซอฟต์แวร์ กทม. (AI-POWERED PLATFORM)',
+    heroTitle: 'ศูนย์รวมข้อมูลและวิเคราะห์ประกาศจัดซื้อจัดจ้างซอฟต์แวร์ กทม.',
+    heroSubtitle: 'แพลตฟอร์ม AI อัจฉริยะที่ช่วยผู้ประกอบการเทคโนโลยีสกัดสาระสำคัญจากเอกสาร TOR ประเมินเกณฑ์คุณสมบัติความพร้อม (Go/No-Go Checklist) วิเคราะห์เปรียบเทียบสถิติงบประมาณย้อนหลัง และตั้งค่าแจ้งเตือนโครงการใหม่ตรงตามสายงานธุรกิจอย่างครบวงจร',
     searchBtn: 'สืบค้นข้อมูล',
     exploreTitle: 'ขีดความสามารถหลักของระบบ',
-    cap1Title: 'สกัดข้อมูล TOR',
-    cap1Desc: 'ใช้ AI สกัดขอบเขตงาน งบประมาณ และกำหนดการยื่นข้อเสนออัตโนมัติจากเอกสาร PDF',
-    cap1Link: 'ค้นหาประกาศจัดซื้อล่าสุด →',
-    cap2Title: 'ตรวจสอบคุณสมบัติ',
-    cap2Desc: 'เครื่องมือตรวจสอบเกณฑ์คุณสมบัติ (Go / No-Go Checklist) ประเมินความเป็นไปได้เชิงธุรกิจ',
-    cap2Link: 'เปิดเครื่องมือเช็คลิสต์ →',
-    cap3Title: 'แบบจำลองเปรียบเทียบราคา',
-    cap3Desc: 'ตรวจจับราคาผิดปกติ (Outliers) และวิเคราะห์แนวโน้มราคากลางร่วมกับโครงการในอดีต',
+    cap1Title: 'สกัดข้อมูล TOR ด้วย AI',
+    cap1Desc: 'สกัดขอบเขตงาน งบประมาณ กำหนดการส่งมอบ และเงื่อนไขสำคัญจาก PDF อัตโนมัติในไม่กี่วินาที',
+    cap1Link: 'สำรวจประกาศจัดซื้อ →',
+    cap2Title: 'ตรวจสอบคุณสมบัติ (Go/No-Go)',
+    cap2Desc: 'ระบบเช็คลิสต์ประเมินทุนจดทะเบียน ผลงาน และบุคลากร ช่วยตัดสินใจยื่นซองอย่างมั่นใจ',
+    cap2Link: 'เปิดเครื่องมือประเมิน →',
+    cap3Title: 'วิเคราะห์ราคากลางย้อนหลัง',
+    cap3Desc: 'เปรียบเทียบงบประมาณกับโครงการในอดีต ตรวจจับราคาผิดปกติ (Outliers) และแนวโน้มตลาด',
     cap3Link: 'วิเคราะห์สถิติราคา →',
+    cap4Title: 'แจ้งเตือนโครงการตรงใจ',
+    cap4Desc: 'กำหนดช่วงงบประมาณและหมวดหมู่เทคโนโลยีที่สนใจเพื่อรับการแจ้งเตือนทันที',
+    cap4Link: 'ตั้งค่าการแจ้งเตือน →',
+    statActiveOpps: 'โอกาสเปิดรับในระบบ',
+    statTotalBudget: 'มูลค่าโครงการรวม',
+    statDepts: 'หน่วยงาน กทม.',
+    statClosingSoon: 'ใกล้ปิดรับใน 7 วัน',
     recentOpps: 'ประกาศจัดซื้อจัดจ้างล่าสุด',
     viewAll: 'ดูทั้งหมด',
   },
@@ -226,6 +234,7 @@ const LABELS = {
     budgetPrefDesc: 'Filter projects within your preferred budget range',
     budgetMin: 'Minimum (THB)',
     budgetMax: 'Maximum (THB)',
+    budgetRangeError: 'Maximum budget cannot be less than minimum budget',
     saveSettings: 'Save Alert Settings',
     settingsSaved: 'Settings saved successfully',
     bookmarkAdded: 'Added to saved items',
@@ -242,20 +251,27 @@ const LABELS = {
     moreThan30: 'More than 30 days',
     allYears: 'All Years',
     breadcrumbHome: 'Home',
-    heroBadge: 'AI-ASSISTED PORTAL',
-    heroTitle: 'Analyze & Filter BMA Software Procurement Opportunities',
-    heroSubtitle: 'BMA intelligence portal offering automated Terms of Reference (TOR) parameter extraction, bidder qualifications checking, and historical price benchmarking models.',
-    searchBtn: 'Search',
+    heroBadge: 'BMA PROCUREMENT INTELLIGENCE (AI-POWERED PLATFORM)',
+    heroTitle: 'Bangkok Software Procurement Intelligence & Analytics',
+    heroSubtitle: 'An AI-powered intelligence platform helping tech vendors discover BMA procurement opportunities, extract key terms from TOR PDFs, evaluate Go/No-Go qualifications, analyze historical price benchmarks, and receive targeted alerts.',
+    searchBtn: 'Search Opportunities',
     exploreTitle: 'Core Capabilities',
-    cap1Title: 'TOR Extraction',
-    cap1Desc: 'Automatically extract project goals, budgets, deadlines, and requirements from scanned PDF files using AI models.',
-    cap1Link: 'Browse Active Projects →',
-    cap2Title: 'Eligibility Evaluator',
-    cap2Desc: 'Check credential metrics dynamically using checklist models to evaluate qualifications prior to bidding.',
+    cap1Title: 'AI TOR Extraction',
+    cap1Desc: 'Automatically extract project goals, budgets, deadlines, and key requirements from scanned PDF files in seconds.',
+    cap1Link: 'Browse Opportunities →',
+    cap2Title: 'Go/No-Go Qualification',
+    cap2Desc: 'Dynamic eligibility checklist evaluating capital, past performance, and personnel criteria prior to bidding.',
     cap2Link: 'Open Checklist Evaluator →',
     cap3Title: 'Price Comparison Models',
-    cap3Desc: 'Examine historical procurement pricing outliers and run competitive budget comparisons.',
-    cap3Link: 'Analyze Historical Bids →',
+    cap3Desc: 'Examine historical procurement pricing outliers and run competitive budget comparisons against past BMA bids.',
+    cap3Link: 'Analyze Price Trends →',
+    cap4Title: 'Smart Tender Alerts',
+    cap4Desc: 'Configure minimum & maximum budget ranges and interest tags (AI, Cloud, Database) for instant notifications.',
+    cap4Link: 'Configure Alerts →',
+    statActiveOpps: 'Active Opportunities',
+    statTotalBudget: 'Total Procurement Budget',
+    statDepts: 'BMA Departments',
+    statClosingSoon: 'Closing in 7 days',
     recentOpps: 'Latest Opportunities',
     viewAll: 'View All',
   }
@@ -767,6 +783,7 @@ const state = {
   },
   bookmarks: new Set(),
   language: 'th',
+  sidebarCollapsed: false,
   settings: {
     emailNotif: true,
     dailyDigest: true,
@@ -879,11 +896,14 @@ function toggleLanguage(lang) {
   render();
 }
 
-function showToast(message, icon) {
+function showToast(message, icon, type = 'info') {
   const toast = document.getElementById('toast');
   toast.innerHTML = `${icon || ''}<span>${message}</span>`;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2500);
+  toast.className = 'toast show' + (type === 'error' ? ' toast-error' : '');
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.remove('toast-error');
+  }, 2500);
 }
 
 function renderDemoBanner() {
@@ -899,17 +919,28 @@ function renderDemoBanner() {
 // ========== GLOBAL RENDER & ORCHESTRATION ==========
 function render() {
   const app = document.getElementById('app');
-  app.innerHTML = renderSidebar() + `<div class="main-content">${renderDemoBanner()}${renderTopbar()}${renderPage()}</div>`;
+  const isHome = state.currentPage === 'home';
+  const mainCls = (state.sidebarCollapsed ? 'main-content sidebar-collapsed' : 'main-content') + (isHome ? ' home-bg' : '');
+  app.innerHTML = renderSidebar() + `<div class="${mainCls}">${renderDemoBanner()}${renderTopbar()}${renderPage()}</div>`;
   attachEventListeners();
   if (state.currentPage === 'historical') {
     setTimeout(renderCharts, 100);
   }
 }
 
+function toggleSidebar() {
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  const sidebar = document.querySelector('.sidebar');
+  const mainContent = document.querySelector('.main-content');
+  if (sidebar) sidebar.classList.toggle('sidebar-collapsed', state.sidebarCollapsed);
+  if (mainContent) mainContent.classList.toggle('sidebar-collapsed', state.sidebarCollapsed);
+}
+
 function renderSidebar() {
   const bookmarkCount = state.bookmarks.size;
+  const collapsed = state.sidebarCollapsed ? 'sidebar-collapsed' : '';
   return `
-    <aside class="sidebar">
+    <aside class="sidebar ${collapsed}">
       <div class="sidebar-brand">
         <div class="sidebar-brand-logo" onclick="navigate('home')">
           <div class="sidebar-brand-icon">B</div>
@@ -918,38 +949,42 @@ function renderSidebar() {
             <div class="sidebar-brand-sub">${L('appSub')}</div>
           </div>
         </div>
+        <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar" id="sidebarToggleBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
       </div>
       <nav class="sidebar-nav">
-        <div class="sidebar-section-label">${L('sectionMain')}</div>
-        <a class="sidebar-link ${state.currentPage === 'home' ? 'active' : ''}" onclick="navigate('home')">
+        <div class="sidebar-section-label"><span class="sidebar-link-label">${L('sectionMain')}</span></div>
+        <a class="sidebar-link ${state.currentPage === 'home' ? 'active' : ''}" onclick="navigate('home')" data-tooltip="${L('navHome')}">
           ${ICONS.home}
-          <span>${L('navHome')}</span>
+          <span class="sidebar-link-label">${L('navHome')}</span>
         </a>
-        <a class="sidebar-link ${state.currentPage === 'dashboard' ? 'active' : ''}" onclick="navigate('dashboard')">
+        <a class="sidebar-link ${state.currentPage === 'dashboard' ? 'active' : ''}" onclick="navigate('dashboard')" data-tooltip="${L('navDashboard')}">
           ${ICONS.dashboard}
-          <span>${L('navDashboard')}</span>
+          <span class="sidebar-link-label">${L('navDashboard')}</span>
         </a>
-        <a class="sidebar-link ${state.currentPage === 'historical' ? 'active' : ''}" onclick="navigate('historical')">
+        <a class="sidebar-link ${state.currentPage === 'historical' ? 'active' : ''}" onclick="navigate('historical')" data-tooltip="${L('navHistorical')}">
           ${ICONS.chart}
-          <span>${L('navHistorical')}</span>
+          <span class="sidebar-link-label">${L('navHistorical')}</span>
         </a>
-        <a class="sidebar-link ${state.currentPage === 'saved' ? 'active' : ''}" onclick="navigate('saved')">
+        <a class="sidebar-link ${state.currentPage === 'saved' ? 'active' : ''}" onclick="navigate('saved')" data-tooltip="${L('navSaved')}">
           ${ICONS.bookmark}
-          <span>${L('navSaved')}</span>
+          <span class="sidebar-link-label">${L('navSaved')}</span>
           ${bookmarkCount > 0 ? `<span class="sidebar-badge">${bookmarkCount}</span>` : ''}
         </a>
-        <div class="sidebar-section-label">${L('sectionTools')}</div>
-        <a class="sidebar-link ${state.currentPage === 'notifications' ? 'active' : ''}" onclick="navigate('notifications')">
+        <div class="sidebar-section-label"><span class="sidebar-link-label">${L('sectionTools')}</span></div>
+        <a class="sidebar-link ${state.currentPage === 'notifications' ? 'active' : ''}" onclick="navigate('notifications')" data-tooltip="${L('navSettings')}">
           ${ICONS.bell}
-          <span>${L('navSettings')}</span>
+          <span class="sidebar-link-label">${L('navSettings')}</span>
         </a>
       </nav>
-      <div class="sidebar-footer" style="text-align: center; font-size: 11px; color: var(--gray-400); padding: 12px 20px;">
-        © 2026 TORBIDD Systems
+      <div class="sidebar-footer">
+        <span class="sidebar-link-label">© 2026 TORBIDD Systems</span>
       </div>
     </aside>
   `;
 }
+
 
 function renderTopbar() {
   const pages = {
@@ -1063,8 +1098,60 @@ function attachEventListeners() {
   // Settings Budget Filters
   const budgetMin = document.getElementById('budgetMin');
   const budgetMax = document.getElementById('budgetMax');
-  if (budgetMin) budgetMin.addEventListener('input', (e) => { state.settings.budgetMin = e.target.value; });
-  if (budgetMax) budgetMax.addEventListener('input', (e) => { state.settings.budgetMax = e.target.value; });
+  const budgetRangeError = document.getElementById('budgetRangeError');
+
+  const updateBudgetValidation = () => {
+    if (!budgetMin || !budgetMax) return;
+    const minVal = budgetMin.value !== '' ? Number(budgetMin.value) : null;
+    const maxVal = budgetMax.value !== '' ? Number(budgetMax.value) : null;
+
+    if (minVal !== null && minVal > 0) {
+      budgetMax.min = minVal;
+    } else {
+      budgetMax.min = 0;
+    }
+
+    if (minVal !== null && maxVal !== null && maxVal < minVal) {
+      budgetMax.classList.add('input-error');
+      if (budgetRangeError) budgetRangeError.style.display = 'flex';
+    } else {
+      budgetMax.classList.remove('input-error');
+      if (budgetRangeError) budgetRangeError.style.display = 'none';
+    }
+  };
+
+  const bindBudgetInput = (inputEl, key) => {
+    if (!inputEl) return;
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === '-' || e.key === 'Minus' || e.code === 'Minus' || e.code === 'NumpadSubtract') {
+        e.preventDefault();
+      }
+    });
+    inputEl.addEventListener('input', (e) => {
+      let val = e.target.value;
+      if (val !== '') {
+        val = val.replace(/-/g, '');
+        if (Number(val) < 0) val = '0';
+        e.target.value = val;
+      }
+      state.settings[key] = val;
+      updateBudgetValidation();
+    });
+    inputEl.addEventListener('change', () => {
+      if (budgetMin && budgetMax) {
+        const minVal = budgetMin.value !== '' ? Number(budgetMin.value) : null;
+        const maxVal = budgetMax.value !== '' ? Number(budgetMax.value) : null;
+        if (minVal !== null && maxVal !== null && maxVal < minVal) {
+          budgetMax.value = budgetMin.value;
+          state.settings.budgetMax = budgetMin.value;
+          updateBudgetValidation();
+        }
+      }
+    });
+  };
+  bindBudgetInput(budgetMin, 'budgetMin');
+  bindBudgetInput(budgetMax, 'budgetMax');
+  updateBudgetValidation();
 
   // Settings Interest Tag Buttons
   document.querySelectorAll('.interest-tag').forEach(btn => {
