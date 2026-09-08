@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { Language } from '@/types/settings';
 import { LABELS, LabelKey } from '@/lib/labels';
 
@@ -17,15 +17,17 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('th');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('torbidd_lang') as Language;
-    if (saved === 'th' || saved === 'en') {
-      setLanguageState(saved);
-      document.documentElement.lang = saved;
+  const [language, setLanguageState] = useState<Language>(() => {
+    // Initializer runs once on mount (client-only — 'use client' guarantees window exists)
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('torbidd_lang') as Language;
+      if (saved === 'th' || saved === 'en') {
+        document.documentElement.lang = saved;
+        return saved;
+      }
     }
-  }, []);
+    return 'th';
+  });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);

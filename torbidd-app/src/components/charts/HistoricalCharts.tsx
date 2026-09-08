@@ -17,7 +17,7 @@ interface BudgetBarChartProps {
 export function BudgetBarChart({ data }: BudgetBarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = useRef<ChartJS | null>(null);
-  const { language, L, getLocalized } = useLanguage();
+  const { language, getLocalized } = useLanguage();
   const { theme } = useTheme();
 
   useEffect(() => {

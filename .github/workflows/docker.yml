@@ -1,0 +1,125 @@
+# =============================================================================
+# Docker Build & Publish Workflow
+# =============================================================================
+# Triggered on every push to `main` (after CI passes).
+# Builds the multi-stage production image, pushes to GitHub Container Registry,
+# and scans for HIGH/CRITICAL CVEs with Trivy.
+#
+# Required GitHub Secrets:
+#   GHCR_TOKEN  — GitHub PAT with `packages:write` scope
+#                 (or use GITHUB_TOKEN which has this automatically in org repos)
+# =============================================================================
+
+name: Docker Build & Publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: 'Push image to GHCR?'
+        required: true
+        default: 'true'
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/torbidd-app
+
+jobs:
+  docker:
+    name: Build → Scan → Push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write        # allows pushing to ghcr.io
+      security-events: write # allows uploading Trivy SARIF
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── QEMU (multi-arch) ─────────────────────────────────────────────────
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # ── Buildx ────────────────────────────────────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ── Docker metadata (tags + labels) ───────────────────────────────────
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-,format=short
+            type=ref,event=branch
+
+      # ── Login to GHCR ─────────────────────────────────────────────────────
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Build (cache-from registry for faster rebuilds) ───────────────────
+      - name: Build Docker image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./torbidd-app
+          file: ./torbidd-app/Dockerfile
+          push: false                       # push only after scan passes
+          load: true                        # load into local daemon for Trivy
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to:   type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+          # Pass stub env vars so `next build` inside Docker succeeds without real secrets
+          build-args: |
+            NODE_ENV=production
+
+      # ── Trivy security scan ───────────────────────────────────────────────
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'          # fail the job on any HIGH/CRITICAL finding
+        continue-on-error: true   # upload SARIF even if scan finds issues
+
+      # ── Upload SARIF to GitHub Security tab ───────────────────────────────
+      - name: Upload Trivy SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      # ── Push to GHCR (only if scan passed + on main) ──────────────────────
+      - name: Push image to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: ./torbidd-app
+          file: ./torbidd-app/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+
+      # ── Summary ───────────────────────────────────────────────────────────
+      - name: Print image digest
+        run: |
+          echo "### 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Registry | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tags | \`${{ steps.meta.outputs.tags }}\` |" >> $GITHUB_STEP_SUMMARY

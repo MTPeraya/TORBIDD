@@ -1,0 +1,70 @@
+# =============================================================================
+# TORBIDD — docker-compose.yml
+# =============================================================================
+# Local development / staging orchestration.
+#
+# NOTE: MongoDB Atlas is the database — no local Mongo container.
+#       Set MONGODB_URI in your .env file pointing to your Atlas cluster.
+#
+# Usage:
+#   cp torbidd-app/.env.example torbidd-app/.env.local   # fill in real values
+#   docker compose up --build
+#
+# One-time seed (after app is healthy):
+#   docker compose run --rm seed
+# =============================================================================
+
+services:
+  # ── Next.js Application ────────────────────────────────────────────────────
+  app:
+    build:
+      context: ./torbidd-app
+      dockerfile: Dockerfile
+      target: runner
+    container_name: torbidd-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./torbidd-app/.env.local      # real secrets — gitignored
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    # Mount GCP service account key as a read-only secret file
+    # Update the host path to point at your service account JSON.
+    # volumes:
+    #   - ./secrets/gcp-service-account.json:/secrets/gcp-sa.json:ro
+    networks:
+      - torbidd-net
+
+  # ── One-shot Database Seeder ───────────────────────────────────────────────
+  # Runs `npm run seed` once and exits. Only needed on a fresh Atlas cluster.
+  # Usage: docker compose run --rm seed
+  seed:
+    build:
+      context: ./torbidd-app
+      dockerfile: Dockerfile
+      target: builder           # has node_modules + scripts/
+    container_name: torbidd-seed
+    command: ["npm", "run", "seed"]
+    env_file:
+      - ./torbidd-app/.env.local
+    environment:
+      NODE_ENV: production
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - torbidd-net
+    profiles:
+      - seed                    # only runs with: docker compose --profile seed run seed
+
+networks:
+  torbidd-net:
+    driver: bridge

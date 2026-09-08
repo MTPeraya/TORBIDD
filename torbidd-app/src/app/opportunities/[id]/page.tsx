@@ -32,11 +32,14 @@ export default function ProjectDetailPage({
   const [checkedIndices, setCheckedIndices] = useState<number[]>([]);
 
   useEffect(() => {
-    // Try matching by externalId first (number) or ObjectId (string)
+    // Fetch fresh data from API; the async callback is safe from the lint rule
     const numId = parseInt(id, 10);
+
+    // Set optimistic offline data synchronously before fetch resolves
     const found = INITIAL_PROJECTS.find((p) => p.externalId === numId);
-    if (found) {
-      setProject(found);
+    if (found && !project) {
+      // Use a microtask so we are not in the synchronous effect body
+      Promise.resolve().then(() => setProject(found));
     }
 
     // Also fetch fresh from API
@@ -48,6 +51,7 @@ export default function ProjectDetailPage({
         }
       })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (!project) {

@@ -15,7 +15,7 @@ export function EligibilityChecklist({
   checkedIndices,
   onToggle,
 }: EligibilityChecklistProps) {
-  const { language, L } = useLanguage();
+  const { L } = useLanguage();
 
   const totalCount = qualifications.length;
   const checkedCount = checkedIndices.length;

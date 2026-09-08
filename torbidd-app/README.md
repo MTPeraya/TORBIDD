@@ -248,6 +248,127 @@ npm run build
 
 ---
 
+## 🐳 Docker
+
+### Build Image
+```bash
+# From torbidd-app/ directory
+npm run docker:build
+# or directly:
+docker build -t torbidd-app ./torbidd-app
+```
+
+### Run Container
+```bash
+npm run docker:run
+# or directly:
+docker run -p 3000:3000 --env-file .env.local torbidd-app
+```
+
+### Docker Compose (recommended for local staging)
+```bash
+# Copy and fill in .env.local first
+cp .env.example .env.local
+
+# Start the app (uses MongoDB Atlas via MONGODB_URI)
+docker compose up --build
+
+# One-time seeding (run separately after app is healthy)
+docker compose --profile seed run seed
+```
+
+> **Note**: There is no local MongoDB container — TORBIDD always connects to **MongoDB Atlas**. Set `MONGODB_URI` in `.env.local` to your Atlas connection string.
+
+The multi-stage Dockerfile produces a minimal production image using Next.js `standalone` output:
+
+| Stage | Base | Purpose |
+|---|---|---|
+| `deps` | `node:20-alpine` | Install `node_modules` via `npm ci` |
+| `builder` | `node:20-alpine` | `npm run build` → `.next/standalone` |
+| `runner` | `node:20-alpine` | Copy only what's needed, run as non-root `nextjs` user |
+
+---
+
+## 🔄 CI/CD — GitHub Actions
+
+Three workflows live in `.github/workflows/`:
+
+| Workflow | File | Trigger | Purpose |
+|---|---|---|---|
+| **CI** | `ci.yml` | Push / PR to `main` or `implement/**` | Lint → Unit Tests → Build |
+| **Docker** | `docker.yml` | Push to `main` | Build image, Trivy CVE scan, push to GHCR |
+| **Deploy** | `deploy.yml` | Manual (`workflow_dispatch`) | Placeholder — configure your deploy target |
+
+### Required GitHub Secrets
+
+Configure these in **Settings → Secrets → Actions**:
+
+| Secret | Description |
+|---|---|
+| `MONGODB_URI` | Atlas connection string (used at deploy time, not in CI build) |
+| `GOOGLE_CLOUD_PROJECT` | GCP project ID |
+| `GCP_SA_KEY` | Service account JSON **base64-encoded** for Vertex AI |
+| `SESSION_SECRET` | 32+ char random string (`openssl rand -hex 32`) |
+| `GITHUB_TOKEN` | Auto-provided — used for GHCR push |
+
+> **CI build uses stub env vars** — no live Atlas or GCP credentials are needed for `npm run lint`, `npm test`, or `npm run build` in CI. Real secrets are only injected at deploy time.
+
+### Configure Deployment
+
+Edit `.github/workflows/deploy.yml` and replace the placeholder step with your deploy command:
+
+```yaml
+# GCP Cloud Run example
+- name: Deploy to Cloud Run
+  run: |
+    gcloud run deploy torbidd-app \
+      --image ghcr.io/${{ github.repository_owner }}/torbidd-app:latest \
+      --region asia-southeast1 \
+      --platform managed \
+      --set-env-vars MONGODB_URI=${{ secrets.MONGODB_URI }}
+```
+
+---
+
+## 🗄️ Database Scripts
+
+In addition to `npm run seed`, two utility scripts are available:
+
+### Health Check
+```bash
+npm run db:check
+```
+
+Connects to Atlas and verifies:
+- All required collections exist (`projects`, `historicalprojects`, `bookmarks`, `usersettings`)
+- Document counts for each collection
+- Critical indexes are in place (exits non-zero on failure — safe to use in CI)
+
+### Migration Runner
+```bash
+npm run db:migrate
+```
+
+Runs pending schema migrations idempotently. Each migration is recorded in a `migrations` collection and never re-applied. To add a migration, append an entry to the `MIGRATIONS` array in `scripts/db-migrate.ts`.
+
+### Recommended workflow for a fresh Atlas cluster:
+```bash
+# 1. Verify connection
+npm run db:check
+
+# 2. Seed initial data
+npm run seed
+
+# 3. Apply any pending schema migrations
+npm run db:migrate
+
+# 4. Verify again
+npm run db:check
+```
+
+---
+
 ## 📄 License & Attribution
 
 Developed for **Bangkok Metropolitan Administration (BMA) Software Procurement Intelligence Platform (TORBIDD)**.
+

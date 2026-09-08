@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+// jest.config.js must use CommonJS require — next/jest only exports CJS.
 const nextJest = require('next/jest');
 
 const createJestConfig = nextJest({
