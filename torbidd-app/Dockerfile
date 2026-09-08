@@ -1,5 +1,5 @@
 # Multi-Stage Production Dockerfile
-# Stack: Next.js 16 (App Router) + Node 20 + TypeScript
+# Stack: Next.js 16 (App Router) + Node 22 + TypeScript
 
 # Stages:
 #   1. deps    — Install production node_modules
@@ -13,7 +13,7 @@
 #   docker run -p 3000:3000 --env-file .env.local torbidd-app
 
 # Stage 1: Install dependencies 
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 
 # Install libc compatibility for native modules
 RUN apk add --no-cache libc6-compat
@@ -24,10 +24,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Clean install — respects package-lock.json, no postinstall scripts for speed
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps
 
 # Stage 2: Build the Next.js application 
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -56,7 +56,7 @@ ENV SESSION_SECRET=build-time-placeholder-replace-at-runtime
 RUN npm run build
 
 # Stage 3: Minimal production runner
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 

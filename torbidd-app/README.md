@@ -283,9 +283,9 @@ The multi-stage Dockerfile produces a minimal production image using Next.js `st
 
 | Stage | Base | Purpose |
 |---|---|---|
-| `deps` | `node:20-alpine` | Install `node_modules` via `npm ci` |
-| `builder` | `node:20-alpine` | `npm run build` → `.next/standalone` |
-| `runner` | `node:20-alpine` | Copy only what's needed, run as non-root `nextjs` user |
+| `deps` | `node:22-alpine` | Install `node_modules` via `npm ci` |
+| `builder` | `node:22-alpine` | `npm run build` → `.next/standalone` |
+| `runner` | `node:22-alpine` | Copy only what's needed, run as non-root `nextjs` user |
 
 ---
 

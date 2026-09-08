@@ -117,9 +117,7 @@ async function main(): Promise<void> {
   ok(`Connected to database: ${YELLOW}${dbName}${RESET}\n`);
 
   const db = mongoose.connection.db!;
-  // Use untyped collection for migration records — this is a script, not app code
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const migrationsCol = db.collection<Record<string, any>>('migrations');
+  const migrationsCol = db.collection<MigrationRecord>('migrations');
 
   // Ensure an index on `id` for O(1) lookups
   await migrationsCol.createIndex({ id: 1 }, { unique: true });
