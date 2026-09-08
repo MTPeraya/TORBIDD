@@ -1,21 +1,18 @@
-# =============================================================================
-# TORBIDD — Multi-Stage Production Dockerfile
-# =============================================================================
+# Multi-Stage Production Dockerfile
 # Stack: Next.js 16 (App Router) + Node 20 + TypeScript
-#
+
 # Stages:
 #   1. deps    — Install production node_modules
 #   2. builder — Full build (TypeScript strict check + Next.js standalone)
 #   3. runner  — Minimal runtime image (non-root, no dev tools)
-#
+
 # Build:
 #   docker build -t torbidd-app ./torbidd-app
-#
+
 # Run:
 #   docker run -p 3000:3000 --env-file .env.local torbidd-app
-# =============================================================================
 
-# ── Stage 1: Install dependencies ────────────────────────────────────────────
+# Stage 1: Install dependencies 
 FROM node:20-alpine AS deps
 
 # Install libc compatibility for native modules
@@ -29,7 +26,7 @@ COPY package.json package-lock.json ./
 # Clean install — respects package-lock.json, no postinstall scripts for speed
 RUN npm ci --ignore-scripts
 
-# ── Stage 2: Build the Next.js application ───────────────────────────────────
+# Stage 2: Build the Next.js application 
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -58,7 +55,7 @@ ENV SESSION_SECRET=build-time-placeholder-replace-at-runtime
 # Build — next.config.ts output: 'standalone' creates a self-contained bundle
 RUN npm run build
 
-# ── Stage 3: Minimal production runner ───────────────────────────────────────
+# Stage 3: Minimal production runner
 FROM node:20-alpine AS runner
 
 WORKDIR /app
