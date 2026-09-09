@@ -20,7 +20,6 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
   const isDashboard = pathname === '/opportunities' || pathname.startsWith('/opportunities/');
   const isHistorical = pathname === '/historical';
   const isSaved = pathname === '/saved';
-  const isNotifications = pathname === '/notifications';
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
@@ -88,18 +87,6 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
           {bookmarkCount > 0 && <span className="sidebar-badge">{bookmarkCount}</span>}
         </Link>
 
-        <div className="sidebar-section-label">
-          <span className="sidebar-link-label">{L('sectionTools')}</span>
-        </div>
-
-        <Link
-          href="/notifications"
-          className={`sidebar-link ${isNotifications ? 'active' : ''}`}
-          data-tooltip={L('navSettings')}
-        >
-          {ICONS.bell}
-          <span className="sidebar-link-label">{L('navSettings')}</span>
-        </Link>
       </nav>
 
       <div className="sidebar-footer">
