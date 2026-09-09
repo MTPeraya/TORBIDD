@@ -26,7 +26,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/torbidd-app
+  IMAGE_NAME: mtperaya/torbidd-app
 
 jobs:
   docker:
@@ -57,7 +57,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=sha,prefix=sha-,format=short
             type=ref,event=branch
 
@@ -88,6 +88,7 @@ jobs:
 
       # ── Trivy security scan ───────────────────────────────────────────────
       - name: Scan image with Trivy
+        id: trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
@@ -97,10 +98,21 @@ jobs:
           exit-code: '1'          # fail the job on any HIGH/CRITICAL finding
         continue-on-error: true   # upload SARIF even if scan finds issues
 
+      # ── Check SARIF exists ───────────────────────────────────────────────
+      - name: Check SARIF file exists
+        id: sarif_check
+        if: always()
+        run: |
+          if [ -f "trivy-results.sarif" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       # ── Upload SARIF to GitHub Security tab ───────────────────────────────
       - name: Upload Trivy SARIF report
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && steps.sarif_check.outputs.exists == 'true'
         with:
           sarif_file: trivy-results.sarif
 
@@ -110,7 +122,7 @@ jobs:
         with:
           context: ./torbidd-app
           file: ./torbidd-app/Dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          push: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.push_image) }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache

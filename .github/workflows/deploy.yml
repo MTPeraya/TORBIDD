@@ -50,7 +50,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/torbidd-app
+  IMAGE_NAME: mtperaya/torbidd-app # 
 
 jobs:
   deploy:
