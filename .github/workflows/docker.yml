@@ -16,6 +16,13 @@ on:
   push:
     branches:
       - main
+      - 'implement/**'
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+      - 'implement/**'
   workflow_dispatch:
     inputs:
       push_image:
@@ -134,8 +141,12 @@ jobs:
       # ── Summary ───────────────────────────────────────────────────────────
       - name: Print image digest
         run: |
-          echo "### 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.push_image) }}" = "true" ]; then
+            echo "### 🐳 Docker Image Published to GHCR" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### 🐳 Docker Image Built & Scanned (Not Pushed)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Registry | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Tags | \`${{ steps.meta.outputs.tags }}\` |" >> $GITHUB_STEP_SUMMARY

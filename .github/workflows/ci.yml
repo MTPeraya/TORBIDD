@@ -12,10 +12,14 @@ on:
     branches:
       - main
       - 'implement/**'
+      - 'feature/**'
+      - 'fix/**'
   pull_request:
     branches:
       - main
       - 'implement/**'
+      - 'feature/**'
+      - 'fix/**'
 
 jobs:
   ci:
