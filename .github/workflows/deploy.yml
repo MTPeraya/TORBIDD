@@ -50,7 +50,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: mtperaya/torbidd-app # 
 
 jobs:
   deploy:
@@ -62,6 +61,11 @@ jobs:
       # ── Checkout ──────────────────────────────────────────────────────────
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # ── Dynamic lowercase image name ─────────────────────────────────────
+      - name: Set lowercased image name
+        run: |
+          echo "IMAGE_NAME=$(echo '${{ github.repository_owner }}/torbidd-app' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       # ── Confirm deploy ────────────────────────────────────────────────────
       - name: Print deploy info

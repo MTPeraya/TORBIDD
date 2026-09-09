@@ -26,7 +26,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: mtperaya/torbidd-app
 
 jobs:
   docker:
@@ -41,6 +40,11 @@ jobs:
       # ── Checkout ──────────────────────────────────────────────────────────
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # ── Dynamic lowercase image name ─────────────────────────────────────
+      - name: Set lowercased image name
+        run: |
+          echo "IMAGE_NAME=$(echo '${{ github.repository_owner }}/torbidd-app' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       # ── QEMU (multi-arch) ─────────────────────────────────────────────────
       - name: Set up QEMU
