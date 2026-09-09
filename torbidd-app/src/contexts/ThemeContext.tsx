@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { Theme } from '@/types/settings';
 
 interface ThemeContextValue {
@@ -11,19 +11,21 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('torbidd_theme') as Theme;
-    if (saved === 'dark' || saved === 'light') {
-      setTheme(saved);
-      if (saved === 'dark') {
-        document.body.classList.add('dark-mode');
-      } else {
-        document.body.classList.remove('dark-mode');
+  const [theme, setTheme] = useState<Theme>(() => {
+    // Initializer runs once on mount ('use client' guarantees window exists)
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('torbidd_theme') as Theme;
+      if (saved === 'dark' || saved === 'light') {
+        if (saved === 'dark') {
+          document.body.classList.add('dark-mode');
+        } else {
+          document.body.classList.remove('dark-mode');
+        }
+        return saved;
       }
     }
-  }, []);
+    return 'light';
+  });
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';

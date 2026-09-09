@@ -1,0 +1,85 @@
+# =============================================================================
+# CI Workflow — Lint, Test, Build
+# =============================================================================
+# Triggers on every push and pull-request that touches main or any
+# implement/** branch. Validates code quality before anything is deployed.
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'implement/**'
+  pull_request:
+    branches:
+      - main
+      - 'implement/**'
+
+jobs:
+  ci:
+    name: Lint → Test → Build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: torbidd-app
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Node.js ──────────────────────────────────────────────────────────
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: torbidd-app/package-lock.json
+
+      # ── Install ───────────────────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # ── Lint ──────────────────────────────────────────────────────────────
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      # ── Test ──────────────────────────────────────────────────────────────
+      - name: Run unit tests (Jest)
+        run: npm test -- --ci --coverage --forceExit
+        env:
+          NODE_ENV: test
+
+      # ── Upload coverage ───────────────────────────────────────────────────
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: torbidd-app/coverage/
+          retention-days: 7
+
+      # ── Build ─────────────────────────────────────────────────────────────
+      # Uses stub env vars so the build succeeds without live Atlas / GCP creds.
+      # Real secrets are ONLY injected at deploy time.
+      - name: Build Next.js (TypeScript strict + App Router analysis)
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1
+          # --- Stub values (build-time only) --------------------------------
+          MONGODB_URI: mongodb://localhost:27017/torbidd
+          MONGODB_DB: torbidd
+          GOOGLE_CLOUD_PROJECT: ci-placeholder
+          GOOGLE_CLOUD_LOCATION: asia-southeast1
+          VERTEX_AI_MODEL_PRO: gemini-1.5-pro
+          VERTEX_AI_MODEL_FLASH: gemini-1.5-flash
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          SESSION_SECRET: ci-placeholder-secret-32-chars-long
+
+      # ── Build size summary ────────────────────────────────────────────────
+      - name: Report .next/standalone size
+        run: du -sh .next/standalone 2>/dev/null || echo "standalone output not found"

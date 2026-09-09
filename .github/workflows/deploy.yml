@@ -1,0 +1,89 @@
+# =============================================================================
+# Deploy Workflow — Manual Trigger Stub
+# =============================================================================
+# This workflow is a placeholder for your deployment step.
+# It is only triggered manually (workflow_dispatch) — nothing auto-deploys
+# without an explicit click.
+#
+# To configure a real deploy, replace the "Deploy" step below with your
+# preferred strategy:
+#
+#   Option A — GCP Cloud Run:
+#     gcloud run deploy torbidd-app \
+#       --image ghcr.io/<owner>/torbidd-app:latest \
+#       --region asia-southeast1 \
+#       --platform managed
+#
+#   Option B — SSH into a VPS (docker-compose pull + up):
+#     ssh user@server "cd /srv/torbidd && docker compose pull && docker compose up -d"
+#
+#   Option C — Render / Railway / Fly.io:
+#     Use their respective GitHub Actions integrations.
+#
+# Required Secrets (configure in repo Settings → Secrets → Actions):
+#   MONGODB_URI          — Atlas connection string
+#   GOOGLE_CLOUD_PROJECT — GCP project ID
+#   GCP_SA_KEY           — Service account JSON (base64-encoded)
+#   SESSION_SECRET       — 32+ char random string
+#   DEPLOY_SSH_KEY       — (Option B) SSH private key for the target server
+#   DEPLOY_HOST          — (Option B) server hostname / IP
+#   DEPLOY_USER          — (Option B) SSH username
+# =============================================================================
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment target'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: 'Image tag to deploy (e.g. sha-abc1234 or latest)'
+        required: true
+        default: 'latest'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/torbidd-app
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}   # uses GitHub Environment secrets
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Confirm deploy ────────────────────────────────────────────────────
+      - name: Print deploy info
+        run: |
+          echo "## 🚀 Deploying TORBIDD" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | \`${{ inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image tag   | \`${{ inputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+
+      # ── !! REPLACE THIS STEP WITH YOUR DEPLOY COMMAND !! ─────────────────
+      - name: Deploy (placeholder — configure your deploy strategy here)
+        run: |
+          echo "⚠️  No deploy command configured yet."
+          echo ""
+          echo "Edit .github/workflows/deploy.yml and replace this step."
+          echo ""
+          echo "Target image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}"
+          echo ""
+          echo "Common options:"
+          echo "  GCP Cloud Run: gcloud run deploy ..."
+          echo "  VPS SSH:       ssh user@host 'docker compose pull && docker compose up -d'"
+          echo "  Fly.io:        flyctl deploy --image ..."

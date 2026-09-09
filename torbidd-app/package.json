@@ -8,6 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "npx tsx scripts/seed.ts",
+    "db:check": "npx tsx scripts/db-check.ts",
+    "db:migrate": "npx tsx scripts/db-migrate.ts",
+    "docker:build": "docker build -t torbidd-app .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env.local torbidd-app",
     "test": "jest"
   },
   "dependencies": {
