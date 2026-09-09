@@ -4,6 +4,7 @@
 
 import { Project } from '@/types/project';
 import { HistoricalProject } from '@/types/historical';
+import { enrichProjectDetail } from '@/lib/projectDetailHelper';
 
 export const INITIAL_DEPARTMENTS = [
   { th: 'สำนักยุทธศาสตร์และประเมินผล', en: 'Strategy and Evaluation Dept.' },
@@ -17,7 +18,7 @@ export const INITIAL_DEPARTMENTS = [
   { th: 'สำนักการจราจรและขนส่ง', en: 'Traffic and Transport Dept.' },
 ];
 
-export const INITIAL_PROJECTS: Project[] = [
+const RAW_PROJECTS: Project[] = [
   {
     externalId: 1,
     title: {
@@ -479,6 +480,8 @@ export const INITIAL_PROJECTS: Project[] = [
     aiConfidence: 'High',
   },
 ];
+
+export const INITIAL_PROJECTS: Project[] = RAW_PROJECTS.map(enrichProjectDetail);
 
 export const INITIAL_HISTORICAL: HistoricalProject[] = [
   { title: { th: 'โครงการพัฒนาระบบบริหารจัดการกล้อง CCTV สำนักการจราจร กทม.', en: 'BMA CCTV Management Database System Project' }, department: INITIAL_DEPARTMENTS[8], year: 2025, category: 'Database', budget: 34000000 },
