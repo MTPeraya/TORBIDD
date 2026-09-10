@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Project } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
-import { ProjectCard } from '@/components/ui/ProjectCard';
+import { ProjectCarousel } from '@/components/ui/ProjectCarousel';
 import { isClosingSoon } from '@/lib/utils';
 
 // Static fallback data so the page renders even before MongoDB is connected
@@ -33,7 +33,7 @@ export default function HomePage() {
 
   const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
   const closingCount = projects.filter((p) => isClosingSoon(p.deadline)).length;
-  const recentProjects = projects.slice(0, 4);
+  const recentProjects = projects.slice(0, 8);
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,9 +102,13 @@ export default function HomePage() {
               </span>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Core Capabilities */}
-          <div className="section-header hero-inner-divider anim-fade-up anim-delay-2">
+      {/* Core Capabilities Section (ขีดความสามารถหลักของระบบ) */}
+      <div className="home-capabilities-section">
+        <div className="home-capabilities-content">
+          <div className="section-header capabilities-section-header anim-fade-up anim-delay-2">
             <div className="section-header-line"></div>
             <h2 className="section-header-title">{L('exploreTitle')}</h2>
             <div className="section-header-line"></div>
@@ -148,16 +152,21 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="recent-projects-list anim-fade-up anim-delay-3">
-            {recentProjects.map((p) => (
-              <ProjectCard key={p.externalId} project={p} />
-            ))}
+          <div className="anim-fade-up anim-delay-3">
+            <ProjectCarousel projects={recentProjects} />
           </div>
 
-          {/* Footer */}
-          <div className="home-footer anim-fade-up anim-delay-3">
-            <span className="analysis-disclaimer">{L('disclaimer')}</span>
-          </div>
+          {/* Website Maker Contact Footer (Direct in Website) */}
+          <footer className="home-footer anim-fade-up anim-delay-3" id="contact-footer">
+            <div className="footer-direct-wrapper">
+              <div className="footer-direct-bottom">
+                <div className="footer-copyright-text">
+                  © 2026 TORBIDD · Department of Computer Engineering, Faculty of Engineering, Kasetsart University
+                </div>
+                <div className="analysis-disclaimer">{L('disclaimer')}</div>
+              </div>
+            </div>
+          </footer>
         </div>
       </div>
     </div>
