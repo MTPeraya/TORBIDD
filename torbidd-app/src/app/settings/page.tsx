@@ -1,36 +1,41 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
 import { ICONS } from '@/components/ui/Icons';
+
+function getSavedProfile() {
+  if (typeof window === 'undefined') {
+    return { name: '', org: '', role: '', avatar: null as string | null };
+  }
+  try {
+    const saved = localStorage.getItem('torbidd_profile');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        name: parsed.name ?? '',
+        org: parsed.org ?? '',
+        role: parsed.role ?? '',
+        avatar: (parsed.avatar as string | null) ?? null,
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return { name: '', org: '', role: '', avatar: null as string | null };
+}
 
 export default function ProfileSettingsPage() {
   const { L } = useLanguage();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState('');
-  const [org, setOrg] = useState('');
-  const [role, setRole] = useState('');
-  const [avatar, setAvatar] = useState<string | null>(null); // base64 data URL
+  const [name, setName] = useState(() => getSavedProfile().name);
+  const [org, setOrg] = useState(() => getSavedProfile().org);
+  const [role, setRole] = useState(() => getSavedProfile().role);
+  const [avatar, setAvatar] = useState<string | null>(() => getSavedProfile().avatar);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Load saved profile from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('torbidd_profile');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setName(parsed.name ?? '');
-        setOrg(parsed.org ?? '');
-        setRole(parsed.role ?? '');
-        setAvatar(parsed.avatar ?? null);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -80,7 +85,7 @@ export default function ProfileSettingsPage() {
   };
 
   const initials = name
-    ? name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    ? name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
     : 'BM';
 
   return (

@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjectById, getProjectByExternalId } from '@/services/database/projects';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
+import { enrichProjectDetail } from '@/lib/projectDetailHelper';
+import { Project } from '@/types/project';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,17 +22,27 @@ export async function GET(
     if (!isNaN(numId)) {
       try {
         const project = await getProjectByExternalId(numId);
-        if (project) return NextResponse.json({ data: project });
+        if (project) {
+          return NextResponse.json({
+            data: enrichProjectDetail(project as unknown as Project),
+          });
+        }
       } catch {}
       const fallback = INITIAL_PROJECTS.find((p) => p.externalId === numId);
-      if (fallback) return NextResponse.json({ data: fallback });
+      if (fallback) {
+        return NextResponse.json({ data: enrichProjectDetail(fallback) });
+      }
     }
 
     // Check if ObjectId
     if (/^[0-9a-fA-F]{24}$/.test(id)) {
       try {
         const project = await getProjectById(id);
-        if (project) return NextResponse.json({ data: project });
+        if (project) {
+          return NextResponse.json({
+            data: enrichProjectDetail(project as unknown as Project),
+          });
+        }
       } catch {}
     }
 

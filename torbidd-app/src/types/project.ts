@@ -16,6 +16,51 @@ export interface Department {
   en: string;
 }
 
+export interface TimelineEvent {
+  id: string;
+  event: BilingualText;
+  date: string; // ISO date
+  description?: BilingualText;
+  status: 'completed' | 'active' | 'upcoming';
+}
+
+export interface BudgetBreakdownItem {
+  category: BilingualText;
+  amount: number;
+  percentage: number;
+}
+
+export interface HighlightedQualification {
+  type: 'critical' | 'standard';
+  title: BilingualText;
+  description: BilingualText;
+}
+
+export interface DocumentSection {
+  sectionId: string;
+  articleNumber?: string;
+  title: BilingualText;
+  page: number;
+  content: BilingualText;
+  extractedHighlights?: BilingualText[];
+}
+
+export interface AiMetadata {
+  model: string;
+  confidenceScore: number;
+  verifiedByHuman: boolean;
+  extractedClausesCount: number;
+  lastVerifiedDate: string;
+}
+
+export interface ContactInfo {
+  department: BilingualText;
+  division?: BilingualText;
+  phone?: string;
+  email?: string;
+  officer?: BilingualText;
+}
+
 export interface Project {
   _id?: string;
   externalId: number;
@@ -31,9 +76,17 @@ export interface Project {
   qualifications: { th: string[]; en: string[] };
   historicalAvg: number;
   sourceDocument: string;
+  sourceUrl?: string;
+  documentUrl?: string;
   processedDate: string;
   aiConfidence: AiConfidence;
   aiClassificationModel?: string;
+  timeline?: TimelineEvent[];
+  budgetBreakdown?: BudgetBreakdownItem[];
+  highlightedQualifications?: HighlightedQualification[];
+  documentSections?: DocumentSection[];
+  aiMetadata?: AiMetadata;
+  contactInfo?: ContactInfo;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -45,3 +98,4 @@ export interface ProjectFilters {
   budget?: 'under5m' | '5to10' | '10to20' | 'above20m';
   deadline?: 'within7' | 'within30' | 'moreThan30';
 }
+

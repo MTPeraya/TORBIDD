@@ -44,11 +44,9 @@ export function ProjectCarousel({ projects }: ProjectCarouselProps) {
   const totalPages = pages.length;
 
   // Keep currentIndex bounded when pages change
-  useEffect(() => {
-    if (currentIndex >= totalPages && totalPages > 0) {
-      setCurrentIndex(totalPages - 1);
-    }
-  }, [totalPages, currentIndex]);
+  if (currentIndex >= totalPages && totalPages > 0) {
+    setCurrentIndex(totalPages - 1);
+  }
 
   const goToNext = useCallback(() => {
     if (totalPages <= 1) return;

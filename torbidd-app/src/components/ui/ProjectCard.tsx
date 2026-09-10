@@ -11,7 +11,6 @@ import {
   formatDate,
   daysUntil,
   isClosingSoon,
-  isNew,
   getCategoryClass,
 } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/labels';
@@ -26,7 +25,6 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const { isBookmarked, toggleBookmark } = useBookmarks();
 
   const closing = isClosingSoon(project.deadline);
-  const isNewItem = isNew(project.publishDate);
   const days = daysUntil(project.deadline);
   const catClass = getCategoryClass(project.category);
   const catLabel = CATEGORY_LABELS[language][project.category] || project.category;

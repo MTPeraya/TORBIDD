@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
 import { ICONS } from '@/components/ui/Icons';
-import { CATEGORIES, CATEGORY_LABELS, ALL_INTEREST_TAGS } from '@/lib/labels';
+import { CATEGORY_LABELS, ALL_INTEREST_TAGS } from '@/lib/labels';
 import { ProjectCategory } from '@/types/project';
 
 export default function NotificationsPage() {

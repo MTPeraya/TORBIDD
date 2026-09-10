@@ -1,11 +1,40 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useSyncExternalStore, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ICONS } from '@/components/ui/Icons';
+
+interface ProfileData {
+  name: string;
+  org: string;
+  avatar: string | null;
+}
+
+const emptyProfile: ProfileData = { name: '', org: '', avatar: null };
+
+function subscribeProfile(callback: () => void) {
+  window.addEventListener('torbidd_profile_updated', callback);
+  window.addEventListener('storage', callback);
+  return () => {
+    window.removeEventListener('torbidd_profile_updated', callback);
+    window.removeEventListener('storage', callback);
+  };
+}
+
+function getProfileSnapshot(): string {
+  try {
+    return localStorage.getItem('torbidd_profile') ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function getProfileServerSnapshot(): string {
+  return '';
+}
 
 export function Topbar() {
   const pathname = usePathname();
@@ -13,32 +42,31 @@ export function Topbar() {
   const { language, setLanguage, L } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Profile data synced from localStorage
-  const [profile, setProfile] = useState({ name: '', org: '', avatar: null as string | null });
+  // Close dropdown on route change without setState in effect
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setDropdownOpen(false);
+  }
 
-  const loadProfile = () => {
+  // Profile data synced from localStorage via useSyncExternalStore
+  const profileRaw = useSyncExternalStore(
+    subscribeProfile,
+    getProfileSnapshot,
+    getProfileServerSnapshot
+  );
+
+  const profile = useMemo<ProfileData>(() => {
+    if (!profileRaw) return emptyProfile;
     try {
-      const saved = localStorage.getItem('torbidd_profile');
-      if (saved) {
-        const p = JSON.parse(saved);
-        setProfile({ name: p.name ?? '', org: p.org ?? '', avatar: p.avatar ?? null });
-      }
-    } catch { /* ignore */ }
-  };
-
-  useEffect(() => {
-    loadProfile();
-    // Re-sync when the settings page saves (same tab)
-    window.addEventListener('torbidd_profile_updated', loadProfile);
-    // Re-sync across tabs
-    window.addEventListener('storage', loadProfile);
-    return () => {
-      window.removeEventListener('torbidd_profile_updated', loadProfile);
-      window.removeEventListener('storage', loadProfile);
-    };
-  }, []);
+      const p = JSON.parse(profileRaw);
+      return { name: p.name ?? '', org: p.org ?? '', avatar: p.avatar ?? null };
+    } catch {
+      return emptyProfile;
+    }
+  }, [profileRaw]);
 
   const initials = profile.name
     ? profile.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -56,11 +84,6 @@ export function Topbar() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
-
-  // Close dropdown on route change
-  useEffect(() => {
-    setDropdownOpen(false);
-  }, [pathname]);
 
   const getPageCrumb = () => {
     if (pathname === '/') return null;
