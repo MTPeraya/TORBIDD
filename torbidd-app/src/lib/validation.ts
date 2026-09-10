@@ -65,3 +65,37 @@ export const AiClassifySchema = z.object({
   title: z.string().min(1).max(500),
   description: z.string().min(1).max(5000),
 });
+
+// ─── Project Create & Update (Admin CRUD) ───────────────────────────────────
+
+export const BilingualStringSchema = z.object({
+  th: z.string().min(1).max(1000),
+  en: z.string().min(1).max(1000),
+});
+
+export const BilingualArraySchema = z.object({
+  th: z.array(z.string()).min(1),
+  en: z.array(z.string()).min(1),
+});
+
+export const ProjectCreateSchema = z.object({
+  externalId: z.coerce.number().int().positive().optional(),
+  title: BilingualStringSchema,
+  department: BilingualStringSchema,
+  budget: z.coerce.number().min(0),
+  publishDate: z.string().min(1),
+  deadline: z.string().min(1),
+  category: z.enum(['Website', 'Mobile App', 'AI', 'Database']),
+  procurementType: z.string().min(1).max(200),
+  description: BilingualStringSchema,
+  scope: BilingualArraySchema,
+  qualifications: BilingualArraySchema,
+  historicalAvg: z.coerce.number().min(0).optional(),
+  sourceDocument: z.string().optional().default(''),
+  sourceUrl: z.string().optional(),
+  documentUrl: z.string().optional(),
+  aiConfidence: z.enum(['High', 'Medium', 'Low']).optional().default('High'),
+});
+
+export const ProjectUpdateSchema = ProjectCreateSchema.partial();
+

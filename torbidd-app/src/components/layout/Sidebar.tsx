@@ -20,6 +20,7 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
   const isDashboard = pathname === '/opportunities' || pathname.startsWith('/opportunities/');
   const isHistorical = pathname === '/historical';
   const isSaved = pathname === '/saved';
+  const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
@@ -87,6 +88,31 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
           {bookmarkCount > 0 && <span className="sidebar-badge">{bookmarkCount}</span>}
         </Link>
 
+        <div className="sidebar-section-label" style={{ marginTop: 12 }}>
+          <span className="sidebar-link-label">{L('sectionTools')}</span>
+        </div>
+
+        <Link
+          href="/admin"
+          className={`sidebar-link ${isAdmin ? 'active' : ''}`}
+          data-tooltip={L('navAdmin')}
+          id="sidebarAdminLink"
+        >
+          {ICONS.shield}
+          <span className="sidebar-link-label">{L('navAdmin')}</span>
+          <span
+            className="sidebar-badge"
+            style={{
+              background: 'rgba(59, 130, 246, 0.15)',
+              color: '#3b82f6',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              fontSize: '0.65rem',
+              fontWeight: 700,
+            }}
+          >
+            ADMIN
+          </span>
+        </Link>
       </nav>
 
       <div className="sidebar-footer">
