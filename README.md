@@ -322,7 +322,7 @@ Edit `.github/workflows/deploy.yml` and replace the placeholder step with your d
 - name: Deploy to Cloud Run
   run: |
     gcloud run deploy torbidd-app \
-      --image ghcr.io/${{ github.repository_owner }}/torbidd-app:latest \
+      --image ghcr.io/mtperaya/torbidd-app:latest \
       --region asia-southeast1 \
       --platform managed \
       --set-env-vars MONGODB_URI=${{ secrets.MONGODB_URI }}
