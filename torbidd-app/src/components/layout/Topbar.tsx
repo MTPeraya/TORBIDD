@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useSyncExternalStore, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -205,7 +206,7 @@ export function Topbar() {
               title="User menu"
             >
               {activeProfile.avatar ? (
-                <img src={activeProfile.avatar} alt="avatar" className="topbar-avatar-img" />
+                <Image src={activeProfile.avatar} alt="avatar" className="topbar-avatar-img" width={36} height={36} unoptimized />
               ) : (
                 initials
               )}
@@ -216,7 +217,7 @@ export function Topbar() {
                 <div className="user-dropdown-header">
                   <div className="user-dropdown-avatar">
                     {activeProfile.avatar ? (
-                      <img src={activeProfile.avatar} alt="avatar" className="topbar-avatar-img" />
+                      <Image src={activeProfile.avatar} alt="avatar" className="topbar-avatar-img" width={36} height={36} unoptimized />
                     ) : (
                       initials
                     )}

@@ -6,6 +6,7 @@
 
 import React, { Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -61,7 +62,7 @@ function LoginContent() {
           <div className="login-session-box">
             <div className="login-session-avatar">
               {user.picture ? (
-                <img src={user.picture} alt={user.name} className="login-avatar-img" />
+                <Image src={user.picture} alt={user.name} className="login-avatar-img" width={48} height={48} unoptimized />
               ) : (
                 user.name.slice(0, 2).toUpperCase()
               )}

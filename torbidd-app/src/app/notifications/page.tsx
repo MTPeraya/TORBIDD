@@ -47,8 +47,6 @@ export default function NotificationsPage() {
         }
       })
       .catch(() => {
-        // Show nothing while auth is loading to avoid flicker
-        if (authLoading || !isAuthenticated) return;
         // Fallback from localStorage
         const saved = localStorage.getItem('torbidd_settings');
         if (saved) {

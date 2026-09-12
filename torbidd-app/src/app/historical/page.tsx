@@ -49,9 +49,6 @@ export default function HistoricalPage() {
       .catch(() => {});
   }, []);
 
-  // Show nothing while auth is loading to avoid flicker
-  if (authLoading || !isAuthenticated) return null;
-
   const departments = useMemo(() => {
     return Array.from(new Set(historicalData.map((d) => (getLocalized(d.department) as string))));
   }, [historicalData, getLocalized]);
@@ -79,6 +76,9 @@ export default function HistoricalPage() {
 
     return result;
   }, [historicalData, selectedCategory, selectedDept, selectedYear, getLocalized]);
+
+  // Show nothing while auth is loading to avoid flicker
+  if (authLoading || !isAuthenticated) return null;
 
   return (
     <div className="page-content">

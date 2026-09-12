@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -153,7 +154,7 @@ export default function ProfileSettingsPage() {
         <div className="profile-avatar-section">
           <div className="profile-avatar-upload-wrapper" onClick={handleAvatarClick} title={L('profileAvatarTitle')}>
             {previewAvatar ? (
-              <img src={previewAvatar} alt="Profile" className="profile-avatar-large profile-avatar-img" />
+              <Image src={previewAvatar} alt="Profile" className="profile-avatar-large profile-avatar-img" width={80} height={80} unoptimized />
             ) : (
               <div className="profile-avatar-large">{initials}</div>
             )}
