@@ -1,41 +1,63 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ICONS } from '@/components/ui/Icons';
 
-function getSavedProfile() {
+interface SavedProfile {
+  userId?: string;
+  email?: string;
+  name?: string;
+  org?: string;
+  role?: string;
+  avatar?: string | null;
+}
+
+function getSavedProfile(): SavedProfile {
   if (typeof window === 'undefined') {
-    return { name: '', org: '', role: '', avatar: null as string | null };
+    return {};
   }
   try {
     const saved = localStorage.getItem('torbidd_profile');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        name: parsed.name ?? '',
-        org: parsed.org ?? '',
-        role: parsed.role ?? '',
-        avatar: (parsed.avatar as string | null) ?? null,
-      };
+      return JSON.parse(saved);
     }
   } catch {
     // ignore
   }
-  return { name: '', org: '', role: '', avatar: null as string | null };
+  return {};
 }
 
 export default function ProfileSettingsPage() {
   const { L } = useLanguage();
   const { showToast } = useToast();
+  const { user: authUser, isAuthenticated, updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState(() => getSavedProfile().name);
-  const [org, setOrg] = useState(() => getSavedProfile().org);
-  const [role, setRole] = useState(() => getSavedProfile().role);
-  const [avatar, setAvatar] = useState<string | null>(() => getSavedProfile().avatar);
+  const initialSaved = getSavedProfile();
+
+  const [name, setName] = useState(() => initialSaved.name || '');
+  const [org, setOrg] = useState(() => initialSaved.org || '');
+  const [role, setRole] = useState(() => initialSaved.role || '');
+  const [avatar, setAvatar] = useState<string | null>(() => initialSaved.avatar ?? null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Adjust state during render when authUser becomes available/changes
+  const [prevAuthId, setPrevAuthId] = useState<string | null>(null);
+
+  if (authUser && prevAuthId !== authUser.id) {
+    setPrevAuthId(authUser.id);
+    const saved = getSavedProfile();
+    const isMatchingUser = saved && (saved.userId === authUser.id || saved.email === authUser.email);
+
+    setName(isMatchingUser && saved.name !== undefined && saved.name !== '' ? saved.name : (authUser.name || ''));
+    setOrg(isMatchingUser && saved.org !== undefined && saved.org !== '' ? saved.org : (authUser.org || 'กรุงเทพมหานคร'));
+    setRole(isMatchingUser && saved.role !== undefined && saved.role !== '' ? saved.role : (authUser.role || 'BMA Officer'));
+    setAvatar(isMatchingUser && saved.avatar !== undefined ? saved.avatar : (authUser.picture || null));
+  }
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -47,11 +69,11 @@ export default function ProfileSettingsPage() {
 
     // Validate type and size (max 2MB)
     if (!file.type.startsWith('image/')) {
-      showToast('กรุณาเลือกไฟล์รูปภาพ', ICONS.bell);
+      showToast(L('profileImageTypeError'), ICONS.bell);
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      showToast('ไฟล์ต้องมีขนาดไม่เกิน 2MB', ICONS.bell);
+      showToast(L('profileImageSizeError'), ICONS.bell);
       return;
     }
 
@@ -73,19 +95,36 @@ export default function ProfileSettingsPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    const payload = { name, org, role, avatar };
+    const payload: SavedProfile = {
+      userId: authUser?.id,
+      email: authUser?.email,
+      name,
+      org,
+      role,
+      avatar,
+    };
     localStorage.setItem('torbidd_profile', JSON.stringify(payload));
     // Notify same-tab listeners (storage event only fires in other tabs)
     window.dispatchEvent(new Event('torbidd_profile_updated'));
 
+    if (isAuthenticated) {
+      await updateProfile({ name, org, role, avatar });
+    }
+
     // Small delay for visual feedback
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     setIsSaving(false);
     showToast(L('profileSaved'), ICONS.check);
   };
 
-  const initials = name
-    ? name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+  // Example Preview Data (matches Google data & live updates with form)
+  const previewName = name || authUser?.name || 'BMA Officer';
+  const previewOrg = org || authUser?.org || 'กรุงเทพมหานคร';
+  const previewRole = role || authUser?.role || 'BMA Officer';
+  const previewAvatar = avatar !== null && avatar !== undefined ? avatar : (authUser?.picture || null);
+
+  const initials = previewName
+    ? previewName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
     : 'BM';
 
   return (
@@ -96,24 +135,38 @@ export default function ProfileSettingsPage() {
       </div>
 
       <div className="profile-settings-container">
-        {/* Avatar section */}
+        {/* Sign in prompt for unauthenticated visitors */}
+        {!isAuthenticated && (
+          <div className="google-auth-prompt-card">
+            <div className="google-prompt-icon">{ICONS.google}</div>
+            <div className="google-prompt-info">
+              <div className="google-prompt-title">{L('profileGooglePromptTitle')}</div>
+              <div className="google-prompt-desc">{L('profileGooglePromptDesc')}</div>
+            </div>
+            <Link href="/login" className="google-prompt-btn">
+              <span>{L('navLogin')}</span>
+            </Link>
+          </div>
+        )}
+
+        {/* Example Preview Card / Avatar section */}
         <div className="profile-avatar-section">
-          <div className="profile-avatar-upload-wrapper" onClick={handleAvatarClick} title="เปลี่ยนรูปโปรไฟล์">
-            {avatar ? (
-              <img src={avatar} alt="Profile" className="profile-avatar-large profile-avatar-img" />
+          <div className="profile-avatar-upload-wrapper" onClick={handleAvatarClick} title={L('profileAvatarTitle')}>
+            {previewAvatar ? (
+              <img src={previewAvatar} alt="Profile" className="profile-avatar-large profile-avatar-img" />
             ) : (
               <div className="profile-avatar-large">{initials}</div>
             )}
             <div className="profile-avatar-overlay">
               <span className="profile-avatar-overlay-icon">{ICONS.camera}</span>
-              <span className="profile-avatar-overlay-text">เปลี่ยนรูป</span>
+              <span className="profile-avatar-overlay-text">{L('profileChangeAvatar')}</span>
             </div>
-            {avatar && (
+            {previewAvatar && (
               <button
                 type="button"
                 className="profile-avatar-remove-btn"
                 onClick={handleRemoveAvatar}
-                title="ลบรูปโปรไฟล์"
+                title={L('profileRemoveAvatar')}
               >
                 ✕
               </button>
@@ -131,13 +184,27 @@ export default function ProfileSettingsPage() {
           />
 
           <div className="profile-avatar-info">
-            <div className="profile-avatar-name">{name || 'BMA Officer'}</div>
-            <div className="profile-avatar-org">{org || 'กรุงเทพมหานคร'}</div>
-            <p className="profile-avatar-hint">คลิกที่รูปเพื่อเปลี่ยน · สูงสุด 2MB</p>
+            <div className="profile-avatar-header-row">
+              <div className="profile-avatar-name">{previewName}</div>
+              {isAuthenticated && (
+                <span className="profile-verified-badge" title="Google Account">
+                  {ICONS.google}
+                  <span>Google</span>
+                </span>
+              )}
+            </div>
+            <div className="profile-avatar-meta-row">
+              <span className="profile-role-badge">{previewRole}</span>
+              <span className="profile-avatar-org">{previewOrg}</span>
+            </div>
+            {isAuthenticated && authUser?.email && (
+              <div className="profile-avatar-email">{authUser.email}</div>
+            )}
+            <p className="profile-avatar-hint">{L('profileAvatarHint')}</p>
           </div>
         </div>
 
-        {/* Form */}
+        {/* Form Inputs matching Google Account */}
         <div className="profile-form">
           <div className="profile-form-group">
             <label className="profile-form-label" htmlFor="profileName">

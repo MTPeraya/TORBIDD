@@ -1,22 +1,33 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { HistoricalProject } from '@/types/historical';
 import { Project, ProjectCategory } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { BudgetBarChart, ComparisonChart } from '@/components/charts/HistoricalCharts';
 import { formatBudget, getCategoryAvg, getOutlierStatus } from '@/lib/utils';
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
 import { INITIAL_HISTORICAL, INITIAL_PROJECTS } from '@/lib/initialData';
 
 export default function HistoricalPage() {
+  const router = useRouter();
   const { language, L, getLocalized } = useLanguage();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [historicalData, setHistoricalData] = useState<HistoricalProject[]>(INITIAL_HISTORICAL);
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
 
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+
+  // Client-side auth guard (middleware is the primary guard)
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login?from=/historical');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
     fetch('/api/historical')
@@ -37,6 +48,9 @@ export default function HistoricalPage() {
       })
       .catch(() => {});
   }, []);
+
+  // Show nothing while auth is loading to avoid flicker
+  if (authLoading || !isAuthenticated) return null;
 
   const departments = useMemo(() => {
     return Array.from(new Set(historicalData.map((d) => (getLocalized(d.department) as string))));
