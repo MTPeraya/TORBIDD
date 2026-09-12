@@ -65,3 +65,22 @@ export const AiClassifySchema = z.object({
   title: z.string().min(1).max(500),
   description: z.string().min(1).max(5000),
 });
+
+// ─── Ingestion: Discover (POST /api/ingestion/discover) ─────────────────────
+
+export const IngestionDiscoverSchema = z.object({
+  keyword: z.string().max(200).default('ซอฟต์แวร์'),
+  fiscalYear: z.coerce.number().int().min(2500).max(2600).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(1000).default(100),
+});
+
+// ─── Ingestion: Project ID (11 digits e-GP identifier) ──────────────────────
+
+export const ProjectIdParamSchema = z.object({
+  projectId: z
+    .string()
+    .trim()
+    .regex(/^\d{11}$/, 'Project ID must contain exactly 11 numeric digits'),
+});
+

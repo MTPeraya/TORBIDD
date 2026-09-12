@@ -10,6 +10,7 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
+    '^bson$': require.resolve('bson'),
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 };
