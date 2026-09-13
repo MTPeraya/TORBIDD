@@ -15,6 +15,8 @@ interface SavedProfile {
   org?: string;
   role?: string;
   avatar?: string | null;
+  userType?: 'individual' | 'organization';
+  userDetail?: string;
 }
 
 function getSavedProfile(): SavedProfile {
@@ -44,6 +46,10 @@ export default function ProfileSettingsPage() {
   const [org, setOrg] = useState(() => initialSaved.org || '');
   const [role, setRole] = useState(() => initialSaved.role || '');
   const [avatar, setAvatar] = useState<string | null>(() => initialSaved.avatar ?? null);
+  const [userType, setUserType] = useState<'individual' | 'organization'>(
+    () => initialSaved.userType || 'individual'
+  );
+  const [userDetail, setUserDetail] = useState(() => initialSaved.userDetail || '');
   const [isSaving, setIsSaving] = useState(false);
 
   // Adjust state during render when authUser becomes available/changes
@@ -58,6 +64,8 @@ export default function ProfileSettingsPage() {
     setOrg(isMatchingUser && saved.org !== undefined && saved.org !== '' ? saved.org : (authUser.org || 'กรุงเทพมหานคร'));
     setRole(isMatchingUser && saved.role !== undefined && saved.role !== '' ? saved.role : (authUser.role || 'BMA Officer'));
     setAvatar(isMatchingUser && saved.avatar !== undefined ? saved.avatar : (authUser.picture || null));
+    if (isMatchingUser && saved.userType) setUserType(saved.userType);
+    if (isMatchingUser && saved.userDetail !== undefined) setUserDetail(saved.userDetail);
   }
 
   const handleAvatarClick = () => {
@@ -103,6 +111,8 @@ export default function ProfileSettingsPage() {
       org,
       role,
       avatar,
+      userType,
+      userDetail,
     };
     localStorage.setItem('torbidd_profile', JSON.stringify(payload));
     // Notify same-tab listeners (storage event only fires in other tabs)
@@ -254,19 +264,67 @@ export default function ProfileSettingsPage() {
               autoComplete="organization-title"
             />
           </div>
+        </div>
 
-          <div className="profile-form-actions">
+        {/* User Type Card */}
+        <div className="profile-usertype-card">
+          <div className="profile-usertype-header">
+            <div className="profile-usertype-title">{L('profileUserTypeTitle')}</div>
+            <div className="profile-usertype-sub">{L('profileUserTypeSub')}</div>
+          </div>
+
+          <div className="profile-usertype-toggle">
             <button
               type="button"
-              className="btn btn-primary"
-              id="saveProfileBtn"
-              onClick={handleSave}
-              disabled={isSaving}
+              id="userTypeIndividualBtn"
+              className={`profile-usertype-btn ${userType === 'individual' ? 'active' : ''}`}
+              onClick={() => { setUserType('individual'); setUserDetail(''); }}
             >
-              {isSaving ? ICONS.clock : ICONS.check}
-              <span>{isSaving ? '...' : L('profileSave')}</span>
+              <span className="profile-usertype-btn-icon">{ICONS.user}</span>
+              <span className="profile-usertype-btn-label">{L('profileUserTypeIndividual')}</span>
+              <span className="profile-usertype-btn-desc">{L('profileUserTypeIndividualDesc')}</span>
+            </button>
+
+            <button
+              type="button"
+              id="userTypeOrgBtn"
+              className={`profile-usertype-btn ${userType === 'organization' ? 'active' : ''}`}
+              onClick={() => { setUserType('organization'); setUserDetail(''); }}
+            >
+              <span className="profile-usertype-btn-icon">{ICONS.building}</span>
+              <span className="profile-usertype-btn-label">{L('profileUserTypeOrg')}</span>
+              <span className="profile-usertype-btn-desc">{L('profileUserTypeOrgDesc')}</span>
             </button>
           </div>
+
+          <div className="profile-usertype-detail">
+            <label className="profile-form-label" htmlFor="profileUserDetail">
+              {userType === 'individual' ? ICONS.dashboard : ICONS.building}
+              <span>{userType === 'individual' ? L('profileWorkExpLabel') : L('profileCompanyDescLabel')}</span>
+            </label>
+            <textarea
+              id="profileUserDetail"
+              className="profile-form-textarea"
+              rows={4}
+              placeholder={userType === 'individual' ? L('profileWorkExpPlaceholder') : L('profileCompanyDescPlaceholder')}
+              value={userDetail}
+              onChange={(e) => setUserDetail(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Page-level Save Action */}
+        <div className="profile-page-actions">
+          <button
+            type="button"
+            className="btn btn-primary"
+            id="saveProfileBtn"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? ICONS.clock : ICONS.check}
+            <span>{isSaving ? '...' : L('profileSave')}</span>
+          </button>
         </div>
       </div>
     </div>

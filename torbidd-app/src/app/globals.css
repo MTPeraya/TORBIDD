@@ -3691,6 +3691,164 @@ body.dark-mode .footer-copyright-text {
   padding-top: 4px;
 }
 
+
+.profile-page-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-200);
+  margin-top: 4px;
+}
+
+body.dark-mode .profile-page-actions {
+  border-color: var(--gray-300);
+}
+
+/* ==========================================================================
+   PROFILE USER TYPE CARD
+   ========================================================================== */
+
+.profile-usertype-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+body.dark-mode .profile-usertype-card {
+  background: var(--white);
+  border-color: var(--gray-300);
+}
+
+.profile-usertype-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-usertype-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-950);
+}
+
+body.dark-mode .profile-usertype-title {
+  color: var(--gray-900);
+}
+
+.profile-usertype-sub {
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.profile-usertype-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.profile-usertype-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--border-radius-sm);
+  border: 1.5px solid var(--gray-300);
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  text-align: left;
+}
+
+body.dark-mode .profile-usertype-btn {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+.profile-usertype-btn:hover {
+  border-color: var(--primary-600);
+  background: var(--primary-50);
+}
+
+body.dark-mode .profile-usertype-btn:hover {
+  background: var(--primary-50);
+}
+
+.profile-usertype-btn.active {
+  border-color: var(--primary-600);
+  background: var(--primary-50);
+  box-shadow: 0 0 0 3px rgba(39, 115, 165, 0.15);
+}
+
+.profile-usertype-btn-icon {
+  display: flex;
+  color: var(--primary-600);
+  margin-bottom: 2px;
+}
+
+.profile-usertype-btn-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.profile-usertype-btn-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-950);
+}
+
+body.dark-mode .profile-usertype-btn-label {
+  color: var(--gray-900);
+}
+
+.profile-usertype-btn-desc {
+  font-size: 12px;
+  color: var(--gray-500);
+  line-height: 1.4;
+}
+
+.profile-usertype-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-form-textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--border-radius-sm);
+  border: 1.5px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-950);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+body.dark-mode .profile-form-textarea {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+  color: var(--gray-950);
+}
+
+.profile-form-textarea:focus {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(39, 115, 165, 0.12);
+}
+
+.profile-form-textarea::placeholder {
+  color: var(--gray-400);
+}
+
 /* ==========================================================================
    ENHANCED PROCUREMENT DETAIL VIEWER STYLES
    ========================================================================== */
