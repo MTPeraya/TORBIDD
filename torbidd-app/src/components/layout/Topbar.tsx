@@ -93,6 +93,7 @@ export function Topbar() {
     if (pathname === '/saved') return L('navSaved');
     if (pathname === '/notifications') return L('navSettings');
     if (pathname === '/settings') return L('navProfile');
+    if (pathname === '/admin' || pathname.startsWith('/admin')) return L('navAdmin');
     return null;
   };
 
@@ -192,6 +193,17 @@ export function Topbar() {
               <div className="user-dropdown-divider" />
 
               <Link
+                href="/admin"
+                className="user-dropdown-item"
+                id="dropdownAdminLink"
+                role="menuitem"
+                onClick={() => setDropdownOpen(false)}
+              >
+                {ICONS.shield}
+                <span>{L('navAdmin')}</span>
+              </Link>
+
+              <Link
                 href="/settings"
                 className="user-dropdown-item"
                 id="dropdownProfileLink"
@@ -212,6 +224,7 @@ export function Topbar() {
                 {ICONS.bell}
                 <span>{L('navSettings')}</span>
               </Link>
+
 
               <div className="user-dropdown-divider" />
 
