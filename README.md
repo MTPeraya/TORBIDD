@@ -1,46 +1,55 @@
-# 🏛️ TORBIDD: BMA Software Procurement Intelligence Platform
+# 🏛️ TORBIDD: Government Software Procurement Intelligence Platform
 
-> **แพลตฟอร์มข่าวกรองการจัดซื้อจัดจ้างซอฟต์แวร์ กรุงเทพมหานคร**  
-> An AI-powered procurement intelligence & analytics platform helping technology vendors discover BMA software procurement opportunities, evaluate Go/No-Go bidder qualifications, analyze historical price benchmarks, and receive targeted tender alerts.
-
----
-
-## 📐 Architecture Overview
-
-```
-                          ┌─────────────────────────────┐
-                          │   Browser / Client Devices  │
-                          │   (Next.js App Router UI)   │
-                          └──────────────┬──────────────┘
-                                         │ HTTPS
-                                         ▼
-                          ┌─────────────────────────────┐
-                          │     Next.js Server Layer    │
-                          │  (Server Actions / Routes)  │
-                          └──────┬───────────────┬──────┘
-                                 │               │
-                     Mongoose /  │               │ @google-cloud/vertexai
-                  Connection Pool│               │ (Private Server Credentials)
-                                 ▼               ▼
-                      ┌──────────────────┐  ┌──────────────────┐
-                      │  MongoDB Atlas   │  │ Google Cloud     │
-                      │  - Projects      │  │ Vertex AI        │
-                      │  - Historical    │  │ - Gemini 1.5 Pro │
-                      │  - Bookmarks     │  │   (TOR Extract)  │
-                      │  - Settings      │  │ - Gemini Flash   │
-                      └──────────────────┘  │   (Classifier)   │
-                                            └──────────────────┘
-```
+> **แพลตฟอร์มข่าวกรองการจัดซื้อจัดจ้างซอฟต์แวร์ภาครัฐ**  
+> An AI-powered procurement intelligence & analytics platform helping technology vendors discover Thai government and municipal software procurement opportunities, evaluate Go/No-Go bidder qualifications with LLMs, analyze historical price benchmarks, and receive targeted tender alerts.
 
 ---
 
-## 🚀 Tech Stack
+## Project Documentation
+
+Key project specifications, requirements, and design documents are available in the [`docs/`](./docs) directory:
+
+- 📄 [**Software Requirements Specification (SRS)** (`docs/TORBIDD_SRS.pdf`)](./docs/TORBIDD_SRS.pdf) — Comprehensive specification covering system architecture, external data pipelines, functional & non-functional requirements, data schemas, and UI/UX mockups.
+- 📄 [**Project Proposal** (`docs/TORBIDD_Proposal.pdf`)](./docs/TORBIDD_Proposal.pdf) — Initial conceptual proposal, problem statement, objectives, and preliminary feasibility study.
+- 🖼️ [**System Architecture & Data Flow Diagram** (`docs/TORBIDD System Architecture and Data Flow.png`)](./docs/TORBIDD%20System%20Architecture%20and%20Data%20Flow.png) — Visual architecture diagram depicting external ingestion, Next.js server services, MongoDB Atlas, and Vertex AI multimodal workflows.
+
+---
+
+## 🌐 External Data Sources & Scope Evolution
+
+The platform aggregates and continuously polls procurement notices, Terms of Reference (TOR) specification documents, and historical bidding records from official Thai public government sources.
+
+> [!NOTE]
+> **Data Source Evolution (Proposal vs. SRS)**:  
+> In our initial **Project Proposal**, 5 external data sources were tentatively proposed for integration. Following technical feasibility evaluations, API accessibility audits, and schema consolidation conducted for the **Software Requirements Specification (SRS)**, the active data ingestion pipeline was refined to focus on **3 authoritative public government sources**:
+
+1. **Bangkok Metropolitan Administration e-Procurement**  
+   🔗 [egp2.bangkok.go.th](http://egp2.bangkok.go.th/)  
+   *Municipal procurement notices, electronic tender announcements, and downloadable TOR specifications from BMA departments and 50 district offices.*
+
+2. **Electronic Government Procurement (e-GP)**  
+   🔗 [www.gprocurement.go.th](http://www.gprocurement.go.th/)  
+   *Thailand's central national e-procurement portal operated by the Comptroller General's Department (CGD), Ministry of Finance, covering nationwide ministry and state agency software tenders.*
+
+3. **Open Government Data of Thailand**  
+   🔗 [data.go.th](http://data.go.th/)  
+   *The national open government data clearinghouse managed by the Digital Government Development Agency (DGA), providing structured historical procurement datasets, agency catalogs, and awarded contract analytics.*
+
+---
+
+## Architecture Overview
+
+![TORBIDD System Architecture and Data Flow](./docs/TORBIDD%20System%20Architecture%20and%20Data%20Flow.png)
+
+---
+
+## Tech Stack
 
 | Layer | Technology | Purpose |
 |---|---|---|
 | **Framework** | Next.js 16 (App Router) + React 19 | Server & Client Components, Route Handlers |
 | **Language** | TypeScript (Strict Mode) | Full-stack end-to-end type safety |
-| **Styling** | Vanilla CSS + CSS Tokens | High-performance design system with Dark/Light theme |
+| **Styling** | CSS | High-performance design system with Dark/Light theme |
 | **Database** | MongoDB Atlas + Mongoose | Document database with connection pooling & indexing |
 | **AI Layer** | Google Cloud Vertex AI (Gemini 1.5) | TOR document extraction & project classification |
 | **Charts** | Chart.js + react-chartjs-2 | Interactive historical budget & comparison visualizers |
@@ -49,46 +58,20 @@
 
 ---
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```
-torbidd-app/
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx                    # Root layout (Providers, Fonts, AppShell)
-│   │   ├── page.tsx                      # Home landing page with hero & capabilities
-│   │   ├── globals.css                   # Complete TORBIDD design system & tokens
-│   │   ├── opportunities/
-│   │   │   ├── page.tsx                  # Opportunities dashboard with live filters
-│   │   │   └── [id]/page.tsx             # Project detail + Go/No-Go checklist
-│   │   ├── historical/
-│   │   │   └── page.tsx                  # Historical price charts & outlier table
-│   │   ├── saved/
-│   │   │   └── page.tsx                  # Saved bookmarked opportunities
-│   │   ├── notifications/
-│   │   │   └── page.tsx                  # Alert settings & budget range preferences
-│   │   └── api/
-│   │       ├── projects/                 # GET /api/projects, GET /api/projects/[id]
-│   │       ├── historical/               # GET /api/historical
-│   │       ├── bookmarks/                # GET, POST /api/bookmarks, DELETE [id]
-│   │       ├── settings/                 # GET, PUT /api/settings
-│   │       └── ai/
-│   │           ├── classify/             # POST /api/ai/classify (Gemini Flash)
-│   │           └── extract/              # POST /api/ai/extract (Gemini Pro multimodal)
-│   ├── components/
-│   │   ├── layout/                       # Sidebar, Topbar, AppShell, Toast
-│   │   ├── ui/                           # ProjectCard, StatCard, EligibilityChecklist, etc.
-│   │   └── charts/                       # BudgetBarChart, ComparisonChart (Chart.js)
-│   ├── contexts/                         # LanguageContext (TH/EN), ThemeContext, ToastContext
-│   ├── hooks/                            # useLanguage, useTheme, useBookmarks, useToast
-│   ├── lib/                              # mongodb, session, utils, labels, validation, initialData
-│   ├── models/                           # Project, HistoricalProject, Bookmark, UserSettings
-│   ├── services/                         # ai/ (vertex-ai, classifier, tor-extractor), database/
-│   └── types/                            # project, historical, settings TypeScript interfaces
-├── scripts/
-│   └── seed.ts                           # MongoDB seed script (10 projects + 12 historical records)
-├── .env.example                          # Environment variable configuration template
-├── package.json
+TORBIDD/
+├── docs/                 # Formal documentation and diagrams
+├── torbidd-app/          # Full-stack Next.js web application
+│   ├── src/
+│   │   ├── app/          # App Router (pages & API routes)
+│   │   ├── components/   # Reusable UI components & Chart.js visualizers
+│   │   ├── contexts/     # Application state (Theme, Language, Toast)
+│   │   ├── models/       # Mongoose schemas (Projects, Bookmarks, Settings)
+│   │   └── services/     # Vertex AI services & database clients
+│   └── scripts/          # Database seeding, verification, and migration scripts
+├── docker-compose.yml    # Multi-container orchestration
 └── README.md
 ```
 
@@ -96,7 +79,7 @@ torbidd-app/
 
 ## ⚙️ Prerequisites
 
-- **Node.js**: v18.18.0 or higher
+- **Node.js**: v18.18.0 or higher (v20+ recommended)
 - **npm**: v9.0.0 or higher
 - **MongoDB Atlas account** (or local MongoDB instance)
 - **Google Cloud Project** with Vertex AI API enabled (optional for local testing with fallbacks)
@@ -134,7 +117,7 @@ torbidd-app/
 
 ## 📦 Database Setup & Seeding
 
-To seed your MongoDB Atlas cluster with all 10 BMA software projects and 12 historical procurement records:
+To seed your MongoDB Atlas cluster with initial software projects and historical procurement records:
 
 ```bash
 cd torbidd-app
@@ -162,6 +145,7 @@ Output:
 
 ```bash
 # 1. Install dependencies
+cd torbidd-app
 npm install
 
 # 2. Run the Next.js development server
@@ -193,7 +177,7 @@ npm run build
 - **`GET /api/projects`**
   - Query parameters:
     - `search`: string (keyword in title, department, or category)
-    - `department`: string (BMA department name)
+    - `department`: string (Government agency or BMA department name)
     - `category`: `Website` | `Mobile App` | `AI` | `Database`
     - `budget`: `under5m` | `5to10` | `10to20` | `above20m`
     - `deadline`: `within7` | `within30` | `moreThan30`
@@ -268,7 +252,7 @@ docker run -p 3000:3000 --env-file .env.local torbidd-app
 ### Docker Compose (recommended for local staging)
 ```bash
 # Copy and fill in .env.local first
-cp .env.example .env.local
+cp torbidd-app/.env.example torbidd-app/.env.local
 
 # Start the app (uses MongoDB Atlas via MONGODB_URI)
 docker compose up --build
@@ -332,7 +316,7 @@ Edit `.github/workflows/deploy.yml` and replace the placeholder step with your d
 
 ## 🗄️ Database Scripts
 
-In addition to `npm run seed`, two utility scripts are available:
+In addition to `npm run seed`, two utility scripts are available in `torbidd-app`:
 
 ### Health Check
 ```bash
@@ -370,5 +354,4 @@ npm run db:check
 
 ## 📄 License & Attribution
 
-Developed for **Bangkok Metropolitan Administration (BMA) Software Procurement Intelligence Platform (TORBIDD)**.
-
+Developed for **Government Software Procurement Intelligence Platform (TORBIDD)** — empowering technology vendors across Thai public sector and municipal procurements.
