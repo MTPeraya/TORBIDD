@@ -484,16 +484,485 @@ const RAW_PROJECTS: Project[] = [
 export const INITIAL_PROJECTS: Project[] = RAW_PROJECTS.map(enrichProjectDetail);
 
 export const INITIAL_HISTORICAL: HistoricalProject[] = [
-  { title: { th: 'โครงการพัฒนาระบบบริหารจัดการกล้อง CCTV สำนักการจราจร กทม.', en: 'BMA CCTV Management Database System Project' }, department: INITIAL_DEPARTMENTS[8], year: 2025, category: 'Database', budget: 34000000 },
-  { title: { th: 'โครงการพัฒนาเว็บไซต์และสื่อข้อมูลประวัติศาสตร์แหล่งท่องเที่ยวกรุงเทพฯ', en: 'BMA Historical Tourism Web Portal Project' }, department: INITIAL_DEPARTMENTS[3], year: 2025, category: 'Website', budget: 4500000 },
-  { title: { th: 'โครงการพัฒนาระบบโปรแกรมสารสนเทศงานบำเหน็จบำนาญข้าราชการ กทม. ระยะที่ 1', en: 'BMA Retiree Benefits Information System Phase I' }, department: INITIAL_DEPARTMENTS[7], year: 2024, category: 'Website', budget: 7800000 },
-  { title: { th: 'โครงการจ้างพัฒนาแอปพลิเคชันรายงานข้อมูลการจราจรติดขัด กทม. แบบเรียลไทม์', en: 'BMA Live Traffic Conditions Mobile App' }, department: INITIAL_DEPARTMENTS[8], year: 2024, category: 'Mobile App', budget: 8500000 },
-  { title: { th: 'โครงการพัฒนาระบบปัญญาประดิษฐ์วิเคราะห์ภาพกล้องวงจรปิดเพื่อตรวจจับระดับน้ำท่วมขัง', en: 'AI CCTV Image Flood Level Detection Project' }, department: INITIAL_DEPARTMENTS[0], year: 2025, category: 'AI', budget: 18200000 },
-  { title: { th: 'โครงการจ้างพัฒนาระบบสารสนเทศติดตามเรื่องร้องเรียนกทม. (Traffy Fondue Platform)', en: 'BMA Traffy Fondue Complaint Tracking Database System' }, department: INITIAL_DEPARTMENTS[0], year: 2023, category: 'Website', budget: 12500000 },
-  { title: { th: 'โครงการพัฒนาระบบฐานข้อมูลกลางคนเมืองกทม. (BMA Citizen Profile)', en: 'BMA Centralized Citizen Profile Database System' }, department: INITIAL_DEPARTMENTS[0], year: 2024, category: 'Database', budget: 22000000 },
-  { title: { th: 'โครงการระบบวิเคราะห์ข้อมูลสุขภาพผู้สูงอายุอัจฉริยะ (BMA Smart Health AI Model)', en: 'BMA Smart Health AI Analytics Model' }, department: INITIAL_DEPARTMENTS[4], year: 2025, category: 'AI', budget: 9500000 },
-  { title: { th: 'โครงการพัฒนาระบบจัดซื้อจัดจ้างภาครัฐส่วนท้องถิ่น กทม. (e-GP BMA)', en: 'BMA Local e-Procurement Portal (e-GP BMA)' }, department: INITIAL_DEPARTMENTS[7], year: 2024, category: 'Website', budget: 15200000 },
-  { title: { th: 'โครงการพัฒนาแอปพลิเคชันตรวจสอบสิทธิสุขภาพพนักงาน กทม.', en: 'BMA Employees Healthcare Benefits Mobile App' }, department: INITIAL_DEPARTMENTS[5], year: 2025, category: 'Mobile App', budget: 4800000 },
-  { title: { th: 'โครงการจ้างพัฒนาระบบภูมิสารสนเทศด้านสิ่งแวดล้อม กทม. (BMA Environment GIS)', en: 'BMA Environmental GIS Map Project' }, department: INITIAL_DEPARTMENTS[2], year: 2024, category: 'AI', budget: 6100000 },
-  { title: { th: 'โครงการพัฒนาระบบวิเคราะห์ฐานข้อมูลครูโรงเรียนสังกัดกรุงเทพมหานคร', en: 'BMA Teachers Personnel Registry Database System' }, department: INITIAL_DEPARTMENTS[1], year: 2025, category: 'Database', budget: 5200000 },
+  {
+    title: {
+      th: 'โครงการพัฒนาระบบบริหารจัดการกล้อง CCTV สำนักการจราจร กทม.',
+      en: 'BMA CCTV Management Database System Project',
+    },
+    department: INITIAL_DEPARTMENTS[8],
+    year: 2025,
+    category: 'Database',
+    budget: 34000000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท ดิจิทัล ทรานสปอร์ต ซิสเต็มส์ จำกัด', en: 'Digital Transport Systems Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบฐานข้อมูลรวมศูนย์เชื่อมต่อกล้องโทรทัศน์วงจรปิด (CCTV) ทั่วกรุงเทพมหานครกว่า 15,000 จุด พร้อมระบบสตรีมมิงและจัดเก็บวิดีโอ',
+      en: 'Centralized CCTV database connecting over 15,000 traffic cameras across Bangkok with video streaming and retention subsystems.',
+    },
+    scope: {
+      th: [
+        'ออกแบบสถาปัตยกรรมฐานข้อมูลแบบกระจายศูนย์ (Distributed Database Architecture)',
+        'พัฒนาระบบ Video Management System (VMS) รองรับการเชื่อมต่อกล้อง IP Cameras',
+        'สร้าง API Gateway ให้บริการข้อมูลภาพสตรีมมิ่งความหน่วงต่ำแก่หน่วยงานภาครัฐ',
+        'ติดตั้งระบบสำรองข้อมูลอัตโนมัติบน Cloud Storage แบบ High Availability',
+      ],
+      en: [
+        'Design distributed database architecture for high-throughput video streams',
+        'Develop Video Management System (VMS) interfacing with 15,000+ IP cameras',
+        'Build low-latency API Gateway streaming feeds to government incident centers',
+        'Implement automated high-availability cloud backup storage solutions',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาเว็บไซต์และสื่อข้อมูลประวัติศาสตร์แหล่งท่องเที่ยวกรุงเทพฯ',
+      en: 'BMA Historical Tourism Web Portal Project',
+    },
+    department: INITIAL_DEPARTMENTS[3],
+    year: 2025,
+    category: 'Website',
+    budget: 4500000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท สยาม มีเดีย ครีเอทีฟ จำกัด', en: 'Siam Media Creative Co., Ltd.' },
+    description: {
+      th: 'พัฒนาเว็บพอร์ทัลรวบรวมมรดกทางวัฒนธรรม แผนที่ท่องเที่ยวเชิงประวัติศาสตร์ และระบบจองตั๋วพิพิธภัณฑ์ กทม. รองรับ 5 ภาษา',
+      en: 'Develop multilingual cultural tourism web portal featuring interactive historic maps and museum ticketing for Bangkok city.',
+    },
+    scope: {
+      th: [
+        'พัฒนา Responsive Web Application รองรับอุปกรณ์มือถือและแท็บเล็ต',
+        'ออกแบบระบบแผนที่อินเตอร์แอคทีฟแสดงตำแหน่งโบราณสถานและจุดท่องเที่ยว',
+        'พัฒนาระบบบริหารจัดการเนื้อหา (CMS) รองรับ 5 ภาษา (ไทย อังกฤษ จีน ญี่ปุ่น ฝรั่งเศส)',
+        'เชื่อมต่อระบบบัตรดิจิทัล e-Ticket เข้าชมพิพิธภัณฑ์และแหล่งเรียนรู้ กทม.',
+      ],
+      en: [
+        'Develop responsive web application optimized for mobile and desktop views',
+        'Design interactive historic heritage maps showing landmarks and walking routes',
+        'Build CMS supporting 5 international languages (TH, EN, ZH, JA, FR)',
+        'Integrate digital e-Ticket system for BMA cultural centers and museums',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาระบบโปรแกรมสารสนเทศงานบำเหน็จบำนาญข้าราชการ กทม. ระยะที่ 1',
+      en: 'BMA Retiree Benefits Information System Phase I',
+    },
+    department: INITIAL_DEPARTMENTS[7],
+    year: 2024,
+    category: 'Website',
+    budget: 7800000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท กสทช. ซอฟต์แวร์ โซลูชั่น จำกัด', en: 'KST Software Solutions Co., Ltd.' },
+    description: {
+      th: 'ระบบคำนวณและประมวลผลการจ่ายเบี้ยหวัด บำเหน็จ บำนาญ และค่ารักษาพยาบาลข้าราชการ กทม. ที่เกษียณอายุ',
+      en: 'Retirement benefits calculation and payroll workflow software for retired BMA civil servants.',
+    },
+    scope: {
+      th: [
+        'พัฒนาระบบคำนวณเงินบำเหน็จบำนาญอัตโนมัติตามระเบียบกรุงเทพมหานคร',
+        'สร้างโมดูลยื่นขอรับเงินสงเคราะห์และสวัสดิการค่ารักษาพยาบาลออนไลน์',
+        'เชื่อมต่อระบบ Payroll ธนาคารกรุงไทยสำหรับโอนจ่ายเงินอัตโนมัติ',
+        'จัดทำระบบ Audit Trail ตรวจสอบความถูกต้องและป้องกันการจ่ายเงินซ้ำซ้อน',
+      ],
+      en: [
+        'Implement automated pension calculator obeying BMA civil service regulations',
+        'Create self-service portal for retiree medical reimbursement filings',
+        'Interface with Krungthai Bank payroll API for automated monthly disbursements',
+        'Implement comprehensive audit logging and fraud prevention safeguards',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการจ้างพัฒนาแอปพลิเคชันรายงานข้อมูลการจราจรติดขัด กทม. แบบเรียลไทม์',
+      en: 'BMA Live Traffic Conditions Mobile App',
+    },
+    department: INITIAL_DEPARTMENTS[8],
+    year: 2024,
+    category: 'Mobile App',
+    budget: 8500000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท สมาร์ทโมบิลิตี้ กรุ๊ป จำกัด', en: 'Smart Mobility Group Co., Ltd.' },
+    description: {
+      th: 'แอปพลิเคชันสมาร์ทโฟนสำหรับประชาชนตรวจสอบสภาพการจราจร อุบัติเหตุ และภาพสดจากกล้อง CCTV ทั่วเมืองหลวง',
+      en: 'Public mobile app displaying real-time traffic congestion, road incident alerts, and live CCTV feeds across Bangkok.',
+    },
+    scope: {
+      th: [
+        'พัฒนา Native Mobile App บนแพลตฟอร์ม iOS และ Android',
+        'พัฒนาระบบประมวลผลข้อมูลจราจรแบบสดจากเซ็นเซอร์ตรวจวัดความเร็วและกล้องจราจร',
+        'ออกแบบระบบแจ้งเตือนแบบ Push Notifications เมื่อมีอุบัติเหตุหรือปิดเส้นทาง',
+        'เชื่อมต่อระบบแผนที่นำทางแบบ Dynamic Route Re-routing',
+      ],
+      en: [
+        'Develop native iOS and Android mobile apps with modern ergonomic UI',
+        'Process live speed sensor telemetry and junction camera traffic feeds',
+        'Implement push notification engine broadcasting road hazard alerts',
+        'Integrate dynamic detour suggestion engine based on live speed indices',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาระบบปัญญาประดิษฐ์วิเคราะห์ภาพกล้องวงจรปิดเพื่อตรวจจับระดับน้ำท่วมขัง',
+      en: 'AI CCTV Image Flood Level Detection Project',
+    },
+    department: INITIAL_DEPARTMENTS[0],
+    year: 2025,
+    category: 'AI',
+    budget: 18200000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท ปัญญาประดิษฐ์สยาม จำกัด', en: 'Siam Artificial Intelligence Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบ Computer Vision วิเคราะห์ภาพจากกล้อง CCTV ริมถนนและคลอง เพื่อประเมินระดับน้ำท่วมขังและแจ้งเตือนสถานการณ์น้ำท่วมอัตโนมัติ',
+      en: 'Computer Vision AI model analyzing urban roadside CCTV footage to measure water accumulation depths and trigger flood alerts.',
+    },
+    scope: {
+      th: [
+        'ฝึกฝนโมเดล Deep Learning (YOLOv8/Segmentation) สำหรับตรวจวัดระดับผิวน้ำ',
+        'พัฒนาระบบประมวลผล Edge Computing ณ ตู้ควบคุมกล้อง 120 จุดเสี่ยง',
+        'สร้าง Dashboard แผนที่ GIS แสดงระดับน้ำแบบเรียลไทม์สำหรับศูนย์ควบคุมระบายน้ำ',
+        'เชื่อมต่อระบบส่ง SMS/LINE Notify แจ้งเตือนประชาชนและเจ้าหน้าที่ภาคสนาม',
+      ],
+      en: [
+        'Train Deep Learning segmentation models estimating road surface water depths',
+        'Deploy edge computing inference boxes across 120 flood-prone intersections',
+        'Build GIS dashboard monitoring urban flooding in real time for Drainage Dept',
+        'Integrate automated broadcast alert system via LINE Official and SMS gateways',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการจ้างพัฒนาระบบสารสนเทศติดตามเรื่องร้องเรียนกทม. (Traffy Fondue Platform)',
+      en: 'BMA Traffy Fondue Complaint Tracking Database System',
+    },
+    department: INITIAL_DEPARTMENTS[0],
+    year: 2023,
+    category: 'Website',
+    budget: 12500000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'สถาบันเทคโนโลยีและนวัตกรรมเมือง จำกัด', en: 'Urban Tech Innovation Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบรับแจ้งปัญหาเส้นเลือดฝอยจากประชาชน จัดหมวดหมู่เรื่องร้องเรียนอัตโนมัติด้วย AI และกระจายงานสู่ 50 เขต',
+      en: 'Citizen incident reporting platform categorizing urban issues via AI and dispatching tickets to all 50 Bangkok district offices.',
+    },
+    scope: {
+      th: [
+        'พัฒนาระบบจัดการตั๋วปัญหา (Ticketing Management System) รองรับ 50 สำนักงานเขต',
+        'พัฒนาระบบ AI NLP จำแนกหมวดหมู่ปัญหาและหน่วยงานผู้รับผิดชอบจากข้อความร้องเรียน',
+        'สร้างพอร์ทัลตรวจสอบความคืบหน้าแบบเรียลไทม์สำหรับประชาชน',
+        'พัฒนาระบบสรุปผลเชิงสถิติ (Executive Analytics Dashboard) ประเมิน SLA การทำงาน',
+      ],
+      en: [
+        'Develop ticket management system serving all 50 BMA municipal district offices',
+        'Implement NLP algorithms automatically classifying citizen reports to agencies',
+        'Build public incident tracking portal with before-and-after photo verification',
+        'Deliver executive KPI dashboard measuring district resolution SLAs',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาระบบฐานข้อมูลกลางคนเมืองกทม. (BMA Citizen Profile)',
+      en: 'BMA Centralized Citizen Profile Database System',
+    },
+    department: INITIAL_DEPARTMENTS[0],
+    year: 2024,
+    category: 'Database',
+    budget: 22000000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท บิ๊กดาต้า เมโทรโพลิส จำกัด', en: 'Big Data Metropolis Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบจัดเก็บและรวบรวมฐานข้อมูลประชากร ผู้มีสิทธิสวัสดิการ และประวัติการรับบริการภาครัฐแบบ Single Citizen View',
+      en: 'Centralized urban citizen profile consolidating demographic, welfare, and municipal service records into a unified Single Citizen View.',
+    },
+    scope: {
+      th: [
+        'ออกแบบฐานข้อมูล Data Lakehouse รองรับระเบียนข้อมูลกว่า 10 ล้านรายการ',
+        'พัฒนาระบบ Master Data Management (MDM) เพื่อทำ Data Cleansing และ Deduplication',
+        'เชื่อมต่อระบบยืนยันตัวตนดิจิทัลผ่าน ThaiD DOPA Gateway ตามมาตรฐาน PDPA',
+        'จัดทำระบบ Access Control และ Data Masking ป้องกันการเข้าถึงข้อมูลส่วนบุคคลโดยมิชอบ',
+      ],
+      en: [
+        'Architect high-performance Data Lakehouse indexing over 10 million citizen profiles',
+        'Deploy Master Data Management (MDM) pipelines for deduplication and identity resolution',
+        'Interface with DOPA ThaiD digital ID gateway adhering strictly to PDPA standards',
+        'Implement role-based access control and sensitive data masking mechanisms',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการระบบวิเคราะห์ข้อมูลสุขภาพผู้สูงอายุอัจฉริยะ (BMA Smart Health AI Model)',
+      en: 'BMA Smart Health AI Analytics Model',
+    },
+    department: INITIAL_DEPARTMENTS[4],
+    year: 2025,
+    category: 'AI',
+    budget: 9500000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท เมดิคอล เอไอ นวัตกรรม จำกัด', en: 'Medical AI Innovation Co., Ltd.' },
+    description: {
+      th: 'พัฒนาโมเดล AI คัดกรองความเสี่ยงโรคไม่ติดต่อเรื้อรัง (NCDs) และภาวะสมองเสื่อมในกลุ่มผู้สูงอายุของศูนย์บริการสาธารณสุข กทม.',
+      en: 'Predictive health analytics model screening chronic disease risks (NCDs) and dementia indicators for elderly clinic visitors.',
+    },
+    scope: {
+      th: [
+        'พัฒนา Predictive ML Model ประเมินความเสี่ยงโรคเบาหวานและความดันโลหิตสูง',
+        'สร้างเว็บแอปพลิเคชันสำหรับแพทย์และพยาบาลประจำศูนย์บริการสาธารณสุข 69 แห่ง',
+        'พัฒนาระบบส่งต่อข้อมูลประวัติการรักษาไปยังโรงพยาบาลในสังกัดสำนักการแพทย์',
+        'ติดตั้งระบบรักษาความปลอดภัยข้อมูลตามมาตรฐาน HL7 FHIR สำหรับเวชระเบียนสุขภาพ',
+      ],
+      en: [
+        'Develop predictive ML algorithms scoring chronic hypertension and diabetes risk',
+        'Build clinical web dashboard for medical staff across 69 public health clinics',
+        'Establish automated referral records data exchange with BMA hospitals',
+        'Implement HL7 FHIR medical data interchange and encryption protocols',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาระบบจัดซื้อจัดจ้างภาครัฐส่วนท้องถิ่น กทม. (e-GP BMA)',
+      en: 'BMA Local e-Procurement Portal (e-GP BMA)',
+    },
+    department: INITIAL_DEPARTMENTS[7],
+    year: 2024,
+    category: 'Website',
+    budget: 15200000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท คลาวด์ กอฟเวิร์นเมนท์ ซิสเต็มส์ จำกัด', en: 'Cloud Government Systems Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบประกาศจัดซื้อจัดจ้าง เผยแพร่ร่าง TOR และรับฟังข้อเสนอแนะจากผู้ค้าภาครัฐ พร้อมระบบจับคู่ผู้ประกอบการ SMEs',
+      en: 'Local e-procurement portal publishing tender announcements, draft TOR documents, and public critique channels for BMA.',
+    },
+    scope: {
+      th: [
+        'พัฒนาระบบเผยแพร่ประกาศจัดซื้อจัดจ้างและร่าง TOR ตาม พ.ร.บ. จัดซื้อจัดจ้าง 2560',
+        'พัฒนาระบบรับฟังคำวิจารณ์และซักถามออนไลน์พร้อมระบบบันทึกเวลาที่ไม่อาจแก้ไขได้',
+        'เชื่อมต่อระบบลงทะเบียนผู้ค้าภาครัฐกับกรมบัญชีกลาง',
+        'จัดทำระบบรายงานความโปร่งใสและ Open Data สัญญาจัดซื้อจัดจ้างตามมาตรฐาน OCDS',
+      ],
+      en: [
+        'Develop procurement publishing platform compliant with Public Procurement Act',
+        'Implement tamper-evident online public feedback and query submission channels',
+        'Interface with Comptroller General’s Department vendor credential database',
+        'Publish Open Contracting Data Standard (OCDS) machine-readable tender feeds',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาแอปพลิเคชันตรวจสอบสิทธิสุขภาพพนักงาน กทม.',
+      en: 'BMA Employees Healthcare Benefits Mobile App',
+    },
+    department: INITIAL_DEPARTMENTS[5],
+    year: 2025,
+    category: 'Mobile App',
+    budget: 4800000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท เฮลท์แคร์ โซลูชั่นส์ จำกัด', en: 'Healthcare Solutions Co., Ltd.' },
+    description: {
+      th: 'แอปพลิเคชันมือถือสำหรับข้าราชการและลูกจ้าง กทม. ตรวจสอบสิทธิเบิกจ่ายค่ารักษาพยาบาล จองคิวตรวจสุขภาพ และตรวจสอบผลตรวจแล็บ',
+      en: 'Mobile app enabling BMA staff to inspect healthcare subsidies, schedule medical appointments, and view laboratory test results.',
+    },
+    scope: {
+      th: [
+        'พัฒนา Mobile App (iOS / Android) รองรับผู้ใช้งานกว่า 80,000 คน',
+        'พัฒนาระบบตรวจสอบสิทธิเบิกตรงค่ารักษาพยาบาลโรงพยาบาลในสังกัด กทม. 11 แห่ง',
+        'ออกแบบโมดูลนัดหมายตรวจสุขภาพประจำปีและแสดงผลตรวจสุขภาพย้อนหลัง',
+        'เชื่อมต่อระบบแจ้งเตือนผลแล็บและคำแนะนำสุขภาพเฉพาะบุคคล',
+      ],
+      en: [
+        'Develop cross-platform iOS and Android mobile app serving 80,000+ staff',
+        'Integrate direct medical billing verification across all 11 BMA municipal hospitals',
+        'Design annual check-up scheduling module with longitudinal health trends',
+        'Deliver push notification engine for personalized doctor recommendations',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการจ้างพัฒนาระบบภูมิสารสนเทศด้านสิ่งแวดล้อม กทม. (BMA Environment GIS)',
+      en: 'BMA Environmental GIS Map Project',
+    },
+    department: INITIAL_DEPARTMENTS[2],
+    year: 2024,
+    category: 'AI',
+    budget: 6100000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท จีไอเอส แอนด์ อีโค่เทค จำกัด', en: 'GIS & Ecotech Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบแผนที่ดาวเทียมและ GIS เพื่อตรวจวัดพื้นที่สีเขียว คลื่นความร้อนในเมือง (Urban Heat Island) และจุดเผาไหม้ขยะ',
+      en: 'Satellite remote sensing and GIS portal monitoring urban green spaces, heat island indices, and environmental violations.',
+    },
+    scope: {
+      th: [
+        'พัฒนาระบบประมวลผลภาพถ่ายดาวเทียม Sentinel-2 คำนวณดัชนีพืชพรรณ (NDVI)',
+        'สร้างแผนที่ความร้อน Urban Heat Island ทั่วทั้ง 50 เขตแบบโต้ตอบได้',
+        'พัฒนาระบบโมบายสำหรับเจ้าหน้าที่สิ่งแวดล้อมลงพื้นที่สำรวจต้นไม้ใหญ่และสวน 15 นาที',
+        'สร้าง Dashboard สรุปความคืบหน้านโยบายปลูกต้นไม้ล้านต้นของกรุงเทพมหานคร',
+      ],
+      en: [
+        'Process Sentinel-2 satellite imagery to compute NDVI vegetation canopy metrics',
+        'Construct interactive multi-layer urban heat island heatmaps covering 50 districts',
+        'Build mobile field inspector app cataloging municipal trees and public pocket parks',
+        'Generate executive progress dashboard tracking million-tree planting initiatives',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาระบบวิเคราะห์ฐานข้อมูลครูโรงเรียนสังกัดกรุงเทพมหานคร',
+      en: 'BMA Teachers Personnel Registry Database System',
+    },
+    department: INITIAL_DEPARTMENTS[1],
+    year: 2025,
+    category: 'Database',
+    budget: 5200000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท เอดูเทค ซอฟต์แวร์ ซิสเต็มส์ จำกัด', en: 'EdTech Software Systems Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบทะเบียนประวัติ จัดสรรอัตรากำลังครู และประเมินวิทยฐานะสำหรับโรงเรียนสังกัด กทม. 437 แห่ง',
+      en: 'Human capital registry, staffing allocation, and teaching competency system covering all 437 BMA primary and secondary schools.',
+    },
+    scope: {
+      th: [
+        'จัดทำฐานข้อมูลประวัติการสอน วุฒิการศึกษา และใบประกอบวิชาชีพครู 14,000 คน',
+        'พัฒนาระบบวิเคราะห์ความต้องการครูตามกลุ่มสาระการเรียนรู้ในแต่ละโรงเรียน',
+        'สร้างโมดูลยื่นขอและประเมินวิทยฐานะออนไลน์แบบ Paperless',
+        'เชื่อมต่อระบบการโอนย้ายและเกลี่ยอัตรากำลังระหว่างสำนักงานเขต',
+      ],
+      en: [
+        'Index teaching credentials, pedagogical certifications, and service logs for 14,000 educators',
+        'Implement staffing gap analytics engine matching curriculum subject demands',
+        'Build paperless online evaluation portal for professional rank advancement',
+        'Coordinate inter-district school teacher reassignment and staff distribution',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาระบบการศึกษาดิจิทัลและห้องเรียนเสมือนจริงสำหรับนักเรียน กทม.',
+      en: 'BMA Digital Classroom and Virtual Learning Platform',
+    },
+    department: INITIAL_DEPARTMENTS[1],
+    year: 2024,
+    category: 'Website',
+    budget: 11800000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท สมาร์ท คลาสรูม อินโนเวชั่น จำกัด', en: 'Smart Classroom Innovation Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบการเรียนรู้ดิจิทัล คลังข้อสอบกลาง และระบบถ่ายทอดสดห้องเรียนเสมือนจริงสำหรับนักเรียนสังกัด กทม. 250,000 คน',
+      en: 'Digital learning management system, centralized question bank, and virtual classroom broadcasting for 250,000 BMA students.',
+    },
+    scope: {
+      th: [
+        'พัฒนาระบบ Learning Management System (LMS) รองรับการเข้าใช้งานพร้อมกัน 50,000 ผู้ใช้',
+        'สร้างคลังข้อสอบและแบบฝึกหัดมาตรฐานตามหลักสูตรแกนกลางการศึกษาขั้นพื้นฐาน',
+        'พัฒนาระบบ Virtual Classroom ถ่ายทอดสดและบันทึกวิดีโอการสอนย้อนหลัง',
+        'สร้างระบบติดตามผลการเรียนรู้รายบุคคล (Student Learning Analytics)',
+      ],
+      en: [
+        'Deploy scalable LMS platform supporting 50,000 concurrent student connections',
+        'Construct central standardized examination bank aligned with national curriculum',
+        'Implement live virtual classroom video broadcasting and on-demand replay modules',
+        'Deliver granular student learning analytics dashboards identifying learning gaps',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาแอปพลิเคชันบริการสวัสดิการสังคมและคนพิการ กทม. (BMA Welfare App)',
+      en: 'BMA Social Welfare and Disability Support Mobile App',
+    },
+    department: INITIAL_DEPARTMENTS[6],
+    year: 2025,
+    category: 'Mobile App',
+    budget: 7200000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท แอคเซสซิเบิล เทคโนโลยี จำกัด', en: 'Accessible Technology Co., Ltd.' },
+    description: {
+      th: 'แอปพลิเคชันอำนวยความสะดวกในการยื่นขอเบี้ยยังชีพ สิทธิ์กายอุปกรณ์ และบริการรถรับส่งผู้สูงอายุและคนพิการของ กทม.',
+      en: 'Mobile portal facilitating welfare subsidy disbursement, assistive device requests, and accessible van bookings for disabled citizens.',
+    },
+    scope: {
+      th: [
+        'พัฒนา Mobile App ตามมาตรฐานการเข้าถึง WCAG 2.1 Level AAA สำหรับผู้พิการทางสายตา',
+        'พัฒนาระบบตรวจสอบยอดเงินเบี้ยยังชีพและการโอนสวัสดิการประจำเดือน',
+        'ออกแบบระบบจองคิวรถตู้รับ-ส่งผู้พิการและผู้สูงอายุไปโรงพยาบาล',
+        'เชื่อมต่อระบบบริการช่วยเหลือฉุกเฉิน (Emergency Help Button) กับศูนย์สั่งการ กทม.',
+      ],
+      en: [
+        'Build mobile app meeting WCAG 2.1 AAA accessibility for visually impaired citizens',
+        'Provide instant monthly welfare payout verification and remittance histories',
+        'Create accessible shuttle van booking dispatch system for medical appointments',
+        'Establish one-tap emergency SOS broadcast channel to municipal dispatchers',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการจัดทำคลังข้อมูลและแพลตฟอร์มวิเคราะห์งบประมาณแบบเปิด กรุงเทพมหานคร (BMA Open Budget)',
+      en: 'BMA Open Budget Data Warehouse and Public Transparency Platform',
+    },
+    department: INITIAL_DEPARTMENTS[7],
+    year: 2023,
+    category: 'Database',
+    budget: 16800000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท โอเพ่นดาต้า โซลูชั่นส์ จำกัด', en: 'Open Data Solutions Co., Ltd.' },
+    description: {
+      th: 'พัฒนาระบบคลังข้อมูลการจัดทำงบประมาณรายจ่ายประจำปีของกรุงเทพมหานคร เชื่อมโยง 16 สำนัก 50 เขต พร้อมระบบเปิดเผยข้อมูลสาธารณะ',
+      en: 'Enterprise data warehouse consolidating annual municipal budget appropriations across all 16 bureaus and 50 district councils with public portal.',
+    },
+    scope: {
+      th: [
+        'พัฒนาระบบ Data Warehouse รวบรวมข้อมูลรายการงบประมาณกว่า 20 ปี',
+        'จัดทำหน้าเว็บพอร์ทัล BMA Open Budget แสดงสถิติการใช้จ่ายงบประมาณแบบ Interactive',
+        'พัฒนา REST API ให้บริการข้อมูล Open Data แก่ประชาชน นักวิจัย และสื่อมวลชน',
+        'จัดทำระบบเชื่อมโยงข้อมูลกับระบบ e-LAAS ของกรมส่งเสริมการปกครองท้องถิ่น',
+      ],
+      en: [
+        'Architect enterprise data warehouse indexing 20+ years of municipal budgets',
+        'Deliver public-facing interactive BMA Open Budget data visualization explorer',
+        'Provide high-throughput REST APIs publishing machine-readable budget datasets',
+        'Establish ETL pipelines integrating with national local government financial systems',
+      ],
+    },
+  },
+  {
+    title: {
+      th: 'โครงการพัฒนาระบบปัญญาประดิษฐ์จัดการขยะและคัดแยกวัสดุรีไซเคิลอัตโนมัติ',
+      en: 'AI Automated Waste Sorting and Recycling Analytics System',
+    },
+    department: INITIAL_DEPARTMENTS[2],
+    year: 2025,
+    category: 'AI',
+    budget: 13500000,
+    procurementType: 'e-Bidding',
+    awardedVendor: { th: 'บริษัท กรีนเทค ปัญญาประดิษฐ์ จำกัด', en: 'GreenTech Artificial Intelligence Co., Ltd.' },
+    description: {
+      th: 'ติดตั้งระบบ AI Computer Vision วิเคราะห์ชนิดและปริมาณขยะบนสายพานโรงกำจัดขยะ กทม. เพื่อประเมินสัดส่วนขยะรีไซเคิลและลดปริมาณฝังกลบ',
+      en: 'Computer vision sorting system classifying waste streams on municipal recycling conveyor belts to boost diversion from landfills.',
+    },
+    scope: {
+      th: [
+        'พัฒนาโมเดลจำแนกชนิดขยะพลาสติก โลหะ แก้ว และขยะอินทรีย์ความเร็วสูง',
+        'ติดตั้งระบบเซ็นเซอร์และกล้องอุตสาหกรรม ณ โรงกำจัดขยะอ่อนนุชและหนองแขม',
+        'พัฒนาระบบคำนวณ Carbon Footprint ที่ลดได้จากการรีไซเคิลแบบเรียลไทม์',
+        'จัดทำรายงานสถิติขยะมูลฝอยประจำวันสำหรับสำนักสิ่งแวดล้อม',
+      ],
+      en: [
+        'Train ultra-fast computer vision models identifying plastics, metals, and organics',
+        'Deploy industrial imaging hardware at On Nut and Nong Khaem treatment centers',
+        'Calculate real-time greenhouse gas carbon offsets achieved through recycling',
+        'Automate daily waste categorization analytics for Environment Bureau officers',
+      ],
+    },
+  },
 ];
+

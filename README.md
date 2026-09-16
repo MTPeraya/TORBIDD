@@ -187,10 +187,43 @@ npm run build
   - Path parameter: numeric `externalId` (e.g. `1`) or MongoDB `ObjectId`
   - Response: `{ data: Project }`
 
-### 2. Historical Price Analysis
+### 2. Historical Price Analysis & Benchmarks
 - **`GET /api/historical`**
-  - Query parameters: `category`, `department`, `year`
-  - Response: `{ data: HistoricalProject[], total: number }`
+  - Query parameters:
+    - `category`: `Website` | `Mobile App` | `AI` | `Database`
+    - `department`: string (BMA department name)
+    - `year`: number (e.g. `2024`, `2025`)
+    - `search`: string (full-text search across titles, descriptions, and departments)
+    - `stats`: `true` | `false` (computes statistical benchmarks: min, q1, median, mean, q3, max, stdDev, iqr)
+    - `agencies`: `true` | `false` (aggregates cross-agency procurement analytics, total spend, and tech category distribution)
+  - Response:
+    ```json
+    {
+      "data": [
+        {
+          "title": { "th": "...", "en": "..." },
+          "department": { "th": "...", "en": "..." },
+          "year": 2025,
+          "category": "Database",
+          "budget": 34000000,
+          "procurementType": "e-Bidding",
+          "awardedVendor": { "th": "...", "en": "..." },
+          "scope": { "th": ["..."], "en": ["..."] }
+        }
+      ],
+      "total": 16,
+      "stats": { "Website": { "median": 11800000, ... }, "All": { ... } },
+      "agencies": [
+        {
+          "departmentKey": "สำนักการจราจรและขนส่ง",
+          "totalBudget": 84500000,
+          "projectCount": 4,
+          "avgBudget": 21125000,
+          "primaryCategory": "AI"
+        }
+      ]
+    }
+    ```
 
 ### 3. Bookmarks (User Session Scoped)
 - **`GET /api/bookmarks`** — List saved project IDs for the session

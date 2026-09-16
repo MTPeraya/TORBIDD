@@ -146,20 +146,7 @@ const PROJECTS_SEED = [
 
 // ─── Historical Data (from Demo/app.js HISTORICAL_DATA) ─────────────────────
 
-const HISTORICAL_SEED = [
-  { title: { th: 'โครงการพัฒนาระบบบริหารจัดการกล้อง CCTV สำนักการจราจร กทม.', en: 'BMA CCTV Management Database System Project' }, department: DEPARTMENTS[8], year: 2025, category: 'Database', budget: 34000000 },
-  { title: { th: 'โครงการพัฒนาเว็บไซต์และสื่อข้อมูลประวัติศาสตร์แหล่งท่องเที่ยวกรุงเทพฯ', en: 'BMA Historical Tourism Web Portal Project' }, department: DEPARTMENTS[3], year: 2025, category: 'Website', budget: 4500000 },
-  { title: { th: 'โครงการพัฒนาระบบโปรแกรมสารสนเทศงานบำเหน็จบำนาญข้าราชการ กทม. ระยะที่ 1', en: 'BMA Retiree Benefits Information System Phase I' }, department: DEPARTMENTS[7], year: 2024, category: 'Website', budget: 7800000 },
-  { title: { th: 'โครงการจ้างพัฒนาแอปพลิเคชันรายงานข้อมูลการจราจรติดขัด กทม. แบบเรียลไทม์', en: 'BMA Live Traffic Conditions Mobile App' }, department: DEPARTMENTS[8], year: 2024, category: 'Mobile App', budget: 8500000 },
-  { title: { th: 'โครงการพัฒนาระบบปัญญาประดิษฐ์วิเคราะห์ภาพกล้องวงจรปิดเพื่อตรวจจับระดับน้ำท่วมขัง', en: 'AI CCTV Image Flood Level Detection Project' }, department: DEPARTMENTS[0], year: 2025, category: 'AI', budget: 18200000 },
-  { title: { th: 'โครงการจ้างพัฒนาระบบสารสนเทศติดตามเรื่องร้องเรียนกทม. (Traffy Fondue Platform)', en: 'BMA Traffy Fondue Complaint Tracking Database System' }, department: DEPARTMENTS[0], year: 2023, category: 'Website', budget: 12500000 },
-  { title: { th: 'โครงการพัฒนาระบบฐานข้อมูลกลางคนเมืองกทม. (BMA Citizen Profile)', en: 'BMA Centralized Citizen Profile Database System' }, department: DEPARTMENTS[0], year: 2024, category: 'Database', budget: 22000000 },
-  { title: { th: 'โครงการระบบวิเคราะห์ข้อมูลสุขภาพผู้สูงอายุอัจฉริยะ (BMA Smart Health AI Model)', en: 'BMA Smart Health AI Analytics Model' }, department: DEPARTMENTS[4], year: 2025, category: 'AI', budget: 9500000 },
-  { title: { th: 'โครงการพัฒนาระบบจัดซื้อจัดจ้างภาครัฐส่วนท้องถิ่น กทม. (e-GP BMA)', en: 'BMA Local e-Procurement Portal (e-GP BMA)' }, department: DEPARTMENTS[7], year: 2024, category: 'Website', budget: 15200000 },
-  { title: { th: 'โครงการพัฒนาแอปพลิเคชันตรวจสอบสิทธิสุขภาพพนักงาน กทม.', en: 'BMA Employees Healthcare Benefits Mobile App' }, department: DEPARTMENTS[5], year: 2025, category: 'Mobile App', budget: 4800000 },
-  { title: { th: 'โครงการจ้างพัฒนาระบบภูมิสารสนเทศด้านสิ่งแวดล้อม กทม. (BMA Environment GIS)', en: 'BMA Environmental GIS Map Project' }, department: DEPARTMENTS[2], year: 2024, category: 'AI', budget: 6100000 },
-  { title: { th: 'โครงการพัฒนาระบบวิเคราะห์ฐานข้อมูลครูโรงเรียนสังกัดกรุงเทพมหานคร', en: 'BMA Teachers Personnel Registry Database System' }, department: DEPARTMENTS[1], year: 2025, category: 'Database', budget: 5200000 },
-];
+import { INITIAL_HISTORICAL } from '../src/lib/initialData';
 
 async function seed() {
   if (!MONGODB_URI) {
@@ -181,8 +168,8 @@ async function seed() {
   // Seed Historical Data
   console.log('\n📊 Seeding historical data...');
   await HistoricalProject.deleteMany({});
-  await HistoricalProject.insertMany(HISTORICAL_SEED);
-  console.log(`   ✓ Inserted ${HISTORICAL_SEED.length} historical records`);
+  await HistoricalProject.insertMany(INITIAL_HISTORICAL);
+  console.log(`   ✓ Inserted ${INITIAL_HISTORICAL.length} historical records`);
 
   // Ensure collections & indexes exist for bookmarks, user settings, and users
   console.log('\n📑 Initializing collections and indexes...');
