@@ -20,6 +20,9 @@ export const HistoricalFiltersSchema = z.object({
   category: z.enum(['Website', 'Mobile App', 'AI', 'Database']).optional(),
   department: z.string().max(200).optional(),
   year: z.coerce.number().int().min(2000).max(2200).optional(),
+  search: z.string().max(200).optional(),
+  stats: z.enum(['true', 'false']).optional(),
+  agencies: z.enum(['true', 'false']).optional(),
 });
 
 // ─── Bookmark (POST /api/bookmarks) ─────────────────────────────────────────
