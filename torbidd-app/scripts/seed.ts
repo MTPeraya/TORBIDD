@@ -5,12 +5,20 @@
 // Or: npm run seed
 // =============================================================================
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
 import mongoose from 'mongoose';
 import Project from '../src/models/Project';
 import HistoricalProject from '../src/models/HistoricalProject';
+import Bookmark from '../src/models/Bookmark';
+import UserSettings from '../src/models/UserSettings';
+import User from '../src/models/User';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || 'torbidd';
 
 // ─── Departments ─────────────────────────────────────────────────────────────
@@ -162,6 +170,20 @@ async function seed() {
   await HistoricalProject.deleteMany({});
   await HistoricalProject.insertMany(INITIAL_HISTORICAL);
   console.log(`   ✓ Inserted ${INITIAL_HISTORICAL.length} historical records`);
+
+  // Ensure collections & indexes exist for bookmarks, user settings, and users
+  console.log('\n📑 Initializing collections and indexes...');
+  await Bookmark.createCollection().catch(() => {});
+  await Bookmark.syncIndexes().catch(() => {});
+  console.log('   ✓ Bookmark collection & indexes initialized');
+
+  await UserSettings.createCollection().catch(() => {});
+  await UserSettings.syncIndexes().catch(() => {});
+  console.log('   ✓ UserSettings collection & indexes initialized');
+
+  await User.createCollection().catch(() => {});
+  await User.syncIndexes().catch(() => {});
+  console.log('   ✓ User collection & indexes initialized');
 
   console.log('\n🎉 Seed complete!');
   await mongoose.disconnect();

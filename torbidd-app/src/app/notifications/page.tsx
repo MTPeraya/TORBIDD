@@ -1,14 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { ICONS } from '@/components/ui/Icons';
 import { CATEGORY_LABELS, ALL_INTEREST_TAGS } from '@/lib/labels';
 import { ProjectCategory } from '@/types/project';
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const { language, L } = useLanguage();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { showToast } = useToast();
 
   const [dailyDigest, setDailyDigest] = useState(true);
@@ -19,6 +23,13 @@ export default function NotificationsPage() {
   const [budgetMax, setBudgetMax] = useState<string>('');
   const [hasError, setHasError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Client-side auth guard (middleware is the primary guard)
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login?from=/notifications');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   // Fetch saved settings from API or localStorage
   useEffect(() => {
@@ -119,6 +130,9 @@ export default function NotificationsPage() {
       showToast(L('settingsSaved'), ICONS.check);
     }
   };
+
+  // Show nothing while auth is loading to avoid flicker
+  if (authLoading || !isAuthenticated) return null;
 
   return (
     <div className="page-content">

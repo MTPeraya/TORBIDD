@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { AgencyComparisonMetrics, HistoricalProject } from '@/types/historical';
 import { Project, ProjectCategory } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { BudgetBarChart, ComparisonChart } from '@/components/charts/HistoricalCharts';
 import { BudgetReasonablenessChecker } from '@/components/historical/BudgetReasonablenessChecker';
 import { SimilarProcurementEstimator } from '@/components/historical/SimilarProcurementEstimator';
@@ -14,7 +16,9 @@ import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
 import { INITIAL_HISTORICAL, INITIAL_PROJECTS } from '@/lib/initialData';
 
 export default function HistoricalPage() {
+  const router = useRouter();
   const { language, L, getLocalized } = useLanguage();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [historicalData, setHistoricalData] = useState<HistoricalProject[]>(INITIAL_HISTORICAL);
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [apiAgencyMetrics, setApiAgencyMetrics] = useState<AgencyComparisonMetrics[] | null>(null);
@@ -30,6 +34,13 @@ export default function HistoricalPage() {
   const [selectedYear, setSelectedYear] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+
+  // Client-side auth guard (middleware is the primary guard)
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login?from=/historical');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
     fetch('/api/historical?stats=true&agencies=true')
@@ -170,6 +181,9 @@ export default function HistoricalPage() {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Show nothing while auth is loading to avoid flicker
+  if (authLoading || !isAuthenticated) return null;
 
   return (
     <div className="page-content">
