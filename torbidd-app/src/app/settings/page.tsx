@@ -17,6 +17,12 @@ interface SavedProfile {
   avatar?: string | null;
   userType?: 'individual' | 'organization';
   userDetail?: string;
+  indProjectCategory?: string;
+  indBudgetScale?: string;
+  indSpecsPreference?: string;
+  orgEngineeringDomain?: string;
+  orgContractScale?: string;
+  orgSupportModel?: string;
 }
 
 function getSavedProfile(): SavedProfile {
@@ -50,6 +56,12 @@ export default function ProfileSettingsPage() {
     () => initialSaved.userType || 'individual'
   );
   const [userDetail, setUserDetail] = useState(() => initialSaved.userDetail || '');
+  const [indProjectCategory, setIndProjectCategory] = useState(() => initialSaved.indProjectCategory || '');
+  const [indBudgetScale, setIndBudgetScale] = useState(() => initialSaved.indBudgetScale || '');
+  const [indSpecsPreference, setIndSpecsPreference] = useState(() => initialSaved.indSpecsPreference || '');
+  const [orgEngineeringDomain, setOrgEngineeringDomain] = useState(() => initialSaved.orgEngineeringDomain || '');
+  const [orgContractScale, setOrgContractScale] = useState(() => initialSaved.orgContractScale || '');
+  const [orgSupportModel, setOrgSupportModel] = useState(() => initialSaved.orgSupportModel || '');
   const [isSaving, setIsSaving] = useState(false);
 
   // Adjust state during render when authUser becomes available/changes
@@ -66,6 +78,14 @@ export default function ProfileSettingsPage() {
     setAvatar(isMatchingUser && saved.avatar !== undefined ? saved.avatar : (authUser.picture || null));
     if (isMatchingUser && saved.userType) setUserType(saved.userType);
     if (isMatchingUser && saved.userDetail !== undefined) setUserDetail(saved.userDetail);
+    if (isMatchingUser) {
+      if (saved.indProjectCategory !== undefined) setIndProjectCategory(saved.indProjectCategory);
+      if (saved.indBudgetScale !== undefined) setIndBudgetScale(saved.indBudgetScale);
+      if (saved.indSpecsPreference !== undefined) setIndSpecsPreference(saved.indSpecsPreference);
+      if (saved.orgEngineeringDomain !== undefined) setOrgEngineeringDomain(saved.orgEngineeringDomain);
+      if (saved.orgContractScale !== undefined) setOrgContractScale(saved.orgContractScale);
+      if (saved.orgSupportModel !== undefined) setOrgSupportModel(saved.orgSupportModel);
+    }
   }
 
   const handleAvatarClick = () => {
@@ -113,6 +133,12 @@ export default function ProfileSettingsPage() {
       avatar,
       userType,
       userDetail,
+      indProjectCategory,
+      indBudgetScale,
+      indSpecsPreference,
+      orgEngineeringDomain,
+      orgContractScale,
+      orgSupportModel,
     };
     localStorage.setItem('torbidd_profile', JSON.stringify(payload));
     // Notify same-tab listeners (storage event only fires in other tabs)
@@ -137,6 +163,47 @@ export default function ProfileSettingsPage() {
   const initials = previewName
     ? previewName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
     : 'BM';
+
+  const indQ1Options = [
+    { key: 'A', label: L('profileIndQ1OptA') },
+    { key: 'B', label: L('profileIndQ1OptB') },
+    { key: 'C', label: L('profileIndQ1OptC') },
+    { key: 'D', label: L('profileIndQ1OptD') },
+    { key: 'E', label: L('profileIndQ1OptE') },
+    { key: 'F', label: L('profileIndQ1OptF') },
+  ];
+
+  const indQ2Options = [
+    { key: 'A', label: L('profileIndQ2OptA') },
+    { key: 'B', label: L('profileIndQ2OptB') },
+    { key: 'C', label: L('profileIndQ2OptC') },
+  ];
+
+  const indQ3Options = [
+    { key: 'A', label: L('profileIndQ3OptA') },
+    { key: 'B', label: L('profileIndQ3OptB') },
+    { key: 'C', label: L('profileIndQ3OptC') },
+  ];
+
+  const orgQ1Options = [
+    { key: 'A', label: L('profileOrgQ1OptA') },
+    { key: 'B', label: L('profileOrgQ1OptB') },
+    { key: 'C', label: L('profileOrgQ1OptC') },
+    { key: 'D', label: L('profileOrgQ1OptD') },
+    { key: 'E', label: L('profileOrgQ1OptE') },
+  ];
+
+  const orgQ2Options = [
+    { key: 'A', label: L('profileOrgQ2OptA') },
+    { key: 'B', label: L('profileOrgQ2OptB') },
+    { key: 'C', label: L('profileOrgQ2OptC') },
+  ];
+
+  const orgQ3Options = [
+    { key: 'A', label: L('profileOrgQ3OptA') },
+    { key: 'B', label: L('profileOrgQ3OptB') },
+    { key: 'C', label: L('profileOrgQ3OptC') },
+  ];
 
   return (
     <div className="page-content">
@@ -278,7 +345,7 @@ export default function ProfileSettingsPage() {
               type="button"
               id="userTypeIndividualBtn"
               className={`profile-usertype-btn ${userType === 'individual' ? 'active' : ''}`}
-              onClick={() => { setUserType('individual'); setUserDetail(''); }}
+              onClick={() => setUserType('individual')}
             >
               <span className="profile-usertype-btn-icon">{ICONS.user}</span>
               <span className="profile-usertype-btn-label">{L('profileUserTypeIndividual')}</span>
@@ -289,7 +356,7 @@ export default function ProfileSettingsPage() {
               type="button"
               id="userTypeOrgBtn"
               className={`profile-usertype-btn ${userType === 'organization' ? 'active' : ''}`}
-              onClick={() => { setUserType('organization'); setUserDetail(''); }}
+              onClick={() => setUserType('organization')}
             >
               <span className="profile-usertype-btn-icon">{ICONS.building}</span>
               <span className="profile-usertype-btn-label">{L('profileUserTypeOrg')}</span>
@@ -297,10 +364,144 @@ export default function ProfileSettingsPage() {
             </button>
           </div>
 
+          {/* Work Experience Section Header */}
+          <div className="profile-usertype-divider" />
+          <div className="profile-section-heading">
+            <span className="profile-section-heading-icon">
+              {userType === 'individual' ? ICONS.dashboard : ICONS.building}
+            </span>
+            <span className="profile-section-heading-text">
+              {userType === 'individual' ? L('profileWorkExpLabel') : L('profileWorkExpSectionTitle')}
+            </span>
+          </div>
+
+          {/* Questionnaire (placed after Work Experience section, before describe box) */}
+          {userType === 'individual' ? (
+            <div className="profile-questions-container">
+              {/* Individual Question 1 */}
+              <div className="profile-question-group">
+                <div className="profile-question-title">{L('profileIndQ1Title')}</div>
+                <div className="profile-options-list">
+                  {indQ1Options.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      id={`indQ1Opt${opt.key}`}
+                      className={`profile-option-card ${indProjectCategory === opt.key ? 'selected' : ''}`}
+                      onClick={() => setIndProjectCategory(opt.key)}
+                    >
+                      <span className="profile-option-badge">{opt.key}</span>
+                      <span className="profile-option-text">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Individual Question 2 */}
+              <div className="profile-question-group">
+                <div className="profile-question-title">{L('profileIndQ2Title')}</div>
+                <div className="profile-options-list">
+                  {indQ2Options.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      id={`indQ2Opt${opt.key}`}
+                      className={`profile-option-card ${indBudgetScale === opt.key ? 'selected' : ''}`}
+                      onClick={() => setIndBudgetScale(opt.key)}
+                    >
+                      <span className="profile-option-badge">{opt.key}</span>
+                      <span className="profile-option-text">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Individual Question 3 */}
+              <div className="profile-question-group">
+                <div className="profile-question-title">{L('profileIndQ3Title')}</div>
+                <div className="profile-options-list">
+                  {indQ3Options.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      id={`indQ3Opt${opt.key}`}
+                      className={`profile-option-card ${indSpecsPreference === opt.key ? 'selected' : ''}`}
+                      onClick={() => setIndSpecsPreference(opt.key)}
+                    >
+                      <span className="profile-option-badge">{opt.key}</span>
+                      <span className="profile-option-text">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="profile-questions-container">
+              {/* Organization Question 1 */}
+              <div className="profile-question-group">
+                <div className="profile-question-title">{L('profileOrgQ1Title')}</div>
+                <div className="profile-options-list">
+                  {orgQ1Options.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      id={`orgQ1Opt${opt.key}`}
+                      className={`profile-option-card ${orgEngineeringDomain === opt.key ? 'selected' : ''}`}
+                      onClick={() => setOrgEngineeringDomain(opt.key)}
+                    >
+                      <span className="profile-option-badge">{opt.key}</span>
+                      <span className="profile-option-text">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Organization Question 2 */}
+              <div className="profile-question-group">
+                <div className="profile-question-title">{L('profileOrgQ2Title')}</div>
+                <div className="profile-options-list">
+                  {orgQ2Options.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      id={`orgQ2Opt${opt.key}`}
+                      className={`profile-option-card ${orgContractScale === opt.key ? 'selected' : ''}`}
+                      onClick={() => setOrgContractScale(opt.key)}
+                    >
+                      <span className="profile-option-badge">{opt.key}</span>
+                      <span className="profile-option-text">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Organization Question 3 */}
+              <div className="profile-question-group">
+                <div className="profile-question-title">{L('profileOrgQ3Title')}</div>
+                <div className="profile-options-list">
+                  {orgQ3Options.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      id={`orgQ3Opt${opt.key}`}
+                      className={`profile-option-card ${orgSupportModel === opt.key ? 'selected' : ''}`}
+                      onClick={() => setOrgSupportModel(opt.key)}
+                    >
+                      <span className="profile-option-badge">{opt.key}</span>
+                      <span className="profile-option-text">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Describe Box */}
           <div className="profile-usertype-detail">
             <label className="profile-form-label" htmlFor="profileUserDetail">
-              {userType === 'individual' ? ICONS.dashboard : ICONS.building}
-              <span>{userType === 'individual' ? L('profileWorkExpLabel') : L('profileCompanyDescLabel')}</span>
+              <span className="profile-describe-label-text">
+                {userType === 'individual' ? L('profileDescribeBoxLabel') : L('profileCompanyDescLabel')}
+              </span>
             </label>
             <textarea
               id="profileUserDetail"
