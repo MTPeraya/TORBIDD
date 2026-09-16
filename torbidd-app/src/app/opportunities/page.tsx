@@ -133,7 +133,7 @@ function OpportunitiesContent() {
           change={`${projects.length} ${L('projects')}`}
           changeType="neutral"
           icon={ICONS.dollarSign}
-          iconColor="teal"
+          iconColor="amber"
         />
       </div>
 
