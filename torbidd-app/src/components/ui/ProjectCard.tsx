@@ -31,15 +31,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const bookmarked = isBookmarked(project.externalId);
 
   // Status tag with dot indicator
-  let statusTagClass = 'tag open-dot';
-  let statusText = language === 'th' ? '● เปิดรับข้อเสนอ' : '● Open';
-  if (closing) {
-    statusTagClass = 'tag closing-soon-dot';
-    statusText = language === 'th' ? '● ใกล้ปิดรับ' : '● Closing Soon';
-  } else if (days < 0) {
-    statusTagClass = 'tag closed-dot';
-    statusText = language === 'th' ? '● ปิดรับข้อเสนอ' : '● Closed';
-  }
+  const statusTagClass = 'tag open-dot';
+  const statusText = language === 'th' ? '● เปิดรับข้อเสนอ' : '● Open';
 
   const handleCardClick = () => {
     router.push(`/opportunities/${project.externalId}`);
@@ -52,7 +45,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="project-card-tags">
             <span className="tag software">{L('softwareProject')}</span>
             <span className={`tag category ${catClass}`}>{catLabel}</span>
-            <span className={statusTagClass}>{statusText}</span>
+            {days >= 0 && <span className={statusTagClass}>{statusText}</span>}
           </div>
           <button
             type="button"
@@ -83,14 +76,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <span style={{ fontSize: 10, color: 'var(--gray-500)' }}>{L('aiExtracted')}</span>
           </div>
 
-          <div className="meta-item">
-            <span className="meta-label">{L('deadline')}</span>
-            <span className={`meta-value ${closing ? 'deadline-soon' : ''}`}>
-              {formatDate(project.deadline, language)}
-              {closing ? ` (${days}${L('days')})` : ''}
-            </span>
-            <span style={{ fontSize: 10, color: 'var(--gray-500)' }}>{L('aiExtracted')}</span>
-          </div>
+
 
           <div className="meta-item">
             <span className="meta-label">{L('publishDate')}</span>
