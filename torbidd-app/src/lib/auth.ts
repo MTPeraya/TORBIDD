@@ -4,8 +4,8 @@
 
 import crypto from 'crypto';
 
-export const AUTH_COOKIE_NAME = 'torbidd_auth_session';
-export const OAUTH_STATE_COOKIE = 'torbidd_oauth_state';
+import { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE } from './auth-constants';
+export { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE };
 
 export interface AuthSessionUser {
   id: string;

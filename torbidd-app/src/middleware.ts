@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { SESSION_COOKIE } from '@/lib/session';
-import { AUTH_COOKIE_NAME } from '@/lib/auth';
+import { AUTH_COOKIE_NAME } from '@/lib/auth-constants';
 
 /** Routes that require a signed-in user */
 const PROTECTED_ROUTES = ['/historical', '/saved', '/notifications'];

@@ -28,8 +28,12 @@ function LoginContent() {
         return 'ไม่สามารถแลกเปลี่ยนโทเคนกับ Google ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
       case 'userinfo_failed':
         return 'ไม่สามารถดึงข้อมูลบัญชี Google ได้ กรุณาลองใหม่อีกครั้ง';
-      case 'unconfigured_credentials':
-        return 'ยังไม่ได้กำหนดค่า GOOGLE_CLIENT_ID และ GOOGLE_CLIENT_SECRET บนเซิร์ฟเวอร์';
+      case 'auth_failed':
+        return 'การยืนยันตัวตนกับเซิร์ฟเวอร์ขัดข้อง กรุณาลองใหม่อีกครั้ง';
+      case 'access_denied':
+        return 'คุณได้ยกเลิกการเข้าสู่ระบบผ่าน Google';
+      case 'missing_code':
+        return 'ไม่พบรหัสยืนยันตัวตนจาก Google กรุณาลองใหม่อีกครั้ง';
       default:
         return code ? `เกิดข้อผิดพลาดในการเข้าสู่ระบบ (${code})` : null;
     }
