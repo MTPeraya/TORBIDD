@@ -50,6 +50,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/login?error=state_parse_failed`);
   }
 
+  const googleError = searchParams.get('error');
+  if (googleError) {
+    return NextResponse.redirect(`${appUrl}/login?error=${encodeURIComponent(googleError)}`);
+  }
+
   if (!code) {
     return NextResponse.redirect(`${appUrl}/login?error=missing_code`);
   }
@@ -142,27 +147,33 @@ export async function GET(req: NextRequest) {
       let userOrg = 'กรุงเทพมหานคร';
 
       if (process.env.MONGODB_URI) {
-        await connectToDatabase();
-        const dbUser = await User.findOneAndUpdate(
-          { googleId: profile.sub },
-          {
-            $set: {
-              email: profile.email,
-              name: profile.name || '',
-              picture: profile.picture || '',
-              lastLoginAt: new Date(),
+        try {
+          await connectToDatabase();
+          const dbUser = await User.findOneAndUpdate(
+            { googleId: profile.sub },
+            {
+              $set: {
+                email: profile.email,
+                name: profile.name || '',
+                picture: profile.picture || '',
+                lastLoginAt: new Date(),
+              },
+              $setOnInsert: {
+                role: 'BMA Officer',
+                org: 'กรุงเทพมหานคร',
+              },
             },
-            $setOnInsert: {
-              role: 'BMA Officer',
-              org: 'กรุงเทพมหานคร',
-            },
-          },
-          { new: true, upsert: true },
-        );
+            { new: true, upsert: true },
+          );
 
-        userId = dbUser._id.toString();
-        userRole = dbUser.role || 'BMA Officer';
-        userOrg = dbUser.org || 'กรุงเทพมหานคร';
+          if (dbUser?._id) {
+            userId = dbUser._id.toString();
+            userRole = dbUser.role || 'BMA Officer';
+            userOrg = dbUser.org || 'กรุงเทพมหานคร';
+          }
+        } catch (dbErr) {
+          console.warn('[Google Auth Callback] MongoDB sync failed, falling back to Google profile session:', dbErr);
+        }
       }
 
       sessionUser = {
