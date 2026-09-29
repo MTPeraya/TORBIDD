@@ -47,7 +47,24 @@ export function Topbar() {
   const { user: authUser, isAuthenticated, logout: authLogout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync unread notification count on navigation
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/notifications?limit=1')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (mounted && data?.unreadCount !== undefined) {
+          setUnreadNotifs(data.unreadCount);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [pathname]);
 
   // Close dropdown on route change without setState in effect
   if (prevPathname !== pathname) {
@@ -117,7 +134,7 @@ export function Topbar() {
     if (pathname === '/opportunities') return L('navDashboard');
     if (pathname === '/historical') return L('navHistorical');
     if (pathname === '/saved') return L('navSaved');
-    if (pathname === '/notifications') return L('navSettings');
+    if (pathname === '/notifications') return L('tabNotifications');
     if (pathname === '/settings') return L('navProfile');
     if (pathname === '/login') return L('navLogin');
     if (pathname === '/admin' || pathname.startsWith('/admin')) return L('navAdmin');
@@ -189,9 +206,18 @@ export function Topbar() {
         </button>
 
         {/* Notifications button */}
-        <Link href="/notifications" className="topbar-icon-btn" title={L('navSettings')}>
+        <Link
+          href="/notifications"
+          className="topbar-icon-btn notif-bell-btn"
+          id="topbarNotifBtn"
+          title={L('tabNotifications')}
+        >
           {ICONS.bell}
-          <span className="notif-dot"></span>
+          {unreadNotifs > 0 ? (
+            <span className="topbar-notif-badge">{unreadNotifs > 99 ? '99+' : unreadNotifs}</span>
+          ) : (
+            <span className="notif-dot"></span>
+          )}
         </Link>
 
         {/* Authentication: User avatar or Sign in with Google button */}
@@ -263,7 +289,7 @@ export function Topbar() {
                   onClick={() => setDropdownOpen(false)}
                 >
                   {ICONS.bell}
-                  <span>{L('navSettings')}</span>
+                  <span>{L('tabNotifications')}</span>
                 </Link>
 
                 <div className="user-dropdown-divider" />

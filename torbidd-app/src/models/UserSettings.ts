@@ -10,6 +10,9 @@ export interface IUserSettings extends Document {
   dailyDigest: boolean;
   closingAlert: boolean;
   newProjectAlert: boolean;
+  newOpportunity?: boolean;
+  savedUpdate?: boolean;
+  deadlineReminder?: boolean;
   interestTags: string[];
   budgetMin: number | null;
   budgetMax: number | null;
@@ -24,6 +27,9 @@ const UserSettingsSchema = new Schema<IUserSettings>(
     dailyDigest: { type: Boolean, default: true },
     closingAlert: { type: Boolean, default: true },
     newProjectAlert: { type: Boolean, default: false },
+    newOpportunity: { type: Boolean, default: true },
+    savedUpdate: { type: Boolean, default: true },
+    deadlineReminder: { type: Boolean, default: true },
     interestTags: { type: [String], default: ['Website', 'AI'] },
     budgetMin: { type: Number, default: null },
     budgetMax: { type: Number, default: null },

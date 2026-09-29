@@ -87,6 +87,20 @@ const MIGRATIONS: Migration[] = [
     },
   },
 
+  // ── 003 ─────────────────────────────────────────────────────────────────
+  {
+    id: '2026-09-30_003_create-notifications-collection-and-indexes',
+    description: 'Create notifications collection and compound indexes for fast feed retrieval',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async up(db: any) {
+      const col = db.collection('notifications');
+      await col.createIndex({ recipientId: 1, createdAt: -1 }, { name: 'recipient_created_idx' });
+      await col.createIndex({ recipientId: 1, isRead: 1, createdAt: -1 }, { name: 'recipient_read_idx' });
+      await col.createIndex({ recipientId: 1, type: 1, createdAt: -1 }, { name: 'recipient_type_idx' });
+      await col.createIndex({ idempotencyKey: 1 }, { name: 'idempotency_unique_idx', unique: true, sparse: true });
+    },
+  },
+
   // ── Add future migrations above this line ────────────────────────────────
 ];
 

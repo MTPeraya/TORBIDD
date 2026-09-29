@@ -8,6 +8,8 @@ import ProcurementDocument, { IProcurementDocument } from '@/models/ProcurementD
 import { DeduplicationCheckResult, DiscoveredProject, ProcurementDocumentRecord } from '@/types/procurement';
 import mongoose, { Types } from 'mongoose';
 import crypto from 'node:crypto';
+import { notifyMatchingUsers } from '@/services/procurement-matching';
+import { notifySavedProcurementUpdate } from '@/services/procurement-diff';
 
 /**
  * Generate a deterministic SHA-256 content hash for secondary deduplication.
@@ -182,6 +184,44 @@ export async function upsertDiscoveredProjects(
   });
 
   const result = await ProcurementProject.bulkWrite(operations);
+
+  // Trigger outbound notification evaluation for newly discovered and updated projects
+  try {
+    if (dedup && dedup.newProjects.length > 0) {
+      for (const np of dedup.newProjects) {
+        notifyMatchingUsers({
+          id: np.externalProjectId,
+          externalId: np.externalProjectId,
+          title: { th: np.projectName, en: np.projectName },
+          budget: np.budget ?? 0,
+          agencyName: np.agencyName,
+          category: np.procurementType,
+          requiredTechnologies: np.requiredTechnologies,
+        }).catch((err) => console.warn('[Notification] Error evaluating new procurement:', err));
+      }
+    }
+
+    if (dedup && dedup.updatedProjects.length > 0) {
+      for (const up of dedup.updatedProjects) {
+        notifySavedProcurementUpdate(
+          {
+            externalProjectId: up.project.externalProjectId,
+            revision: up.oldRevision,
+            title: up.project.projectName,
+          },
+          {
+            externalProjectId: up.project.externalProjectId,
+            revision: up.newRevision,
+            title: up.project.projectName,
+            budget: up.project.budget,
+            contractPrice: up.project.contractPrice,
+          },
+        ).catch((err) => console.warn('[Notification] Error evaluating updated procurement:', err));
+      }
+    }
+  } catch (notifErr) {
+    console.warn('[Notification] Ingestion notification hook error:', notifErr);
+  }
 
   return {
     upsertedCount: result.upsertedCount,
