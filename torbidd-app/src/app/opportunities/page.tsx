@@ -13,6 +13,7 @@ import {
   isClosingSoon,
   isNew,
 } from '@/lib/utils';
+import { LiveSyncBar } from '@/components/ui/LiveSyncBar';
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
 
@@ -27,17 +28,29 @@ function OpportunitiesContent() {
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
   const [selectedBudget, setSelectedBudget] = useState('');
   const [selectedDeadline, setSelectedDeadline] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'live' | 'bma'>('all');
 
-  useEffect(() => {
-    fetch('/api/projects')
+  const loadProjects = (filterMode = activeFilter) => {
+    let url = '/api/projects';
+    if (filterMode === 'live') {
+      url = '/api/projects?source=CKAN_GOVSPENDING';
+    } else if (filterMode === 'bma') {
+      url = '/api/projects?source=BMA';
+    }
+
+    fetch(url)
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.data && Array.isArray(json.data)) {
           setProjects(json.data);
         }
       })
       .catch(() => {});
-  }, []);
+  };
+
+  useEffect(() => {
+    loadProjects(activeFilter);
+  }, [activeFilter]);
 
   const departments = useMemo(() => {
     return Array.from(new Set(projects.map((p) => (getLocalized(p.department) as string))));
@@ -111,6 +124,12 @@ function OpportunitiesContent() {
         <h1 className="page-title">{L('dashboardTitle')}</h1>
         <p className="page-subtitle">{L('dashboardSub')}</p>
       </div>
+
+      <LiveSyncBar
+        onSyncComplete={() => loadProjects(activeFilter)}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
 
       {/* Stats Cards Row */}
       <div className="stats-row">

@@ -3,8 +3,8 @@
 // =============================================================================
 
 import { EgpArchiveMetadata } from '@/types/procurement';
+import { getIngestionConfig } from '@/lib/config';
 
-const DEFAULT_EGP_ORIGIN = 'https://process5.gprocurement.go.th';
 const METADATA_PATH = '/egp-approval-service/apv-common/infoProcureDocAnnounZipTemp';
 const DOWNLOAD_PATH = '/egp-upload-service/v1/downloadFileTest';
 const PROJECT_ID_PATTERN = /^\d{11}$/;
@@ -31,9 +31,10 @@ export class EgpClient {
   private readonly requestTimeoutMs: number;
 
   public constructor(options: EgpClientOptions = {}) {
-    this.baseUrl = (options.baseUrl ?? process.env.EGP_BASE_URL ?? DEFAULT_EGP_ORIGIN).replace(/\/+$/, '');
+    const config = getIngestionConfig();
+    this.baseUrl = (options.baseUrl ?? config.egpBaseUrl).replace(/\/+$/, '');
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.requestTimeoutMs = options.requestTimeoutMs ?? (Number(process.env.REQUEST_TIMEOUT_MS) || 60_000);
+    this.requestTimeoutMs = options.requestTimeoutMs ?? config.requestTimeoutMs;
   }
 
   /**

@@ -54,6 +54,8 @@ export async function upsertDiscoveredProjects(
   };
 }
 
+import { getCachedDiscoveredProjects } from '@/services/ingestion/sync-state';
+
 /**
  * Retrieve discovered procurement projects with optional filtering and pagination.
  */
@@ -62,38 +64,65 @@ export async function getProcurementProjects(params: {
   fiscalYear?: number;
   limit?: number;
   offset?: number;
-} = {}): Promise<{ projects: IProcurementProject[]; total: number }> {
-  await connectToDatabase();
+} = {}): Promise<{ projects: (IProcurementProject | DiscoveredProject)[]; total: number }> {
+  try {
+    await connectToDatabase();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const query: Record<string, any> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: Record<string, any> = {};
 
+    if (params.search) {
+      const regex = new RegExp(params.search, 'i');
+      query.$or = [
+        { projectName: regex },
+        { agencyName: regex },
+        { externalProjectId: regex },
+      ];
+    }
+
+    if (params.fiscalYear) {
+      query.fiscalYear = params.fiscalYear;
+    }
+
+    const limit = Math.min(params.limit ?? 50, 200);
+    const offset = params.offset ?? 0;
+
+    const [projects, total] = await Promise.all([
+      ProcurementProject.find(query)
+        .sort({ discoveredAt: -1, createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .lean(),
+      ProcurementProject.countDocuments(query),
+    ]);
+
+    if (projects.length > 0) {
+      return { projects: projects as unknown as IProcurementProject[], total };
+    }
+  } catch {
+    // If DB is offline or empty, fallback to cached discovered projects
+  }
+
+  let cached = getCachedDiscoveredProjects();
   if (params.search) {
-    const regex = new RegExp(params.search, 'i');
-    query.$or = [
-      { projectName: regex },
-      { agencyName: regex },
-      { externalProjectId: regex },
-    ];
+    const q = params.search.toLowerCase();
+    cached = cached.filter(
+      (p) =>
+        p.projectName.toLowerCase().includes(q) ||
+        p.agencyName.toLowerCase().includes(q) ||
+        p.externalProjectId.includes(q),
+    );
   }
-
   if (params.fiscalYear) {
-    query.fiscalYear = params.fiscalYear;
+    cached = cached.filter((p) => p.fiscalYear === params.fiscalYear);
   }
 
+  const total = cached.length;
   const limit = Math.min(params.limit ?? 50, 200);
   const offset = params.offset ?? 0;
+  const sliced = cached.slice(offset, offset + limit);
 
-  const [projects, total] = await Promise.all([
-    ProcurementProject.find(query)
-      .sort({ discoveredAt: -1, createdAt: -1 })
-      .skip(offset)
-      .limit(limit)
-      .lean(),
-    ProcurementProject.countDocuments(query),
-  ]);
-
-  return { projects: projects as unknown as IProcurementProject[], total };
+  return { projects: sliced, total };
 }
 
 /**
@@ -196,22 +225,75 @@ export async function getDocumentsByProjectId(
  */
 export async function getProjectWithDocuments(
   projectIdOrExternalId: string,
-): Promise<{ project: IProcurementProject; documents: IProcurementDocument[] } | null> {
-  await connectToDatabase();
+): Promise<{ project: IProcurementProject | DiscoveredProject; documents: IProcurementDocument[] } | null> {
+  try {
+    await connectToDatabase();
 
-  let project: IProcurementProject | null = null;
-  if (Types.ObjectId.isValid(projectIdOrExternalId)) {
-    project = await ProcurementProject.findById(projectIdOrExternalId).lean() as unknown as IProcurementProject | null;
+    let project: IProcurementProject | null = null;
+    if (Types.ObjectId.isValid(projectIdOrExternalId)) {
+      project = await ProcurementProject.findById(projectIdOrExternalId).lean() as unknown as IProcurementProject | null;
+    }
+    if (!project) {
+      project = await ProcurementProject.findOne({
+        $or: [
+          { externalProjectId: projectIdOrExternalId },
+          { externalProjectId: { $regex: `^${projectIdOrExternalId}` } },
+        ],
+      }).lean() as unknown as IProcurementProject | null;
+    }
+
+    if (project) {
+      const documents = await ProcurementDocument.find({
+        $or: [{ projectId: project._id }, { externalProjectId: project.externalProjectId }],
+      }).sort({ downloadedAt: -1 }).lean() as unknown as IProcurementDocument[];
+
+      return { project, documents };
+    }
+  } catch {}
+
+  // Fallback to cached discovered projects
+  const cachedList = getCachedDiscoveredProjects();
+  const found = cachedList.find(
+    (p) =>
+      p.externalProjectId === projectIdOrExternalId ||
+      p.externalProjectId.startsWith(projectIdOrExternalId) ||
+      String(p.externalProjectId).includes(projectIdOrExternalId),
+  );
+  if (found) {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const projectDir = path.resolve(process.cwd(), 'storage', 'documents', found.externalProjectId);
+    const diskDocs: IProcurementDocument[] = [];
+
+    if (fs.existsSync(projectDir)) {
+      try {
+        const files = fs.readdirSync(projectDir);
+        for (const file of files) {
+          if (file.toLowerCase().endsWith('.pdf')) {
+            const isTor = file.toLowerCase().includes('tor') || file.includes('ขอบเขต');
+            const stat = fs.statSync(path.join(projectDir, file));
+            diskDocs.push({
+              _id: file as any,
+              projectId: found.externalProjectId as any,
+              externalProjectId: found.externalProjectId,
+              documentType: isTor ? 'ATTACH_TOR' : 'ANNOUNCEMENT',
+              fileName: file,
+              filePath: `storage/documents/${found.externalProjectId}/${file}`,
+              storageReference: path.join(projectDir, file),
+              source: 'NATIONAL_EGP',
+              sourceUrl: found.sourceUrl,
+              fileSize: stat.size,
+              mimeType: 'application/pdf',
+              downloadedAt: stat.mtime,
+              status: 'PROCESSED',
+            } as unknown as IProcurementDocument);
+          }
+        }
+      } catch {}
+    }
+
+    return { project: found, documents: diskDocs };
   }
-  if (!project) {
-    project = await ProcurementProject.findOne({ externalProjectId: projectIdOrExternalId }).lean() as unknown as IProcurementProject | null;
-  }
 
-  if (!project) return null;
-
-  const documents = await ProcurementDocument.find({
-    $or: [{ projectId: project._id }, { externalProjectId: project.externalProjectId }],
-  }).sort({ downloadedAt: -1 }).lean() as unknown as IProcurementDocument[];
-
-  return { project, documents };
+  return null;
 }

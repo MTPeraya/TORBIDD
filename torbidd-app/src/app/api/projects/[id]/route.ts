@@ -25,9 +25,12 @@ export async function GET(
     try {
       const procurementData = await getProjectWithDocuments(cleanId);
       if (procurementData) {
+        const { procurementToProject } = await import('@/lib/project-mapper');
+        const mapped = procurementToProject(procurementData.project);
         return NextResponse.json({
           data: {
             ...procurementData.project,
+            ...mapped,
             documents: procurementData.documents,
           },
         });

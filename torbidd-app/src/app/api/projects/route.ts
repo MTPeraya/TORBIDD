@@ -7,14 +7,18 @@ import { getProjects } from '@/services/database/projects';
 import { getProcurementProjects } from '@/services/database/procurement';
 import { ProjectFiltersSchema } from '@/lib/validation';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
+import { Project } from '@/types/project';
+import { procurementToProject } from '@/lib/project-mapper';
+import { getSyncStatus } from '@/services/ingestion/sync-state';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
     const params = Object.fromEntries(req.nextUrl.searchParams.entries());
+    const syncStatus = getSyncStatus();
 
-    // If requesting discovered CKAN / Open Data procurement projects
+    // 1. If specifically requesting discovered CKAN / Open Data procurement projects
     if (params.source === 'CKAN_GOVSPENDING' || params.type === 'procurement' || params.type === 'discovered') {
       try {
         const { projects, total } = await getProcurementProjects({
@@ -23,10 +27,16 @@ export async function GET(req: NextRequest) {
           limit: params.limit ? parseInt(params.limit, 10) : undefined,
           offset: params.offset ? parseInt(params.offset, 10) : undefined,
         });
-        return NextResponse.json({ data: projects, total });
+
+        const mapped = projects.map(procurementToProject);
+        return NextResponse.json({
+          data: mapped,
+          total,
+          syncStatus,
+        });
       } catch (err) {
         console.error('[GET /api/projects?source=CKAN_GOVSPENDING]', err);
-        return NextResponse.json({ data: [], total: 0 });
+        return NextResponse.json({ data: [], total: 0, syncStatus });
       }
     }
 
@@ -38,26 +48,77 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    try {
-      const projects = await getProjects(parsed.data);
-      if (projects && projects.length > 0) {
-        return NextResponse.json({ data: projects, total: projects.length });
-      }
+    // 2. If requesting BMA projects exclusively
+    if (params.source === 'BMA' || params.source === 'bma') {
+      let bmaDbProjects: Project[] = [];
+      try {
+        bmaDbProjects = ((await getProjects(parsed.data)) as unknown as Project[]) || [];
+      } catch {}
 
-      // Check if any discovered procurement projects exist to return
-      const { projects: discProjects, total: discTotal } = await getProcurementProjects({
+      const bmaList = bmaDbProjects.length > 0 ? bmaDbProjects : INITIAL_PROJECTS;
+      let filtered = bmaList;
+      if (parsed.data.search) {
+        const q = parsed.data.search.toLowerCase();
+        filtered = filtered.filter(
+          (p) =>
+            p.title.th.toLowerCase().includes(q) ||
+            p.title.en.toLowerCase().includes(q) ||
+            p.department.th.toLowerCase().includes(q) ||
+            p.department.en.toLowerCase().includes(q),
+        );
+      }
+      return NextResponse.json({
+        data: filtered,
+        total: filtered.length,
+        syncStatus,
+        source: 'BMA',
+      });
+    }
+
+    // 3. Fetch discovered procurement projects
+    let discoveredProjectsMapped: Project[] = [];
+    try {
+      const { projects: discProjects } = await getProcurementProjects({
         search: parsed.data.search,
       });
       if (discProjects && discProjects.length > 0) {
-        return NextResponse.json({ data: discProjects, total: discTotal });
+        discoveredProjectsMapped = discProjects.map(procurementToProject);
       }
-    } catch {
-      // Fallback to initial dataset if DB not yet connected
+    } catch {}
+
+    // 4. Fetch BMA database projects or fallback to INITIAL_PROJECTS
+    let bmaProjects: Project[] = [];
+    try {
+      bmaProjects = ((await getProjects(parsed.data)) as unknown as Project[]) || [];
+    } catch {}
+
+    if (bmaProjects.length === 0) {
+      bmaProjects = INITIAL_PROJECTS;
+      if (parsed.data.search) {
+        const q = parsed.data.search.toLowerCase();
+        bmaProjects = bmaProjects.filter(
+          (p) =>
+            p.title.th.toLowerCase().includes(q) ||
+            p.title.en.toLowerCase().includes(q) ||
+            p.department.th.toLowerCase().includes(q) ||
+            p.department.en.toLowerCase().includes(q),
+        );
+      }
     }
 
-    return NextResponse.json({ data: INITIAL_PROJECTS, total: INITIAL_PROJECTS.length });
+    // 5. Combine discovered live projects with BMA projects (live projects first)
+    const combined = [...discoveredProjectsMapped, ...bmaProjects];
+    return NextResponse.json({
+      data: combined,
+      total: combined.length,
+      syncStatus,
+    });
   } catch (err) {
     console.error('[GET /api/projects]', err);
-    return NextResponse.json({ data: INITIAL_PROJECTS, total: INITIAL_PROJECTS.length });
+    return NextResponse.json({
+      data: INITIAL_PROJECTS,
+      total: INITIAL_PROJECTS.length,
+      syncStatus: getSyncStatus(),
+    });
   }
 }

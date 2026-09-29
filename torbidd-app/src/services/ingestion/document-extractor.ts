@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { unzipSync, UnzipFileInfo } from 'fflate';
 import { ExtractedDocument, DocumentType } from '@/types/procurement';
+import { getIngestionConfig } from '@/lib/config';
 
 // Regex patterns to identify TOR files inside Thai government archives
 // Matches: "Attach_TOR.pdf", "Attach_TOR_1.pdf", "TOR.pdf", "01_TOR_software.pdf", "ขอบเขตของงาน.pdf", etc.
@@ -27,9 +28,7 @@ export class DocumentExtractor {
 
   public constructor(options: DocumentExtractorOptions = {}) {
     this.storagePath =
-      options.storagePath ??
-      process.env.DOCUMENT_STORAGE_PATH ??
-      path.join(process.cwd(), 'storage', 'documents');
+      options.storagePath ?? getIngestionConfig().resolvedStoragePath;
   }
 
   /**

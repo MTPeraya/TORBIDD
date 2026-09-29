@@ -44,7 +44,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
   }
 
   const handleCardClick = () => {
-    router.push(`/opportunities/${project.externalId}`);
+    const targetId = (project as any).externalProjectId || project.externalId;
+    router.push(`/opportunities/${targetId}`);
   };
 
   return (
@@ -52,6 +53,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <div>
         <div className="project-card-header">
           <div className="project-card-tags">
+            {((project as any).externalProjectId || project.sourceDocument?.includes('Attach_TOR_') || (project as any).source === 'CKAN_GOVSPENDING') && (
+              <span
+                className="tag"
+                style={{
+                  background: '#e8f5ef',
+                  color: '#1e7e53',
+                  border: '1px solid rgba(30, 126, 83, 0.25)',
+                  fontWeight: 600,
+                }}
+              >
+                🟢 e-GP รัฐบาล
+              </span>
+            )}
             <span className="tag software">{L('softwareProject')}</span>
             <span className={`tag category ${catClass}`}>{catLabel}</span>
             <span className={statusTagClass}>{statusText}</span>

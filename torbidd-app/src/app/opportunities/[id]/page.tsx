@@ -92,10 +92,28 @@ export default function ProjectDetailPage({
   };
 
   const handleDownloadTOR = () => {
+    const extId = (project as any).externalProjectId || project.externalId;
+    const docs = (project as any).documents as
+      | Array<{ fileName: string; documentType: string }>
+      | undefined;
+    const torDoc = docs?.find(
+      (d) => d.documentType === 'ATTACH_TOR' || d.fileName.toLowerCase().includes('tor'),
+    );
+
+    if (torDoc) {
+      window.open(`/api/documents/${extId}/${encodeURIComponent(torDoc.fileName)}`, '_blank');
+      return;
+    }
+
+    if ((project as any).sourceUrl) {
+      window.open((project as any).sourceUrl, '_blank');
+      return;
+    }
+
     alert(
       language === 'th'
         ? `เอกสาร TOR ต้นฉบับ: ${project.sourceDocument || 'BMA_TOR.pdf'} (ระบบพร้อมเชื่อมต่อระบบ e-GP กทม.)`
-        : `Opening original TOR document: ${project.sourceDocument || 'BMA_TOR.pdf'}`
+        : `Opening original TOR document: ${project.sourceDocument || 'BMA_TOR.pdf'}`,
     );
   };
 
@@ -232,6 +250,58 @@ export default function ProjectDetailPage({
               <span>{L('sourceTransparency')}</span>
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* e-GP Government Project ID & Verification Link */}
+              {((project as any).externalProjectId || String(project.externalId).length === 11) && (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    background: '#e8f5ef',
+                    border: '1px solid rgba(30, 126, 83, 0.25)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1e7e53' }}>
+                      🟢 {language === 'th' ? 'ข้อมูลจริงจากระบบ e-GP' : 'Verified e-GP Government Project'}
+                    </span>
+                    <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: '#164566' }}>
+                      ID: {(project as any).externalProjectId || project.externalId}
+                    </span>
+                  </div>
+
+                  <a
+                    href={
+                      (project as any).sourceUrl ||
+                      `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${(project as any).externalProjectId || project.externalId}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--primary-700)',
+                      textDecoration: 'underline',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <span>{language === 'th' ? '🔗 ตรวจสอบความถูกต้องบนเว็บ e-GP ทางการ' : '🔗 Verify on official e-GP Portal'}</span>
+                    <span>↗</span>
+                  </a>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
+                <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Data Source</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--gray-900)' }}>
+                  {(project as any).source || 'BMA / CKAN'}
+                </span>
+              </div>
+
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
                 <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Source Document</span>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--gray-900)' }}>
@@ -240,16 +310,54 @@ export default function ProjectDetailPage({
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
-                <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Last Extracted</span>
+                <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Last Extracted / Synced</span>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--gray-900)' }}>
                   {formatDate(project.processedDate || project.publishDate, language)}
                 </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
-                <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Extraction Status</span>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--success)' }}>✓ Verified</span>
+                <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Accuracy Status</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--success)' }}>✓ Government Verified</span>
               </div>
+
+              {/* Real e-GP Downloadable Attachments List */}
+              {(project as any).documents && (project as any).documents.length > 0 && (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--gray-200)' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gray-900)' }}>
+                    {language === 'th' ? '📄 เอกสารแนบจาก e-GP (เปิดอ่าน/ดาวน์โหลดได้จริง):' : '📄 Real e-GP Attachments:'}
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                    {(project as any).documents.map((doc: any, i: number) => (
+                      <a
+                        key={i}
+                        href={`/api/documents/${(project as any).externalProjectId || project.externalId}/${encodeURIComponent(doc.fileName)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: 11.5,
+                          padding: '6px 10px',
+                          borderRadius: 6,
+                          background: doc.documentType === 'ATTACH_TOR' ? '#e8f5ef' : 'var(--gray-100)',
+                          color: doc.documentType === 'ATTACH_TOR' ? '#1e7e53' : 'var(--primary-700)',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          border: doc.documentType === 'ATTACH_TOR' ? '1px solid rgba(30,126,83,0.3)' : '1px solid var(--gray-200)',
+                        }}
+                      >
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 210 }}>
+                          {doc.documentType === 'ATTACH_TOR' ? '⭐ [TOR] ' : '📎 '}
+                          {doc.fileName}
+                        </span>
+                        <span style={{ fontSize: 11 }}>เปิดดู ↗</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>AI Confidence</span>

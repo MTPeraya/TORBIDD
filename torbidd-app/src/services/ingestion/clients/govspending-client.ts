@@ -6,7 +6,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { DiscoveredProject, GovSpendingSearchParams, GovSpendingSearchResult } from '@/types/procurement';
 
-const DEFAULT_BASE_URL = 'https://opend.data.go.th/govspending/service/egp-contract';
+import { getIngestionConfig } from '@/lib/config';
+
 const PROJECT_ID_PATTERN = /^\d{11}$/;
 const MAX_REQUEST_ATTEMPTS = 3;
 
@@ -59,11 +60,12 @@ export class GovSpendingClient {
   private readonly retryDelayBaseMs?: number;
 
   public constructor(options: GovSpendingClientOptions = {}) {
-    const key = options.apiKey ?? process.env.GOVSPENDING_API_KEY;
+    const config = getIngestionConfig();
+    const key = options.apiKey !== undefined ? options.apiKey : config.govspendingApiKey;
     this.apiKey = key?.trim() ?? '';
-    this.baseUrl = options.baseUrl ?? process.env.GOVSPENDING_BASE_URL ?? DEFAULT_BASE_URL;
+    this.baseUrl = options.baseUrl ?? config.govspendingBaseUrl;
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.requestTimeoutMs = options.requestTimeoutMs ?? (Number(process.env.REQUEST_TIMEOUT_MS) || 30_000);
+    this.requestTimeoutMs = options.requestTimeoutMs ?? config.requestTimeoutMs;
     this.retryDelayBaseMs = options.retryDelayBaseMs;
   }
 
