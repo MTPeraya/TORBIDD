@@ -5,45 +5,180 @@
 import connectToDatabase from '@/lib/mongodb';
 import ProcurementProject, { IProcurementProject } from '@/models/ProcurementProject';
 import ProcurementDocument, { IProcurementDocument } from '@/models/ProcurementDocument';
-import { DiscoveredProject, ProcurementDocumentRecord } from '@/types/procurement';
+import { DeduplicationCheckResult, DiscoveredProject, ProcurementDocumentRecord } from '@/types/procurement';
 import mongoose, { Types } from 'mongoose';
+import crypto from 'node:crypto';
 
 /**
- * Idempotently upsert discovered procurement projects into MongoDB.
- * Ensures no duplicate projects are created for the same externalProjectId.
+ * Generate a deterministic SHA-256 content hash for secondary deduplication.
+ */
+export function generateProjectContentHash(project: Partial<DiscoveredProject>): string {
+  const normalized = [
+    project.externalProjectId?.trim() ?? '',
+    project.projectName?.trim() ?? '',
+    String(project.budget ?? 0),
+    String(project.fiscalYear ?? ''),
+    project.agencyName?.trim() ?? '',
+    project.procurementType?.trim() ?? '',
+  ].join('|');
+
+  return crypto.createHash('sha256').update(normalized, 'utf8').digest('hex');
+}
+
+/**
+ * Pre-ingestion check logic: Identifies existing, updated (revisions), and duplicate records
+ * using primary key (externalProjectId) and secondary key (contentHash) before heavy downstream processing.
+ */
+export async function checkProjectDeduplication(
+  projects: DiscoveredProject[],
+): Promise<DeduplicationCheckResult> {
+  if (!projects || projects.length === 0) {
+    return {
+      newProjects: [],
+      updatedProjects: [],
+      duplicateProjects: [],
+      metrics: { totalChecked: 0, newCount: 0, updatedCount: 0, duplicateCount: 0 },
+    };
+  }
+
+  await connectToDatabase();
+
+  const externalIds = projects.map((p) => p.externalProjectId);
+  const existingRecords = await ProcurementProject.find({
+    externalProjectId: { $in: externalIds },
+  }).lean();
+
+  const existingMap = new Map(existingRecords.map((r) => [r.externalProjectId, r]));
+
+  const newProjects: DiscoveredProject[] = [];
+  const updatedProjects: Array<{
+    project: DiscoveredProject;
+    oldRevision: number;
+    newRevision: number;
+    reason: string;
+  }> = [];
+  const duplicateProjects: Array<{
+    project: DiscoveredProject;
+    existingRevision: number;
+  }> = [];
+
+  for (const p of projects) {
+    const hash = p.contentHash || generateProjectContentHash(p);
+    const enriched: DiscoveredProject = { ...p, contentHash: hash };
+    const existing = existingMap.get(p.externalProjectId);
+
+    if (!existing) {
+      newProjects.push({ ...enriched, revision: 1 });
+    } else {
+      const existingHash = existing.contentHash || generateProjectContentHash(existing as unknown as DiscoveredProject);
+      if (existingHash !== hash) {
+        const oldRev = existing.revision ?? 1;
+        const newRev = oldRev + 1;
+        updatedProjects.push({
+          project: { ...enriched, revision: newRev },
+          oldRevision: oldRev,
+          newRevision: newRev,
+          reason: `Content hash changed from ${existingHash.slice(0, 8)} to ${hash.slice(0, 8)} (budget or project details modified)`,
+        });
+      } else {
+        duplicateProjects.push({
+          project: enriched,
+          existingRevision: existing.revision ?? 1,
+        });
+      }
+    }
+  }
+
+  const result: DeduplicationCheckResult = {
+    newProjects,
+    updatedProjects,
+    duplicateProjects,
+    metrics: {
+      totalChecked: projects.length,
+      newCount: newProjects.length,
+      updatedCount: updatedProjects.length,
+      duplicateCount: duplicateProjects.length,
+    },
+  };
+
+  // Structured Logging for Traceability
+  console.info('[Deduplication Audit]', {
+    totalChecked: result.metrics.totalChecked,
+    newCount: result.metrics.newCount,
+    updatedCount: result.metrics.updatedCount,
+    duplicateCount: result.metrics.duplicateCount,
+    duplicateExternalIds: duplicateProjects.map((d) => d.project.externalProjectId),
+    updatedRevisions: updatedProjects.map((u) => ({
+      externalProjectId: u.project.externalProjectId,
+      oldRev: u.oldRevision,
+      newRev: u.newRevision,
+      reason: u.reason,
+    })),
+  });
+
+  return result;
+}
+
+/**
+ * Idempotently upsert discovered procurement projects into MongoDB with conflict resolution.
+ * Ensures no duplicate projects are created for the same externalProjectId,
+ * tracks contentHash secondary key, and increments revision numbers when project content changes.
  */
 export async function upsertDiscoveredProjects(
   projects: DiscoveredProject[],
-): Promise<{ upsertedCount: number; modifiedCount: number; matchedCount: number }> {
+): Promise<{ upsertedCount: number; modifiedCount: number; matchedCount: number; dedupMetrics?: DeduplicationCheckResult['metrics'] }> {
   if (!projects || projects.length === 0) {
     return { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
   }
 
   await connectToDatabase();
 
-  const operations = projects.map((p) => ({
-    updateOne: {
-      filter: { externalProjectId: p.externalProjectId },
-      update: {
-        $set: {
-          projectName: p.projectName,
-          agencyName: p.agencyName,
-          fiscalYear: p.fiscalYear,
-          source: p.source || 'CKAN_GOVSPENDING',
-          sourceUrl: p.sourceUrl || '',
-          budget: p.budget ?? 0,
-          procurementType: p.procurementType || '',
-          updatedAt: new Date(),
+  let dedup: DeduplicationCheckResult | undefined;
+  try {
+    dedup = await checkProjectDeduplication(projects);
+  } catch {
+    // Continue if DB check fails
+  }
+
+  const updatedRevMap = new Map(dedup?.updatedProjects.map((u) => [u.project.externalProjectId, u.newRevision]) ?? []);
+
+  const operations = projects.map((p) => {
+    const hash = p.contentHash || generateProjectContentHash(p);
+    const newRev = updatedRevMap.get(p.externalProjectId);
+
+    // Conflict resolution & merge rules
+    const updateSet: Record<string, unknown> = {
+      projectName: p.projectName,
+      agencyName: p.agencyName,
+      fiscalYear: p.fiscalYear,
+      source: p.source || 'CKAN_GOVSPENDING',
+      sourceUrl: p.sourceUrl || '',
+      budget: p.budget ?? 0,
+      procurementType: p.procurementType || '',
+      contentHash: hash,
+      updatedAt: new Date(),
+    };
+
+    if (newRev !== undefined) {
+      updateSet.revision = newRev;
+    }
+
+    return {
+      updateOne: {
+        filter: { externalProjectId: p.externalProjectId },
+        update: {
+          $set: updateSet,
+          $setOnInsert: {
+            externalProjectId: p.externalProjectId,
+            revision: 1,
+            discoveredAt: new Date(),
+            createdAt: new Date(),
+          },
         },
-        $setOnInsert: {
-          externalProjectId: p.externalProjectId,
-          discoveredAt: new Date(),
-          createdAt: new Date(),
-        },
+        upsert: true,
       },
-      upsert: true,
-    },
-  }));
+    };
+  });
 
   const result = await ProcurementProject.bulkWrite(operations);
 
@@ -51,10 +186,11 @@ export async function upsertDiscoveredProjects(
     upsertedCount: result.upsertedCount,
     modifiedCount: result.modifiedCount,
     matchedCount: result.matchedCount,
+    dedupMetrics: dedup?.metrics,
   };
 }
 
-import { getCachedDiscoveredProjects } from '@/services/ingestion/sync-state';
+import { getCachedDiscoveredProjects, cacheDiscoveredProjects } from '@/services/ingestion/sync-state';
 
 /**
  * Retrieve discovered procurement projects with optional filtering and pagination.
@@ -131,8 +267,15 @@ export async function getProcurementProjects(params: {
 export async function getProcurementProjectByExternalId(
   externalProjectId: string,
 ): Promise<IProcurementProject | null> {
-  await connectToDatabase();
-  return ProcurementProject.findOne({ externalProjectId }).lean() as unknown as Promise<IProcurementProject | null>;
+  try {
+    await connectToDatabase();
+    const proj = await ProcurementProject.findOne({ externalProjectId }).lean();
+    if (proj) return proj as unknown as IProcurementProject;
+  } catch {}
+
+  const cached = getCachedDiscoveredProjects();
+  const found = cached.find((p) => p.externalProjectId === externalProjectId);
+  return (found as unknown as IProcurementProject) ?? null;
 }
 
 /**
@@ -205,19 +348,95 @@ export async function saveProcurementDocument(
 }
 
 /**
+ * Update a procurement project with AI/heuristic extracted TOR information.
+ */
+export async function updateProcurementProjectExtraction(
+  externalProjectId: string,
+  extraction: {
+    summary?: { th: string; en: string };
+    budget?: number | null;
+    deadline?: string | null;
+    requiredTechnologies?: string[];
+    technicalRequirements?: { th: string[]; en: string[] };
+    extractedQualifications?: Array<{
+      id: string;
+      description: { th: string; en: string };
+      category: 'Legal' | 'Financial' | 'Experience' | 'Technical';
+      threshold?: string;
+      mandatory: boolean;
+    }>;
+  },
+): Promise<IProcurementProject | null> {
+  const updateData: Record<string, unknown> = {
+    extractionStatus: 'EXTRACTED',
+    updatedAt: new Date(),
+  };
+
+  if (extraction.summary) updateData.summary = extraction.summary;
+  if (extraction.requiredTechnologies) updateData.requiredTechnologies = extraction.requiredTechnologies;
+  if (extraction.technicalRequirements) updateData.technicalRequirements = extraction.technicalRequirements;
+  if (extraction.extractedQualifications) updateData.extractedQualifications = extraction.extractedQualifications;
+  if (extraction.budget && extraction.budget > 0) updateData.budget = extraction.budget;
+
+  try {
+    await connectToDatabase();
+    const updated = await ProcurementProject.findOneAndUpdate(
+      { externalProjectId },
+      { $set: updateData },
+      { new: true },
+    ).lean();
+
+    if (updated) {
+      const cached = getCachedDiscoveredProjects();
+      const idx = cached.findIndex((p) => p.externalProjectId === externalProjectId);
+      if (idx !== -1) {
+        cached[idx] = {
+          ...cached[idx],
+          ...updateData,
+        };
+        cacheDiscoveredProjects(cached);
+      }
+      return updated as unknown as IProcurementProject;
+    }
+  } catch (err) {
+    console.warn(`[Procurement DB] Failed to update extraction for ${externalProjectId}:`, err);
+  }
+
+  // Update in cache directly if DB is offline
+  const cached = getCachedDiscoveredProjects();
+  const idx = cached.findIndex((p) => p.externalProjectId === externalProjectId);
+  if (idx !== -1) {
+    cached[idx] = {
+      ...cached[idx],
+      ...updateData,
+    };
+    cacheDiscoveredProjects(cached);
+    return cached[idx] as unknown as IProcurementProject;
+  }
+
+  return null;
+}
+
+
+/**
  * Retrieve all procurement documents for a project (by externalProjectId or MongoDB _id).
  */
 export async function getDocumentsByProjectId(
   projectIdOrExternalId: string,
 ): Promise<IProcurementDocument[]> {
-  await connectToDatabase();
+  try {
+    await connectToDatabase();
 
-  const isObjectId = Types.ObjectId.isValid(projectIdOrExternalId);
-  const query = isObjectId
-    ? { $or: [{ projectId: new Types.ObjectId(projectIdOrExternalId) }, { externalProjectId: projectIdOrExternalId }] }
-    : { externalProjectId: projectIdOrExternalId };
+    const isObjectId = Types.ObjectId.isValid(projectIdOrExternalId);
+    const query = isObjectId
+      ? { $or: [{ projectId: new Types.ObjectId(projectIdOrExternalId) }, { externalProjectId: projectIdOrExternalId }] }
+      : { externalProjectId: projectIdOrExternalId };
 
-  return ProcurementDocument.find(query).sort({ downloadedAt: -1 }).lean() as unknown as Promise<IProcurementDocument[]>;
+    const docs = await ProcurementDocument.find(query).sort({ downloadedAt: -1 }).lean();
+    if (docs && docs.length > 0) return docs as unknown as IProcurementDocument[];
+  } catch {}
+
+  return [];
 }
 
 /**

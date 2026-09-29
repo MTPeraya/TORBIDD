@@ -199,4 +199,82 @@ describe('GovSpendingClient (CKAN / Open Data)', () => {
     const octDate = new Date(Date.UTC(2026, 9, 1)); // month 9 is October (start of FY2570)
     expect(getCurrentThaiFiscalYear(octDate)).toBe(2570);
   });
+
+  // ─── 6. Per-Agency Request & Response Metrics ─────────────────────────────
+  it('6. should capture per-agency record metrics and payload size bytes', async () => {
+    const mockFetch = jest.fn().mockImplementation(async () => {
+      const payload = {
+        success: true,
+        total: 2,
+        data: [
+          {
+            project_id: '67119538991',
+            project_name: 'Project A',
+            dept_name: 'สำนักการแพทย์',
+            year: 2568,
+          },
+          {
+            project_id: '67119538992',
+            project_name: 'Project B',
+            dept_name: 'สำนักการแพทย์',
+            year: 2568,
+          },
+        ],
+      };
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    const client = new GovSpendingClient({
+      apiKey: TEST_API_KEY,
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    });
+
+    const result = await client.searchProjects({ fiscalYear: 2568 });
+
+    expect(result.metrics).toBeDefined();
+    expect(result.metrics!.totalRecordsRetrieved).toBe(2);
+    expect(result.metrics!.payloadSizeBytes).toBeGreaterThan(0);
+    expect(result.metrics!.recordsByAgency['สำนักการแพทย์']).toBe(2);
+  });
+
+  // ─── 7. Multi-Agency Iteration Logic ─────────────────────────────────────
+  it('7. should iterate through multiple agency identifiers and aggregate results', async () => {
+    const mockFetch = jest.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      const keyword = url.searchParams.get('keyword') || '';
+      return new Response(
+        JSON.stringify({
+          success: true,
+          total: 1,
+          data: [
+            {
+              project_id: keyword === 'กทม' ? '67119538991' : '67119538992',
+              project_name: `Project for ${keyword}`,
+              dept_name: keyword,
+              year: 2568,
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    });
+
+    const client = new GovSpendingClient({
+      apiKey: TEST_API_KEY,
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    });
+
+    const batch = await client.searchProjectsByAgencies(['กทม', 'สพฐ'], { fiscalYear: 2568 }, 0);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(batch.totalRecordsRetrieved).toBe(2);
+    expect(batch.allProjects).toHaveLength(2);
+    expect(batch.recordsByAgency['กทม']).toBe(1);
+    expect(batch.recordsByAgency['สพฐ']).toBe(1);
+    expect(batch.resultsByAgency['กทม']).toBeDefined();
+    expect(batch.resultsByAgency['สพฐ']).toBeDefined();
+  });
 });

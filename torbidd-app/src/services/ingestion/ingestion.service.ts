@@ -10,8 +10,12 @@ import {
   saveProcurementDocument,
   getDocumentsByProjectId,
   getProcurementProjectByExternalId,
+  checkProjectDeduplication,
+  updateProcurementProjectExtraction,
 } from '@/services/database/procurement';
+import { extractTorFromFile, TorExtractResult } from '@/services/ai/tor-extractor';
 import {
+  DeduplicationCheckResult,
   GovSpendingSearchParams,
   GovSpendingSearchResult,
   IngestionDocumentsResult,
@@ -37,16 +41,39 @@ export class IngestionService {
 
   /**
    * Step 1: Discover procurement projects from CKAN / Open Government Data.
-   * Idempotently saves discovered projects to MongoDB.
+   * Performs pre-ingestion duplicate check and idempotently saves discovered projects to MongoDB.
    */
   public async discoverProjects(
     params: GovSpendingSearchParams = {},
-  ): Promise<GovSpendingSearchResult & { upsertedCount: number; modifiedCount: number }> {
+  ): Promise<
+    GovSpendingSearchResult & {
+      upsertedCount: number;
+      modifiedCount: number;
+      deduplication?: DeduplicationCheckResult['metrics'];
+    }
+  > {
     // 1. Query CKAN / GovSpending API
     const searchResult = await this.govSpendingClient.searchProjects(params);
 
-    // 2. Persist discovered projects idempotently
-    let upsertStats = { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
+    // 2. Pre-ingestion check: Detect duplicates and identify version revisions before downstream queuing
+    let dedupCheck: DeduplicationCheckResult | null = null;
+    try {
+      dedupCheck = await checkProjectDeduplication(searchResult.projects);
+    } catch {
+      // Offline fallback
+    }
+
+    // 3. Persist discovered projects idempotently with conflict resolution
+    let upsertStats: {
+      upsertedCount: number;
+      modifiedCount: number;
+      matchedCount: number;
+      dedupMetrics?: DeduplicationCheckResult['metrics'];
+    } = {
+      upsertedCount: 0,
+      modifiedCount: 0,
+      matchedCount: 0,
+    };
     try {
       upsertStats = await upsertDiscoveredProjects(searchResult.projects);
     } catch (dbErr) {
@@ -57,6 +84,7 @@ export class IngestionService {
       ...searchResult,
       upsertedCount: upsertStats.upsertedCount,
       modifiedCount: upsertStats.modifiedCount,
+      deduplication: dedupCheck?.metrics ?? upsertStats.dedupMetrics,
     };
   }
 
@@ -73,6 +101,7 @@ export class IngestionService {
       const existingDocs = await getDocumentsByProjectId(cleanId);
       const hasTor = existingDocs.some((d) => d.documentType === 'ATTACH_TOR' && d.status === 'PROCESSED');
       if (hasTor) {
+        console.info(`[Deduplication Audit] Skipped duplicate document download for project ${cleanId} (ATTACH_TOR already PROCESSED)`);
         return {
           projectId: cleanId,
           externalProjectId: cleanId,
@@ -136,12 +165,40 @@ export class IngestionService {
       }
     }
 
+    // 7. Issue #91: Automatically process TOR documents and extract structured procurement data
+    let extractionResult: TorExtractResult | null = null;
+    const torDiskItem = diskResults.find((item) => item.document.documentType === 'ATTACH_TOR');
+    if (torDiskItem) {
+      try {
+        const existingProj = await getProcurementProjectByExternalId(cleanId);
+        extractionResult = await extractTorFromFile(torDiskItem.absolutePath, {
+          projectId: cleanId,
+          fileName: torDiskItem.document.fileName,
+          projectContext: {
+            projectName: existingProj?.projectName,
+            agencyName: existingProj?.agencyName,
+            budget: existingProj?.budget,
+            fiscalYear: existingProj?.fiscalYear,
+            procurementType: existingProj?.procurementType,
+          },
+        });
+
+        if (extractionResult) {
+          await updateProcurementProjectExtraction(cleanId, extractionResult);
+          console.info(`[IngestionService] Auto TOR extraction completed for project ${cleanId}`);
+        }
+      } catch (extractErr) {
+        console.warn(`[IngestionService] Auto TOR extraction warning for project ${cleanId}:`, extractErr);
+      }
+    }
+
     return {
       projectId: targetDbId,
       externalProjectId: cleanId,
       documentsFound: savedDocumentRecords.length,
       documents: savedDocumentRecords,
       alreadyIngested: false,
+      extraction: (extractionResult as unknown as Record<string, unknown>) ?? undefined,
     };
   }
 }

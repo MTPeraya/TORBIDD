@@ -89,6 +89,32 @@ export function ProjectCard({ project }: ProjectCardProps) {
           {ICONS.building}
           {getLocalized(project.department) as string}
         </div>
+
+        {project.requiredTechnologies && project.requiredTechnologies.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+            {project.requiredTechnologies.slice(0, 3).map((t, idx) => (
+              <span
+                key={idx}
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  padding: '2px 7px',
+                  borderRadius: 4,
+                  background: 'rgba(14, 165, 233, 0.08)',
+                  color: '#0284c7',
+                  border: '1px solid rgba(14, 165, 233, 0.25)',
+                }}
+              >
+                {t}
+              </span>
+            ))}
+            {project.requiredTechnologies.length > 3 && (
+              <span style={{ fontSize: 10, color: 'var(--gray-500)', alignSelf: 'center' }}>
+                +{project.requiredTechnologies.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div>

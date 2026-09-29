@@ -14,18 +14,30 @@ export interface IProject extends Document {
   category: 'Website' | 'Mobile App' | 'AI' | 'Database';
   procurementType: string;
   description: { th: string; en: string };
+  summary?: { th: string; en: string };
   scope: { th: string[]; en: string[] };
   qualifications: { th: string[]; en: string[] };
+  requiredTechnologies?: string[];
+  technicalRequirements?: { th: string[]; en: string[] };
+  extractedQualifications?: Array<{
+    id: string;
+    description: { th: string; en: string };
+    category: 'Legal' | 'Financial' | 'Experience' | 'Technical';
+    threshold?: string;
+    mandatory: boolean;
+  }>;
   historicalAvg: number;
   sourceDocument: string;
   processedDate: Date;
   aiConfidence: 'High' | 'Medium' | 'Low';
   aiClassificationModel?: string;
+  extractionStatus?: 'PENDING' | 'EXTRACTED' | 'FAILED';
   createdAt: Date;
   updatedAt: Date;
 }
 
 const BilingualSchema = new Schema({ th: { type: String, required: true }, en: { type: String, required: true } }, { _id: false });
+const OptionalBilingualSchema = new Schema({ th: { type: String, default: '' }, en: { type: String, default: '' } }, { _id: false });
 const BilingualArraySchema = new Schema({ th: [String], en: [String] }, { _id: false });
 
 const ProjectSchema = new Schema<IProject>(
@@ -39,13 +51,26 @@ const ProjectSchema = new Schema<IProject>(
     category: { type: String, required: true, enum: ['Website', 'Mobile App', 'AI', 'Database'] },
     procurementType: { type: String, required: true },
     description: { type: BilingualSchema, required: true },
+    summary: { type: OptionalBilingualSchema },
     scope: { type: BilingualArraySchema, required: true },
     qualifications: { type: BilingualArraySchema, required: true },
+    requiredTechnologies: { type: [String], default: [] },
+    technicalRequirements: { type: BilingualArraySchema, default: () => ({ th: [], en: [] }) },
+    extractedQualifications: [
+      {
+        id: { type: String },
+        description: { th: String, en: String },
+        category: { type: String, enum: ['Legal', 'Financial', 'Experience', 'Technical'], default: 'Legal' },
+        threshold: { type: String },
+        mandatory: { type: Boolean, default: true },
+      },
+    ],
     historicalAvg: { type: Number, required: true, min: 0 },
     sourceDocument: { type: String, default: '' },
     processedDate: { type: Date, default: Date.now },
     aiConfidence: { type: String, enum: ['High', 'Medium', 'Low'], default: 'High' },
     aiClassificationModel: { type: String },
+    extractionStatus: { type: String, enum: ['PENDING', 'EXTRACTED', 'FAILED'], default: 'PENDING' },
   },
   { timestamps: true },
 );

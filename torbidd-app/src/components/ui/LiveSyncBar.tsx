@@ -5,9 +5,14 @@ import { ICONS } from '@/components/ui/Icons';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export interface SyncStatusData {
+  lastSuccessfulSyncAt?: string;
+  lastAttemptAt?: string;
   lastSyncAt: string;
   nextSyncAt: string;
   syncIntervalHours: number;
+  triggerType?: 'manual' | 'scheduled';
+  recordsSyncedCount?: number;
+  health?: 'HEALTHY' | 'DEGRADED' | 'DOWN';
   status: 'idle' | 'syncing' | 'success' | 'error';
   totalDiscovered: number;
   lastDiscoveredCount: number;
@@ -68,8 +73,8 @@ export function LiveSyncBar({
       if (res.ok && json.success) {
         setMessage(
           language === 'th'
-            ? `✓ อัปเดตข้อมูลสดสำเร็จ! พบโครงการจัดซื้อจัดจ้าง ${json.total || json.projects?.length || 0} รายการ`
-            : `✓ Live sync successful! Discovered ${json.total || json.projects?.length || 0} procurement projects`,
+            ? `✓ อัปเดตข้อมูลสดสำเร็จ! บันทึกโครงการจัดซื้อจัดจ้าง ${json.total || json.projects?.length || 0} รายการ`
+            : `✓ Live sync successful! Synced ${json.total || json.projects?.length || 0} procurement projects`,
         );
         if (json.syncStatus) {
           setSyncStatus(json.syncStatus);
@@ -113,6 +118,9 @@ export function LiveSyncBar({
     }
   };
 
+  const isHealthy = syncStatus?.health !== 'DEGRADED' && syncStatus?.status !== 'error';
+  const displaySyncTime = syncStatus?.lastSuccessfulSyncAt || syncStatus?.lastSyncAt;
+
   return (
     <div
       style={{
@@ -136,19 +144,19 @@ export function LiveSyncBar({
       >
         {/* Left: Live Status & Accuracy Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 280 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                background: '#e8f5ef',
-                color: '#1e7e53',
+                background: isHealthy ? '#e8f5ef' : '#fef2f2',
+                color: isHealthy ? '#1e7e53' : '#b91c1c',
                 fontSize: 12,
                 fontWeight: 600,
                 padding: '3px 10px',
                 borderRadius: 20,
-                border: '1px solid rgba(30, 126, 83, 0.25)',
+                border: `1px solid ${isHealthy ? 'rgba(30, 126, 83, 0.25)' : 'rgba(185, 28, 28, 0.25)'}`,
               }}
             >
               <span
@@ -156,33 +164,60 @@ export function LiveSyncBar({
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  background: '#23835b',
-                  boxShadow: '0 0 0 2px rgba(35, 131, 91, 0.2)',
+                  background: isHealthy ? '#23835b' : '#dc2626',
+                  boxShadow: `0 0 0 2px ${isHealthy ? 'rgba(35, 131, 91, 0.2)' : 'rgba(220, 38, 38, 0.2)'}`,
                   animation: 'pulse 2s infinite',
                 }}
               />
-              {language === 'th' ? 'ข้อมูลสดภาครัฐ (e-GP / CKAN)' : 'Live Gov Data (e-GP & CKAN)'}
+              {isHealthy
+                ? language === 'th'
+                  ? '🟢 ระบบเชื่อมต่อสด (Live Active)'
+                  : '🟢 Live Sync Active'
+                : language === 'th'
+                  ? '🔴 การเชื่อมต่อมีปัญหา'
+                  : '🔴 Sync Degraded'}
+            </span>
+
+            {/* Trigger Type Badge */}
+            <span
+              style={{
+                fontSize: 11,
+                padding: '2px 8px',
+                borderRadius: 6,
+                background: syncStatus?.triggerType === 'manual' ? '#eff6ff' : '#f3f4f6',
+                color: syncStatus?.triggerType === 'manual' ? '#1d4ed8' : '#4b5563',
+                border: '1px solid var(--gray-200)',
+                fontWeight: 600,
+              }}
+            >
+              {syncStatus?.triggerType === 'manual'
+                ? language === 'th'
+                  ? 'สั่งการเอง (Manual)'
+                  : 'Manual Trigger'
+                : language === 'th'
+                  ? 'รอบอัตโนมัติ (Scheduled)'
+                  : 'Scheduled Sync'}
             </span>
 
             <span style={{ fontSize: 13, color: 'var(--gray-700)', fontWeight: 500 }}>
-              {language === 'th' ? 'อัปเดตล่าสุด: ' : 'Last synced: '}
+              {language === 'th' ? 'ซิงค์สำเร็จล่าสุด: ' : 'Last successful sync: '}
               <strong style={{ color: 'var(--gray-900)' }}>
-                {formatTimestamp(syncStatus?.lastSyncAt)}
+                {formatTimestamp(displaySyncTime)}
               </strong>
             </span>
           </div>
 
-          <div style={{ fontSize: 12, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 12, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span>
               {language === 'th'
-                ? `⏱️ รอบอัปเดตอัตโนมัติ: ทุก ${syncStatus?.syncIntervalHours || 5} ชั่วโมง (รอบถัดไป: ${formatTimestamp(syncStatus?.nextSyncAt)})`
-                : `⏱️ Auto-sync: Every ${syncStatus?.syncIntervalHours || 5} hours (Next: ${formatTimestamp(syncStatus?.nextSyncAt)})`}
+                ? `⏱️ รอบอัตโนมัติ: ทุก ${syncStatus?.syncIntervalHours || 5} ชม. (ถัดไป: ${formatTimestamp(syncStatus?.nextSyncAt)})`
+                : `⏱️ Next scheduled: ${formatTimestamp(syncStatus?.nextSyncAt)}`}
             </span>
             <span>•</span>
-            <span style={{ color: 'var(--primary-700)' }}>
+            <span style={{ color: 'var(--primary-700)', fontWeight: 600 }}>
               {language === 'th'
-                ? '✓ ตรวจสอบความถูกต้องตรงกับประกาศจัดซื้อจัดจ้าง e-GP กรมบัญชีกลาง'
-                : '✓ Verified against official Comptroller General Dept. e-GP'}
+                ? `📊 โครงการที่ซิงค์สำเร็จ: ${syncStatus?.recordsSyncedCount ?? syncStatus?.totalDiscovered ?? 0} รายการ`
+                : `📊 Synced records: ${syncStatus?.recordsSyncedCount ?? syncStatus?.totalDiscovered ?? 0}`}
             </span>
           </div>
         </div>

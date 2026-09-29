@@ -187,12 +187,16 @@ export class GovSpendingClient {
       throw new Error(`GovSpending request failed with status ${response.status}`);
     }
 
+    let rawText = '';
     let payload: unknown;
     try {
-      payload = await response.json();
+      rawText = await response.text();
+      payload = JSON.parse(rawText);
     } catch {
       throw new Error('GovSpending returned invalid JSON response');
     }
+
+    const payloadSizeBytes = Buffer.byteLength(rawText, 'utf8');
 
     const parsed = rawResponseSchema.safeParse(payload);
     if (!parsed.success) {
@@ -200,8 +204,11 @@ export class GovSpendingClient {
     }
 
     const total = parsed.data.total ?? parsed.data.data.length;
+    const recordsByAgency: Record<string, number> = {};
+
     const projects: DiscoveredProject[] = parsed.data.data.map((item) => {
       const agency = item.dept_name || item.dept_sub_name || item.agency_name || 'กรุงเทพมหานคร';
+      recordsByAgency[agency] = (recordsByAgency[agency] || 0) + 1;
       const detailUrl = `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${item.project_id}`;
 
       return {
@@ -216,12 +223,82 @@ export class GovSpendingClient {
       };
     });
 
+    const metrics = {
+      totalRecordsRetrieved: projects.length,
+      payloadSizeBytes,
+      recordsByAgency,
+    };
+
+    // Logging per-agency request and response metrics
+    console.info('[GovSpending API Metrics]', {
+      endpoint: url.pathname,
+      fiscalYear: input.fiscalYear,
+      status: response.status,
+      totalRecordsRetrieved: metrics.totalRecordsRetrieved,
+      payloadSizeBytes: metrics.payloadSizeBytes,
+      recordsByAgency: metrics.recordsByAgency,
+    });
+
     return {
       total,
       page: input.page,
       limit: input.limit,
       offset: input.offset,
       projects,
+      metrics,
+    };
+  }
+
+  /**
+   * Iterate through multiple agency / department identifiers or names.
+   * Queries the unified endpoint per agency with request throttling between iterations.
+   */
+  public async searchProjectsByAgencies(
+    agencies: string[],
+    baseParams: Omit<GovSpendingSearchParams, 'keyword'> = {},
+    throttleDelayMs = 200,
+  ): Promise<{
+    resultsByAgency: Record<string, GovSpendingSearchResult>;
+    allProjects: DiscoveredProject[];
+    totalRecordsRetrieved: number;
+    totalPayloadSizeBytes: number;
+    recordsByAgency: Record<string, number>;
+  }> {
+    const resultsByAgency: Record<string, GovSpendingSearchResult> = {};
+    const allProjects: DiscoveredProject[] = [];
+    const aggregatedRecordsByAgency: Record<string, number> = {};
+    let totalPayloadSizeBytes = 0;
+
+    for (let i = 0; i < agencies.length; i++) {
+      const agency = agencies[i];
+      if (!agency || !agency.trim()) continue;
+
+      const result = await this.searchProjects({
+        ...baseParams,
+        keyword: agency.trim(),
+      });
+
+      resultsByAgency[agency] = result;
+      allProjects.push(...result.projects);
+      totalPayloadSizeBytes += result.metrics?.payloadSizeBytes ?? 0;
+
+      if (result.metrics?.recordsByAgency) {
+        for (const [name, count] of Object.entries(result.metrics.recordsByAgency)) {
+          aggregatedRecordsByAgency[name] = (aggregatedRecordsByAgency[name] || 0) + count;
+        }
+      }
+
+      if (i < agencies.length - 1 && throttleDelayMs > 0) {
+        await delay(throttleDelayMs, undefined, { signal: baseParams.signal });
+      }
+    }
+
+    return {
+      resultsByAgency,
+      allProjects,
+      totalRecordsRetrieved: allProjects.length,
+      totalPayloadSizeBytes,
+      recordsByAgency: aggregatedRecordsByAgency,
     };
   }
 }
