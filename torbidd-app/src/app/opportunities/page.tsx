@@ -132,20 +132,21 @@ function OpportunitiesContent() {
         <StatCard
           label={L('totalOpps')}
           value={projects.length}
-          change={`+${newCount} ${L('newThisWeek')}`}
+          change={language === 'th' ? 'พร้อมยื่นข้อเสนอในระบบ' : 'Active opportunities'}
           changeType="positive"
           icon={ICONS.target}
           iconColor="blue"
         />
 
         <StatCard
-          label={L('newPublished')}
+          label={language === 'th' ? 'โครงการประกาศใหม่' : 'New Announcements'}
           value={newCount}
-          change={L('inPast3days')}
+          change={language === 'th' ? 'ในรอบ 7 วันที่ผ่านมา' : 'In the past 7 days'}
           changeType="positive"
-          icon={ICONS.star}
+          icon={ICONS.sparkles}
           iconColor="green"
         />
+
         <StatCard
           label={L('totalBudget')}
           value={formatBudget(totalBudget, language)}

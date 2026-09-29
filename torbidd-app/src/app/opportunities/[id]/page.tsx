@@ -23,8 +23,6 @@ import { CATEGORY_LABELS } from '@/lib/labels';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { enrichProjectDetail } from '@/lib/projectDetailHelper';
 
-type ViewMode = 'summary' | 'split' | 'document';
-
 export default function ProjectDetailPage({
   params,
 }: {
@@ -40,9 +38,20 @@ export default function ProjectDetailPage({
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractSuccessMsg, setExtractSuccessMsg] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('summary');
+  const [isClauseModalOpen, setIsClauseModalOpen] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Close clause breakdown modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isClauseModalOpen) {
+        setIsClauseModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isClauseModalOpen]);
 
   // Load project data and saved checklist state
   useEffect(() => {
@@ -62,7 +71,7 @@ export default function ProjectDetailPage({
           setProject(enrichProjectDetail(json.data));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Restore persistent checklist state
     try {
@@ -71,7 +80,7 @@ export default function ProjectDetailPage({
         const parsed = JSON.parse(stored);
         Promise.resolve().then(() => setCheckedIndices(parsed));
       }
-    } catch {}
+    } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -81,7 +90,7 @@ export default function ProjectDetailPage({
       const next = prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index];
       try {
         localStorage.setItem(`torbidd_checklist_${id}`, JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -183,34 +192,17 @@ export default function ProjectDetailPage({
     }
   };
 
-  const handleDownloadTOR = () => {
+  // Redirects directly to the official government procurement (e-GP) announcement & TOR page
+  const handleOpenTOR = () => {
+    if (!project) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const extId = (project as any).externalProjectId || project.externalId;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const docs = (project as any).documents as
-      | Array<{ fileName: string; documentType: string }>
-      | undefined;
-    const torDoc = docs?.find(
-      (d) => d.documentType === 'ATTACH_TOR' || d.fileName.toLowerCase().includes('tor'),
-    );
-
-    if (torDoc) {
-      window.open(`/api/documents/${extId}/${encodeURIComponent(torDoc.fileName)}`, '_blank');
-      return;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((project as any).sourceUrl) {
+    const extId = (project as any).externalProjectId || project.externalId || id;
+    const targetUrl =
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      window.open((project as any).sourceUrl, '_blank');
-      return;
-    }
+      (project as any).sourceUrl ||
+      `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${extId}`;
 
-    alert(
-      language === 'th'
-        ? `เอกสาร TOR ต้นฉบับ: ${project.sourceDocument || 'BMA_TOR.pdf'} (ระบบพร้อมเชื่อมต่อระบบ e-GP กทม.)`
-        : `Opening original TOR document: ${project.sourceDocument || 'BMA_TOR.pdf'}`,
-    );
+    window.open(targetUrl, '_blank');
   };
 
   const qualificationsList = (getLocalized(project.qualifications) as string[]) || [];
@@ -337,17 +329,32 @@ export default function ProjectDetailPage({
 
             {/* Action Bar */}
             <div className="detail-hero-actions">
-              <button
+              <a
+                href={
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (project as any)?.sourceUrl ||
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${(project as any)?.externalProjectId || project?.externalId || id}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn btn-primary"
-                onClick={() => setViewMode(viewMode === 'split' ? 'summary' : 'split')}
+                id="btn-open-tor-doc"
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title={language === 'th' ? 'เปิดอ่านเอกสาร TOR / ประกาศบนเว็บ e-GP ทางการ' : 'Open TOR Document & Announcement on Official e-GP Web Portal'}
               >
                 {ICONS.bookOpen}
-                <span>{viewMode === 'split' ? L('summaryView') : L('openTORViewer')}</span>
-              </button>
+                <span>{L('openTORViewer')} (PDF) ↗</span>
+              </a>
 
-              <button className="btn btn-secondary" onClick={handleDownloadTOR}>
-                {ICONS.externalLink}
-                {L('downloadTOR')}
+              <button
+                className="btn btn-secondary"
+                onClick={() => setIsClauseModalOpen(true)}
+                id="btn-toggle-split-view"
+                title={language === 'th' ? 'เปิดมุมมองแยกข้อกำหนด TOR แบบ Pop-up' : 'Open TOR Clause Breakdown (Pop-up)'}
+              >
+                {ICONS.columns}
+                <span>{language === 'th' ? 'มุมมองแยกข้อกำหนด' : 'Clause Breakdown'}</span>
               </button>
 
               <button
@@ -364,20 +371,6 @@ export default function ProjectDetailPage({
               >
                 {ICONS.bell}
                 <span>{L('setAlert')}</span>
-              </button>
-
-              <button
-                className="btn btn-secondary"
-                onClick={handleReprocessTor}
-                disabled={isExtracting}
-                title="Process TOR document with AI automatically"
-              >
-                <span>{isExtracting ? '⏳' : '⚡'}</span>
-                <span>
-                  {isExtracting
-                    ? (language === 'th' ? 'กำลังสกัด TOR...' : 'Extracting...')
-                    : (language === 'th' ? 'สกัด TOR ซ้ำ' : 'Re-extract')}
-                </span>
               </button>
 
               <button className="btn btn-icon" onClick={handleShare} title={L('share')}>
@@ -406,18 +399,6 @@ export default function ProjectDetailPage({
                 <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#312e81' }}>
                   {language === 'th' ? 'สรุปสาระสำคัญ TOR (AI Executive Summary)' : 'TOR Executive Summary'}
                 </h2>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                    background: '#6366f1',
-                    color: '#ffffff',
-                  }}
-                >
-                  Issue #87
-                </span>
               </div>
 
               <button
@@ -541,18 +522,6 @@ export default function ProjectDetailPage({
                 {ICONS.sparkles}
                 <span>{language === 'th' ? 'เทคโนโลยีและข้อกำหนดทางเทคนิค (Tech Stack & Specs)' : 'Required Technologies & Technical Specs'}</span>
               </h2>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  background: '#0284c7',
-                  color: '#ffffff',
-                }}
-              >
-                Issue #89
-              </span>
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -658,18 +627,8 @@ export default function ProjectDetailPage({
           />
         </div>
 
-        {/* Right Column: Split Viewer OR Intelligence Sidebar */}
-        {viewMode === 'split' ? (
-          <div className="detail-split-col">
-            <TorDocumentViewer
-              project={project}
-              documentSections={project.documentSections}
-              isSplitView={true}
-              onClose={() => setViewMode('summary')}
-            />
-          </div>
-        ) : (
-          <div className="detail-sidebar-col">
+        {/* Right Column: Intelligence Sidebar */}
+        <div className="detail-sidebar-col">
             {/* Budget Breakdown Card */}
             <BudgetBreakdownCard
               budget={project.budget}
@@ -795,7 +754,7 @@ export default function ProjectDetailPage({
                     <span>
                       {isExtracting
                         ? (language === 'th' ? 'กำลังสกัดข้อมูล...' : 'Extracting...')
-                        : (language === 'th' ? 'ประมวลผล TOR อัตโนมัติ (Issue #91)' : 'Auto-Extract TOR (Issue #91)')}
+                        : (language === 'th' ? 'ประมวลผล TOR อัตโนมัติ' : 'Auto-Extract TOR')}
                     </span>
                   </button>
                 </div>
@@ -810,9 +769,26 @@ export default function ProjectDetailPage({
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
                   <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Source Document</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--gray-900)' }}>
-                    {project.sourceDocument || 'BMA TOR PDF'}
-                  </span>
+                  <button
+                    onClick={handleOpenTOR}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      color: 'var(--primary-700)',
+                      textDecoration: 'underline',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                    title="เปิดอ่านเอกสาร PDF ทางการ"
+                  >
+                    <span>{project.sourceDocument || 'BMA TOR PDF'}</span>
+                    <span style={{ fontSize: 11 }}>↗</span>
+                  </button>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
@@ -836,34 +812,43 @@ export default function ProjectDetailPage({
                     </span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      {(project as any).documents.map((doc: any, i: number) => (
-                        <a
-                          key={i}
+                      {(project as any).documents.map((doc: any, i: number) => {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const extId = (project as any).externalProjectId || project.externalId || id;
+                        const egpUrl =
+                          doc.sourceUrl ||
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          href={`/api/documents/${(project as any).externalProjectId || project.externalId}/${encodeURIComponent(doc.fileName)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontSize: 11.5,
-                            padding: '6px 10px',
-                            borderRadius: 6,
-                            background: doc.documentType === 'ATTACH_TOR' ? '#e8f5ef' : 'var(--gray-100)',
-                            color: doc.documentType === 'ATTACH_TOR' ? '#1e7e53' : 'var(--primary-700)',
-                            fontWeight: 600,
-                            textDecoration: 'none',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            border: doc.documentType === 'ATTACH_TOR' ? '1px solid rgba(30,126,83,0.3)' : '1px solid var(--gray-200)',
-                          }}
-                        >
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 210 }}>
-                            {doc.documentType === 'ATTACH_TOR' ? '⭐ [TOR] ' : '📎 '}
-                            {doc.fileName}
-                          </span>
-                          <span style={{ fontSize: 11 }}>เปิดดู ↗</span>
-                        </a>
-                      ))}
+                          (project as any).sourceUrl ||
+                          `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${extId}`;
+                        return (
+                          <a
+                            key={i}
+                            href={egpUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: 11.5,
+                              padding: '6px 10px',
+                              borderRadius: 6,
+                              background: doc.documentType === 'ATTACH_TOR' ? '#e8f5ef' : 'var(--gray-100)',
+                              color: doc.documentType === 'ATTACH_TOR' ? '#1e7e53' : 'var(--primary-700)',
+                              fontWeight: 600,
+                              textDecoration: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              border: doc.documentType === 'ATTACH_TOR' ? '1px solid rgba(30,126,83,0.3)' : '1px solid var(--gray-200)',
+                            }}
+                            title={language === 'th' ? `เปิดดูประกาศและเอกสารบนเว็บ e-GP ทางการ: ${doc.fileName}` : `View on official e-GP portal: ${doc.fileName}`}
+                          >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 210 }}>
+                              {doc.documentType === 'ATTACH_TOR' ? '⭐ [TOR] ' : '📎 '}
+                              {doc.fileName}
+                            </span>
+                            <span style={{ fontSize: 11 }}>เปิดดูบน e-GP ↗</span>
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -923,7 +908,6 @@ export default function ProjectDetailPage({
               </div>
             )}
           </div>
-        )}
       </div>
 
       {/* Set Alert Modal */}
@@ -932,6 +916,27 @@ export default function ProjectDetailPage({
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}
       />
+
+      {/* Clause Breakdown Modal (Pop-up) */}
+      {isClauseModalOpen && (
+        <div
+          className="modal-overlay"
+          onClick={() => setIsClauseModalOpen(false)}
+          style={{ zIndex: 1000 }}
+        >
+          <div
+            className="modal-dialog tor-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <TorDocumentViewer
+              project={project}
+              documentSections={project.documentSections}
+              isSplitView={false}
+              onClose={() => setIsClauseModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

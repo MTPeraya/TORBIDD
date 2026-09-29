@@ -53,9 +53,13 @@ export function isClosingSoon(dateStr: string): boolean {
 }
 
 export function isNew(publishDate: string): boolean {
-  const d = daysUntil(publishDate);
-  // Published within the last 3 days (daysUntil returns negative for past dates)
-  return d >= -3 && d <= 0;
+  if (!publishDate) return false;
+  const now = new Date();
+  const pub = new Date(publishDate);
+  if (isNaN(pub.getTime())) return false;
+  const diffDays = (now.getTime() - pub.getTime()) / (1000 * 60 * 60 * 24);
+  // Published within the last 7 days (or today)
+  return diffDays >= -1 && diffDays <= 7;
 }
 
 // ─── Budget Status ──────────────────────────────────────────────────────────
