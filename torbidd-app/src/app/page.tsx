@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Project } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { ProjectCarousel } from '@/components/ui/ProjectCarousel';
 import { isClosingSoon } from '@/lib/utils';
+
+import { LiveSyncBar } from '@/components/ui/LiveSyncBar';
 
 // Static fallback data so the page renders even before MongoDB is connected
 import { INITIAL_PROJECTS } from '@/lib/initialData';
@@ -17,19 +18,29 @@ export default function HomePage() {
   const { language, L } = useLanguage();
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [searchVal, setSearchVal] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'live' | 'bma'>('all');
 
-  useEffect(() => {
-    fetch('/api/projects')
+  const loadProjects = useCallback((filterMode = activeFilter) => {
+    let url = '/api/projects';
+    if (filterMode === 'live') {
+      url = '/api/projects?source=CKAN_GOVSPENDING';
+    } else if (filterMode === 'bma') {
+      url = '/api/projects?source=BMA';
+    }
+
+    fetch(url)
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.data && Array.isArray(json.data)) {
           setProjects(json.data);
         }
       })
-      .catch(() => {
-        // Use fallback projects if API isn't populated yet
-      });
-  }, []);
+      .catch(() => {});
+  }, [activeFilter]);
+
+  useEffect(() => {
+    loadProjects(activeFilter);
+  }, [activeFilter, loadProjects]);
 
   const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
   const closingCount = projects.filter((p) => isClosingSoon(p.deadline)).length;
@@ -145,12 +156,11 @@ export default function HomePage() {
       {/* Recent Tenders Section */}
       <div className="home-bottom-section">
         <div className="home-bottom-content">
-          <div className="home-section-header anim-fade-up anim-delay-3">
-            <h2 className="home-section-title">{L('recentOpps')}</h2>
-            <Link href="/opportunities" className="home-section-link">
-              {L('viewAll')} ({projects.length}) →
-            </Link>
-          </div>
+          <LiveSyncBar
+            onSyncComplete={() => loadProjects(activeFilter)}
+            activeFilter={activeFilter}
+            onFilterChange={setActiveFilter}
+          />
 
           <div className="anim-fade-up anim-delay-3">
             <ProjectCarousel projects={recentProjects} />

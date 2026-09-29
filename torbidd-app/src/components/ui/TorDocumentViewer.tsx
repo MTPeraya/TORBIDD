@@ -30,21 +30,6 @@ export function TorDocumentViewer({
   const currentSection =
     sections.find((s) => s.sectionId === activeSectionId) || sections[0];
 
-  const handleDownloadPDF = () => {
-    const docName = project.sourceDocument || `BMA_TOR_${project.externalId}.pdf`;
-    // Create a mock blob or download trigger
-    const content = `Bangkok Metropolitan Administration - Official TOR Document\nProject: ${getLocalized(project.title)}\nDepartment: ${getLocalized(project.department)}\nBudget: ${project.budget} THB\nPublished: ${project.publishDate}\nDeadline: ${project.deadline}\n\n=========================================\n${sections.map((s) => `${getLocalized(s.title)}\n${getLocalized(s.content)}`).join('\n\n')}`;
-    const blob = new Blob([content], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = docName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const filteredSections = searchQuery.trim()
     ? sections.filter((s) => {
         const title = (getLocalized(s.title) as string).toLowerCase();
@@ -93,10 +78,6 @@ export function TorDocumentViewer({
         </div>
 
         <div className="toolbar-right">
-          <button className="btn btn-secondary toolbar-action-btn" onClick={handleDownloadPDF}>
-            {ICONS.download}
-            <span>{L('downloadOfficialPDF')}</span>
-          </button>
 
           {project.sourceUrl && (
             <a
@@ -183,18 +164,52 @@ export function TorDocumentViewer({
               className="tor-paper-sheet"
               style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
             >
-              {/* Document Official Header */}
+              {/* Document Header & AI Preview Tag */}
               <div className="paper-official-header">
-                <div className="paper-garuda-emblem">
-                  <div className="emblem-circle">ครุฑ</div>
-                  <span className="emblem-subtext">เอกสารราชการกรุงเทพมหานคร</span>
+                <div className="paper-preview-badge">
+                  <span className="preview-badge-pill">
+                    {language === 'th' ? 'สำเนาสรุปสาระสำคัญ (AI Preview)' : 'AI Summary Preview'}
+                  </span>
                 </div>
                 <div className="paper-header-meta">
                   <div className="paper-ref-number">
-                    เลขที่ประกาศ: BMA-TOR-2026/0{project.externalId}
+                    {language === 'th' ? 'รหัสอ้างอิงโครงการ: ' : 'Project Ref: '}
+                    {(project as { externalProjectId?: string | number }).externalProjectId || project.externalId}
                   </div>
                   <div className="paper-publish-date">
-                    วันประกาศ: {formatDate(project.publishDate, language)}
+                    {language === 'th' ? 'วันที่ประกาศ: ' : 'Announced: '}
+                    {formatDate(project.publishDate, language)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Non-official Disclaimer Notice Box */}
+              <div className="paper-disclaimer-box">
+                <span className="disclaimer-icon">⚠️</span>
+                <div className="disclaimer-content">
+                  <div className="disclaimer-title">
+                    {language === 'th'
+                      ? 'เอกสารนี้ไม่ใช่เอกสารทางการที่มีผลผูกพันทางกฎหมาย'
+                      : 'Non-Official Document Notice (AI-Assisted Overview)'}
+                  </div>
+                  <div className="disclaimer-text">
+                    {language === 'th'
+                      ? 'ข้อมูลและข้อกำหนดนี้ผ่านการสกัดและสรุปสาระสำคัญด้วยระบบ AI เพื่ออำนวยความสะดวกในการศึกษารายละเอียดเบื้องต้นเท่านั้น มิใช่เอกสารทางราชการฉบับทางการ กรุณาตรวจสอบความถูกต้องและเงื่อนไขฉบับสมบูรณ์จากเอกสารประกาศต้นทางบนระบบจัดซื้อจัดจ้างภาครัฐ (e-GP) อีกครั้งเพื่อข้อมูลที่ถูกต้องและเป็นปัจจุบัน'
+                      : 'This document has been extracted and summarized by AI for preliminary review purposes only and is not an official or legally binding government document. Please verify all requirements, specifications, and terms against the original announcement on the official e-GP portal.'}
+                  </div>
+                  <div className="disclaimer-action">
+                    <a
+                      href={
+                        project.sourceUrl ||
+                        `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${(project as { externalProjectId?: string | number }).externalProjectId || project.externalId}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="disclaimer-link"
+                    >
+                      <span>{language === 'th' ? '🔗 ตรวจสอบเอกสารประกาศและ TOR ต้นฉบับบนเว็บ e-GP ทางการ' : '🔗 Verify Original Official Announcement on e-GP Portal'}</span>
+                      <span>↗</span>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -247,8 +262,14 @@ export function TorDocumentViewer({
 
               {/* Paper Footer */}
               <div className="paper-footer">
-                <span>กรุงเทพมหานคร — สำนักยุทธศาสตร์และประเมินผล</span>
-                <span>หน้าที่ {currentSection.page}</span>
+                <span>
+                  {language === 'th'
+                    ? 'ระบบวิเคราะห์สาระสำคัญ TOR (AI Summary View) — โปรดตรวจสอบเอกสารทางการจาก e-GP'
+                    : 'TOR Intelligence (AI Summary View) — Please refer to official e-GP documents'}
+                </span>
+                <span>
+                  {L('page')} {currentSection.page} {L('of')} {sections.length}
+                </span>
               </div>
             </div>
           ) : (

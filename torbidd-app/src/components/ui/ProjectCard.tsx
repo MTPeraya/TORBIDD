@@ -14,6 +14,11 @@ import {
 } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/labels';
 
+interface ExtendedProject extends Project {
+  externalProjectId?: string | number;
+  source?: string;
+}
+
 interface ProjectCardProps {
   project: Project;
 }
@@ -23,6 +28,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
 
+  const extProject = project as ExtendedProject;
   const days = daysUntil(project.deadline);
   const catClass = getCategoryClass(project.category);
   const catLabel = CATEGORY_LABELS[language][project.category] || project.category;
@@ -33,7 +39,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const statusText = language === 'th' ? '● เปิดรับข้อเสนอ' : '● Open';
 
   const handleCardClick = () => {
-    router.push(`/opportunities/${project.externalId}`);
+    const targetId = extProject.externalProjectId || project.externalId;
+    router.push(`/opportunities/${targetId}`);
   };
 
   return (
@@ -41,6 +48,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <div>
         <div className="project-card-header">
           <div className="project-card-tags">
+            {(extProject.externalProjectId || project.sourceDocument?.includes('Attach_TOR_') || extProject.source === 'CKAN_GOVSPENDING') && (
+              <span
+                className="tag"
+                style={{
+                  background: '#e8f5ef',
+                  color: '#1e7e53',
+                  border: '1px solid rgba(30, 126, 83, 0.25)',
+                  fontWeight: 600,
+                }}
+              >
+                🟢 e-GP รัฐบาล
+              </span>
+            )}
             <span className="tag software">{L('softwareProject')}</span>
             <span className={`tag category ${catClass}`}>{catLabel}</span>
             {days >= 0 && <span className={statusTagClass}>{statusText}</span>}
@@ -64,6 +84,32 @@ export function ProjectCard({ project }: ProjectCardProps) {
           {ICONS.building}
           {getLocalized(project.department) as string}
         </div>
+
+        {project.requiredTechnologies && project.requiredTechnologies.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+            {project.requiredTechnologies.slice(0, 3).map((t, idx) => (
+              <span
+                key={idx}
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  padding: '2px 7px',
+                  borderRadius: 4,
+                  background: 'rgba(14, 165, 233, 0.08)',
+                  color: '#0284c7',
+                  border: '1px solid rgba(14, 165, 233, 0.25)',
+                }}
+              >
+                {t}
+              </span>
+            ))}
+            {project.requiredTechnologies.length > 3 && (
+              <span style={{ fontSize: 10, color: 'var(--gray-500)', alignSelf: 'center' }}>
+                +{project.requiredTechnologies.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
@@ -71,6 +117,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="meta-item">
             <span className="meta-label">{L('budget')}</span>
             <span className="meta-value budget">{formatBudget(project.budget, language)}</span>
+            {project.contractPrice && project.contractPrice !== project.budget && (
+              <span style={{ fontSize: 10, color: '#047857', fontWeight: 600 }}>
+                {language === 'th' ? `จัดหาได้: ${formatBudget(project.contractPrice, language)}` : `Awarded: ${formatBudget(project.contractPrice, language)}`}
+              </span>
+            )}
             <span style={{ fontSize: 10, color: 'var(--gray-500)' }}>{L('aiExtracted')}</span>
           </div>
 

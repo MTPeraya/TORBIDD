@@ -13,6 +13,7 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   modulePathIgnorePatterns: ['<rootDir>/.next/'],
   moduleNameMapper: {
+    '^bson$': require.resolve('bson'),
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 };

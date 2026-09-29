@@ -2,7 +2,7 @@
 
 // =============================================================================
 // app/opportunities/page.tsx - BMA Procurement Opportunities Discovery Page
-// (Integrates Issues #147, #149, #150, #152, #154, #155, #156)
+// (Integrates Issues #147, #149, #150, #152, #154, #155, #156 & Live Ingestion)
 // =============================================================================
 
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
@@ -16,6 +16,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { formatBudget, isNew } from '@/lib/utils';
 import { INITIAL_PROJECTS, INITIAL_DEPARTMENTS } from '@/lib/initialData';
 import { executeProcurementSearch } from '@/services/procurement-search';
+import { LiveSyncBar } from '@/components/ui/LiveSyncBar';
 
 // Discovery Components
 import { ProcurementSearchBar } from '@/components/procurement-search/ProcurementSearchBar';
@@ -49,6 +50,7 @@ function OpportunitiesContent() {
 
   // State Management
   const [allProjects, setAllProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'live' | 'bma'>('all');
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategories, setSelectedCategories] = useState<SoftwareCategory[]>(initialCategories);
   const [selectedAgencies, setSelectedAgencies] = useState<string[]>(initialAgencies);
@@ -101,6 +103,8 @@ function OpportunitiesContent() {
     if (maxBudget !== null) queryParams.set('maxBudget', String(maxBudget));
     if (budgetPreset) queryParams.set('budget', budgetPreset);
     if (selectedDeadline) queryParams.set('deadline', selectedDeadline);
+    if (sourceFilter === 'live') queryParams.set('source', 'CKAN_GOVSPENDING');
+    else if (sourceFilter === 'bma') queryParams.set('source', 'BMA');
     queryParams.set('sortBy', sortBy);
     queryParams.set('page', String(page));
     queryParams.set('limit', '12');
@@ -119,7 +123,7 @@ function OpportunitiesContent() {
     });
 
     try {
-      const res = await fetch(`/api/procurements?${queryParams.toString()}`);
+      const res = await fetch(`/api/projects?${queryParams.toString()}`);
       if (!res.ok) {
         throw new Error(`Server returned HTTP ${res.status}`);
       }
@@ -161,6 +165,7 @@ function OpportunitiesContent() {
     maxBudget,
     budgetPreset,
     selectedDeadline,
+    sourceFilter,
     sortBy,
     page,
     allProjects,
@@ -315,6 +320,18 @@ function OpportunitiesContent() {
         <h1 className="page-title">{L('dashboardTitle')}</h1>
         <p className="page-subtitle">{L('dashboardSub')}</p>
       </div>
+
+      {/* Live Data Ingestion Sync Bar */}
+      <LiveSyncBar
+        onSyncComplete={() => {
+          void fetchOpportunities();
+        }}
+        activeFilter={sourceFilter}
+        onFilterChange={(filter) => {
+          setSourceFilter(filter);
+          setPage(1);
+        }}
+      />
 
       {/* Stats Cards Row */}
       <div className="stats-row">
