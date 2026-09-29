@@ -7,6 +7,8 @@ import { getProjects, createProject } from '@/services/database/projects';
 import { getProcurementProjects } from '@/services/database/procurement';
 import { ProjectFiltersSchema, ProjectCreateSchema } from '@/lib/validation';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
+import { executeProcurementSearch } from '@/services/procurement-search';
+import { ProcurementSortOption } from '@/types/procurement';
 import { Project } from '@/types/project';
 import { procurementToProject } from '@/lib/project-mapper';
 import { getSyncStatus } from '@/services/ingestion/sync-state';
@@ -56,20 +58,26 @@ export async function GET(req: NextRequest) {
       } catch {}
 
       const bmaList = bmaDbProjects.length > 0 ? bmaDbProjects : INITIAL_PROJECTS;
-      let filtered = bmaList;
-      if (parsed.data.search) {
-        const q = parsed.data.search.toLowerCase();
-        filtered = filtered.filter(
-          (p) =>
-            p.title.th.toLowerCase().includes(q) ||
-            p.title.en.toLowerCase().includes(q) ||
-            p.department.th.toLowerCase().includes(q) ||
-            p.department.en.toLowerCase().includes(q),
-        );
-      }
+      const searchResult = executeProcurementSearch(bmaList, {
+        search: parsed.data.search,
+        categories: parsed.data.categories
+          ? (Array.isArray(parsed.data.categories) ? parsed.data.categories : [parsed.data.categories])
+          : (parsed.data.category ? [parsed.data.category] : undefined),
+        agencies: parsed.data.agencies
+          ? (Array.isArray(parsed.data.agencies) ? parsed.data.agencies : [parsed.data.agencies])
+          : (parsed.data.agency ? [parsed.data.agency] : (parsed.data.department ? [parsed.data.department] : undefined)),
+        minBudget: parsed.data.minBudget,
+        maxBudget: parsed.data.maxBudget,
+        budgetPreset: parsed.data.budget,
+        deadline: parsed.data.deadline,
+        sortBy: parsed.data.sortBy as ProcurementSortOption,
+        page: parsed.data.page,
+        limit: parsed.data.limit,
+      });
+
       return NextResponse.json({
-        data: filtered,
-        total: filtered.length,
+        data: searchResult.items,
+        total: searchResult.total,
         syncStatus,
         source: 'BMA',
       });
@@ -94,23 +102,30 @@ export async function GET(req: NextRequest) {
 
     if (bmaProjects.length === 0) {
       bmaProjects = INITIAL_PROJECTS;
-      if (parsed.data.search) {
-        const q = parsed.data.search.toLowerCase();
-        bmaProjects = bmaProjects.filter(
-          (p) =>
-            p.title.th.toLowerCase().includes(q) ||
-            p.title.en.toLowerCase().includes(q) ||
-            p.department.th.toLowerCase().includes(q) ||
-            p.department.en.toLowerCase().includes(q),
-        );
-      }
     }
 
-    // 5. Combine discovered live projects with BMA projects (live projects first)
+    // 5. Combine discovered live projects with BMA projects and run full search/filter/sort
     const combined = [...discoveredProjectsMapped, ...bmaProjects];
+    const searchResult = executeProcurementSearch(combined, {
+      search: parsed.data.search,
+      categories: parsed.data.categories
+        ? (Array.isArray(parsed.data.categories) ? parsed.data.categories : [parsed.data.categories])
+        : (parsed.data.category ? [parsed.data.category] : undefined),
+      agencies: parsed.data.agencies
+        ? (Array.isArray(parsed.data.agencies) ? parsed.data.agencies : [parsed.data.agencies])
+        : (parsed.data.agency ? [parsed.data.agency] : (parsed.data.department ? [parsed.data.department] : undefined)),
+      minBudget: parsed.data.minBudget,
+      maxBudget: parsed.data.maxBudget,
+      budgetPreset: parsed.data.budget,
+      deadline: parsed.data.deadline,
+      sortBy: parsed.data.sortBy as ProcurementSortOption,
+      page: parsed.data.page,
+      limit: parsed.data.limit,
+    });
+
     return NextResponse.json({
-      data: combined,
-      total: combined.length,
+      data: searchResult.items,
+      total: searchResult.total,
       syncStatus,
     });
   } catch (err) {
@@ -124,7 +139,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-
   try {
     const body = await req.json();
     const parsed = ProjectCreateSchema.safeParse(body);

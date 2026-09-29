@@ -16,6 +16,10 @@ export const IngestionConfigSchema = z.object({
     .string()
     .url()
     .default('https://process5.gprocurement.go.th'),
+  bmaBaseUrl: z
+    .string()
+    .url()
+    .default('http://egp2.bangkok.go.th'),
   requestTimeoutMs: z.coerce.number().int().positive().default(15000),
   documentStoragePath: z.string().default('./storage/documents'),
 });
@@ -56,6 +60,7 @@ export function getIngestionConfig(
     govspendingBaseUrl:
       env.GOVSPENDING_BASE_URL || 'https://opend.data.go.th/govspending/service/egp-contract',
     egpBaseUrl: env.EGP_BASE_URL || 'https://process5.gprocurement.go.th',
+    bmaBaseUrl: env.BMA_BASE_URL || 'http://egp2.bangkok.go.th',
     requestTimeoutMs: env.REQUEST_TIMEOUT_MS ? Number(env.REQUEST_TIMEOUT_MS) : 15000,
     documentStoragePath: env.DOCUMENT_STORAGE_PATH || './storage/documents',
   };

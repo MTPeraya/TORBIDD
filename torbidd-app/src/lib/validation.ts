@@ -6,13 +6,67 @@ import { z } from 'zod';
 
 // ─── Project Filters (GET /api/projects) ────────────────────────────────────
 
+export const VALID_CATEGORIES = ['Website', 'Mobile App', 'AI', 'Database'] as const;
+
 export const ProjectFiltersSchema = z.object({
   search: z.string().max(200).optional(),
   department: z.string().max(200).optional(),
-  category: z.enum(['Website', 'Mobile App', 'AI', 'Database']).optional(),
+  agency: z.string().max(200).optional(),
+  agencies: z.union([z.string(), z.array(z.string())]).optional(),
+  category: z.enum(VALID_CATEGORIES).optional(),
+  categories: z.union([z.string(), z.array(z.string())]).optional(),
   budget: z.enum(['under5m', '5to10', '10to20', 'above20m']).optional(),
+  minBudget: z.coerce.number().min(0).optional(),
+  maxBudget: z.coerce.number().min(0).optional(),
   deadline: z.enum(['within7', 'within30', 'moreThan30']).optional(),
-});
+  sortBy: z
+    .enum(['publishDate_desc', 'publishDate_asc', 'budget_desc', 'budget_asc', 'newest', 'oldest'])
+    .optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+}).refine(
+  (data) => {
+    if (data.minBudget !== undefined && data.maxBudget !== undefined) {
+      return data.minBudget <= data.maxBudget;
+    }
+    return true;
+  },
+  {
+    message: 'Minimum budget cannot exceed maximum budget',
+    path: ['minBudget'],
+  },
+);
+
+// ─── Procurement Filters (GET /api/procurements) ───────────────────────────
+
+export const ProcurementFiltersSchema = z.object({
+  search: z.string().max(200).optional(),
+  department: z.string().max(200).optional(),
+  agency: z.string().max(200).optional(),
+  agencies: z.union([z.string(), z.array(z.string())]).optional(),
+  category: z.enum(VALID_CATEGORIES).optional(),
+  categories: z.union([z.string(), z.array(z.string())]).optional(),
+  budget: z.enum(['under5m', '5to10', '10to20', 'above20m']).optional(),
+  minBudget: z.coerce.number().min(0).optional(),
+  maxBudget: z.coerce.number().min(0).optional(),
+  deadline: z.enum(['within7', 'within30', 'moreThan30']).optional(),
+  sortBy: z
+    .enum(['publishDate_desc', 'publishDate_asc', 'budget_desc', 'budget_asc', 'newest', 'oldest'])
+    .optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(12),
+}).refine(
+  (data) => {
+    if (data.minBudget !== undefined && data.maxBudget !== undefined) {
+      return data.minBudget <= data.maxBudget;
+    }
+    return true;
+  },
+  {
+    message: 'Minimum budget cannot exceed maximum budget',
+    path: ['minBudget'],
+  },
+);
 
 // ─── Historical Filters (GET /api/historical) ───────────────────────────────
 

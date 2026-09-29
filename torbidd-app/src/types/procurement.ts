@@ -1,6 +1,51 @@
 // =============================================================================
-// types/procurement.ts - Types for Government Procurement Data Ingestion
+// types/procurement.ts - Unified Procurement Types & Data Ingestion Contracts
+// (Supports Issues #150, #154, #155, #156 & Government Ingestion)
 // =============================================================================
+
+import { Project, ProjectCategory } from './project';
+import { SoftwareCategory } from './procurement-category';
+
+// ─── Query & Discovery Contracts ─────────────────────────────────────────────
+
+export type Procurement = Project;
+
+export type ProcurementSortOption =
+  | 'publishDate_desc'
+  | 'publishDate_asc'
+  | 'budget_desc'
+  | 'budget_asc';
+
+export interface ProcurementFilters {
+  search?: string;
+  categories?: (SoftwareCategory | ProjectCategory | string)[];
+  agencies?: string[];
+  department?: string; // backwards compatibility with single department filter
+  minBudget?: number | null;
+  maxBudget?: number | null;
+  budgetPreset?: 'under5m' | '5to10' | '10to20' | 'above20m' | '';
+  deadline?: 'within7' | 'within30' | 'moreThan30' | '';
+  sortBy?: ProcurementSortOption;
+  page?: number;
+  limit?: number;
+}
+
+export interface ProcurementQueryResult {
+  items: Project[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ActiveFilterIndicator {
+  id: string;
+  type: 'search' | 'category' | 'agency' | 'budget' | 'deadline';
+  label: string;
+  value: string;
+}
+
+// ─── Data Ingestion Contracts ────────────────────────────────────────────────
 
 export interface DiscoveredProject {
   _id?: string;

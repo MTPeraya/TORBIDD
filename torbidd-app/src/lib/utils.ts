@@ -25,6 +25,10 @@ export function formatTHB(amount: number, language: Language = 'th'): string {
   return formatBudgetFull(amount, language);
 }
 
+export function formatNumber(amount: number): string {
+  return amount.toLocaleString();
+}
+
 
 // ─── Date Formatting ────────────────────────────────────────────────────────
 

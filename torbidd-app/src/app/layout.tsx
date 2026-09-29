@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Noto_Sans_Thai } from 'next/font/google';
 import './globals.css';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -13,6 +13,12 @@ const notoSansThai = Noto_Sans_Thai({
   display: 'swap',
   variable: '--font-noto-sans-thai',
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   title: 'BMA Software Procurement Intelligence Platform | แพลตฟอร์มข่าวกรองการจัดซื้อจัดจ้างซอฟต์แวร์ กทม.',

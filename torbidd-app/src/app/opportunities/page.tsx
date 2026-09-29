@@ -1,251 +1,466 @@
 'use client';
 
+// =============================================================================
+// app/opportunities/page.tsx - BMA Procurement Opportunities Discovery Page
+// (Integrates Issues #147, #149, #150, #152, #154, #155, #156 & Live Ingestion)
+// =============================================================================
+
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Project, ProjectCategory } from '@/types/project';
+import { Project } from '@/types/project';
+import { SoftwareCategory, isSoftwareCategory } from '@/types/procurement-category';
+import { ProcurementSortOption, ProcurementFilters } from '@/types/procurement';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { StatCard } from '@/components/ui/StatCard';
-import { ProjectCard } from '@/components/ui/ProjectCard';
-import {
-  formatBudget,
-  daysUntil,
-  isNew,
-} from '@/lib/utils';
+import { formatBudget, isNew } from '@/lib/utils';
+import { INITIAL_PROJECTS, INITIAL_DEPARTMENTS } from '@/lib/initialData';
+import { executeProcurementSearch } from '@/services/procurement-search';
 import { LiveSyncBar } from '@/components/ui/LiveSyncBar';
-import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
+
+// Discovery Components
+import { ProcurementSearchBar } from '@/components/procurement-search/ProcurementSearchBar';
+import { ProcurementSort } from '@/components/procurement-sort/ProcurementSort';
+import { ProcurementFilterPanel } from '@/components/procurement-filters/ProcurementFilterPanel';
+import { ActiveFilterChips } from '@/components/procurement-filters/ActiveFilterChips';
+import { ProcurementList } from '@/components/procurement-list/ProcurementList';
 
 function OpportunitiesContent() {
   const searchParams = useSearchParams();
-  const initialQuery = searchParams.get('search') || '';
+  const { language, L } = useLanguage();
 
-  const { language, L, getLocalized } = useLanguage();
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [selectedDept, setSelectedDept] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
-  const [selectedBudget, setSelectedBudget] = useState('');
-  const [selectedDeadline, setSelectedDeadline] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'live' | 'bma'>('all');
+  // Read initial query params from URL
+  const initialSearch = searchParams.get('search') || '';
+  const initialCategoryParam = searchParams.get('category') || searchParams.get('categories') || '';
+  const initialCategories: SoftwareCategory[] = initialCategoryParam
+    ? (initialCategoryParam.split(',').filter(isSoftwareCategory) as SoftwareCategory[])
+    : [];
 
-  const loadProjects = useCallback((filterMode = activeFilter) => {
-    let url = '/api/projects';
-    if (filterMode === 'live') {
-      url = '/api/projects?source=CKAN_GOVSPENDING';
-    } else if (filterMode === 'bma') {
-      url = '/api/projects?source=BMA';
+  const initialAgencyParam = searchParams.get('agency') || searchParams.get('agencies') || searchParams.get('department') || '';
+  const initialAgencies = initialAgencyParam
+    ? initialAgencyParam.split(',').map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const initialMinBudget = searchParams.get('minBudget') ? Number(searchParams.get('minBudget')) : null;
+  const initialMaxBudget = searchParams.get('maxBudget') ? Number(searchParams.get('maxBudget')) : null;
+  const initialBudgetPreset = searchParams.get('budget') || '';
+  const initialDeadline = searchParams.get('deadline') || '';
+  const initialSortBy = (searchParams.get('sortBy') as ProcurementSortOption) || 'publishDate_desc';
+  const initialPage = searchParams.get('page') ? Number(searchParams.get('page')) : 1;
+
+  // State Management
+  const [allProjects, setAllProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'live' | 'bma'>('all');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [selectedCategories, setSelectedCategories] = useState<SoftwareCategory[]>(initialCategories);
+  const [selectedAgencies, setSelectedAgencies] = useState<string[]>(initialAgencies);
+  const [minBudget, setMinBudget] = useState<number | null>(initialMinBudget);
+  const [maxBudget, setMaxBudget] = useState<number | null>(initialMaxBudget);
+  const [budgetPreset, setBudgetPreset] = useState<string>(initialBudgetPreset);
+  const [selectedDeadline, setSelectedDeadline] = useState<string>(initialDeadline);
+  const [sortBy, setSortBy] = useState<ProcurementSortOption>(initialSortBy);
+  const [page, setPage] = useState<number>(initialPage);
+
+  // UX Feedback States (Issue #156)
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
+
+  // Dynamic result count & items
+  const [resultItems, setResultItems] = useState<Project[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
+  // Sync state to URL without reloading
+  const updateUrlParams = useCallback(
+    (params: Record<string, string | number | null | undefined>) => {
+      if (typeof window === 'undefined') return;
+      const url = new URL(window.location.href);
+
+      Object.entries(params).forEach(([key, val]) => {
+        if (val === null || val === undefined || val === '') {
+          url.searchParams.delete(key);
+        } else {
+          url.searchParams.set(key, String(val));
+        }
+      });
+
+      window.history.replaceState(null, '', url.pathname + url.search);
+    },
+    [],
+  );
+
+  // Fetch or Compute Filtered Results
+  const fetchOpportunities = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    const queryParams = new URLSearchParams();
+    if (searchQuery.trim()) queryParams.set('search', searchQuery.trim());
+    if (selectedCategories.length > 0) queryParams.set('categories', selectedCategories.join(','));
+    if (selectedAgencies.length > 0) queryParams.set('agencies', selectedAgencies.join(','));
+    if (minBudget !== null) queryParams.set('minBudget', String(minBudget));
+    if (maxBudget !== null) queryParams.set('maxBudget', String(maxBudget));
+    if (budgetPreset) queryParams.set('budget', budgetPreset);
+    if (selectedDeadline) queryParams.set('deadline', selectedDeadline);
+    if (sourceFilter === 'live') queryParams.set('source', 'CKAN_GOVSPENDING');
+    else if (sourceFilter === 'bma') queryParams.set('source', 'BMA');
+    queryParams.set('sortBy', sortBy);
+    queryParams.set('page', String(page));
+    queryParams.set('limit', '12');
+
+    // Update browser URL
+    updateUrlParams({
+      search: searchQuery.trim() || null,
+      categories: selectedCategories.length > 0 ? selectedCategories.join(',') : null,
+      agencies: selectedAgencies.length > 0 ? selectedAgencies.join(',') : null,
+      minBudget: minBudget !== null ? minBudget : null,
+      maxBudget: maxBudget !== null ? maxBudget : null,
+      budget: budgetPreset || null,
+      deadline: selectedDeadline || null,
+      sortBy: sortBy !== 'publishDate_desc' ? sortBy : null,
+      page: page > 1 ? page : null,
+    });
+
+    try {
+      const res = await fetch(`/api/projects?${queryParams.toString()}`);
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+      const json = await res.json();
+
+      if (json.data && Array.isArray(json.data)) {
+        setResultItems(json.data);
+        setTotalCount(json.total || json.data.length);
+        setTotalPages(json.totalPages || Math.max(1, Math.ceil((json.total || json.data.length) / 12)));
+      } else {
+        throw new Error('Invalid response structure');
+      }
+    } catch {
+      // Offline fallback: Run in-memory query service directly
+      const fallbackResult = executeProcurementSearch(allProjects, {
+        search: searchQuery.trim(),
+        categories: selectedCategories,
+        agencies: selectedAgencies,
+        minBudget,
+        maxBudget,
+        budgetPreset: budgetPreset as ProcurementFilters['budgetPreset'],
+        deadline: selectedDeadline as ProcurementFilters['deadline'],
+        sortBy,
+        page,
+        limit: 12,
+      });
+
+      setResultItems(fallbackResult.items);
+      setTotalCount(fallbackResult.total);
+      setTotalPages(fallbackResult.totalPages);
+    } finally {
+      setIsLoading(false);
     }
+  }, [
+    searchQuery,
+    selectedCategories,
+    selectedAgencies,
+    minBudget,
+    maxBudget,
+    budgetPreset,
+    selectedDeadline,
+    sourceFilter,
+    sortBy,
+    page,
+    allProjects,
+    updateUrlParams,
+  ]);
 
-    fetch(url)
+  // Trigger query on parameter change (deferred to next tick to avoid cascading render warning)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchOpportunities();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchOpportunities]);
+
+  // Initial load to fetch all projects for stats and agency/category counts
+  useEffect(() => {
+    fetch('/api/projects')
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data)) {
-          setProjects(json.data);
+        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+          setAllProjects(json.data);
         }
       })
       .catch(() => {});
-  }, [activeFilter]);
+  }, []);
 
-  useEffect(() => {
-    loadProjects(activeFilter);
-  }, [activeFilter, loadProjects]);
+  // Compute category counts for badge counters
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      Website: 0,
+      'Mobile App': 0,
+      AI: 0,
+      Database: 0,
+    };
+    allProjects.forEach((p) => {
+      if (p.category && p.category in counts) {
+        counts[p.category]++;
+      }
+    });
+    return counts;
+  }, [allProjects]);
 
-  const departments = useMemo(() => {
-    return Array.from(new Set(projects.map((p) => (getLocalized(p.department) as string))));
-  }, [projects, getLocalized]);
+  // Available agencies for autocomplete
+  const availableAgencies = useMemo(() => {
+    const map = new Map<string, { th: string; en: string }>();
+    INITIAL_DEPARTMENTS.forEach((d) => map.set(d.th, d));
+    allProjects.forEach((p) => {
+      if (p.department?.th && !map.has(p.department.th)) {
+        map.set(p.department.th, p.department);
+      }
+    });
+    return Array.from(map.values());
+  }, [allProjects]);
 
-
+  // Stats Counters
   const newCount = useMemo(() => {
-    return projects.filter((p) => isNew(p.publishDate)).length;
-  }, [projects]);
+    return allProjects.filter((p) => isNew(p.publishDate)).length;
+  }, [allProjects]);
 
-  const totalBudget = useMemo(() => {
-    return projects.reduce((sum, p) => sum + p.budget, 0);
-  }, [projects]);
+  const totalBudgetSum = useMemo(() => {
+    return allProjects.reduce((sum, p) => sum + (p.budget || 0), 0);
+  }, [allProjects]);
 
-  const filteredProjects = useMemo(() => {
-    let result = [...projects];
+  // Clear Individual Filters (Issue #155)
+  const handleRemoveSearch = () => {
+    setSearchQuery('');
+    setPage(1);
+  };
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter((p) => {
-        const titleStr = `${p.title.th} ${p.title.en}`.toLowerCase();
-        const deptStr = `${p.department.th} ${p.department.en}`.toLowerCase();
-        const catStr = p.category.toLowerCase();
-        return titleStr.includes(q) || deptStr.includes(q) || catStr.includes(q);
-      });
-    }
+  const handleRemoveCategory = (cat: SoftwareCategory) => {
+    setSelectedCategories((prev) => prev.filter((c) => c !== cat));
+    setPage(1);
+  };
 
-    if (selectedDept) {
-      result = result.filter(
-        (p) => (getLocalized(p.department) as string) === selectedDept || p.department.th === selectedDept
-      );
-    }
+  const handleRemoveAgency = (ag: string) => {
+    setSelectedAgencies((prev) => prev.filter((a) => a !== ag));
+    setPage(1);
+  };
 
-    if (selectedCategory) {
-      result = result.filter((p) => p.category === selectedCategory);
-    }
+  const handleRemoveBudget = () => {
+    setMinBudget(null);
+    setMaxBudget(null);
+    setBudgetPreset('');
+    setPage(1);
+  };
 
-    if (selectedBudget) {
-      result = result.filter((p) => {
-        switch (selectedBudget) {
-          case 'under5m': return p.budget < 5_000_000;
-          case '5to10': return p.budget >= 5_000_000 && p.budget <= 10_000_000;
-          case '10to20': return p.budget >= 10_000_000 && p.budget <= 20_000_000;
-          case 'above20m': return p.budget > 20_000_000;
-          default: return true;
-        }
-      });
-    }
+  const handleRemoveDeadline = () => {
+    setSelectedDeadline('');
+    setPage(1);
+  };
 
-    if (selectedDeadline) {
-      result = result.filter((p) => {
-        const d = daysUntil(p.deadline);
-        switch (selectedDeadline) {
-          case 'within7': return d >= 0 && d <= 7;
-          case 'within30': return d >= 0 && d <= 30;
-          case 'moreThan30': return d > 30;
-          default: return true;
-        }
-      });
-    }
+  // Global "Clear All" Action (Issues #147, #149, #150, #152, #155, #156)
+  const handleClearAll = () => {
+    setSearchQuery('');
+    setSelectedCategories([]);
+    setSelectedAgencies([]);
+    setMinBudget(null);
+    setMaxBudget(null);
+    setBudgetPreset('');
+    setSelectedDeadline('');
+    setPage(1);
+  };
 
-    return result;
-  }, [projects, searchQuery, selectedDept, selectedCategory, selectedBudget, selectedDeadline, getLocalized]);
+  // Filter change handlers that reset page to 1
+  const handleCategoryChange = (categories: SoftwareCategory[]) => {
+    setSelectedCategories(categories);
+    setPage(1);
+  };
+
+  const handleAgencyChange = (agencies: string[]) => {
+    setSelectedAgencies(agencies);
+    setPage(1);
+  };
+
+  const handleBudgetChange = (options: {
+    minBudget: number | null;
+    maxBudget: number | null;
+    budgetPreset: string;
+  }) => {
+    setMinBudget(options.minBudget);
+    setMaxBudget(options.maxBudget);
+    setBudgetPreset(options.budgetPreset);
+    setPage(1);
+  };
+
+  const handleDeadlineChange = (deadline: string) => {
+    setSelectedDeadline(deadline);
+    setPage(1);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setPage(1);
+  };
+
+  const handleSortChange = (newSort: ProcurementSortOption) => {
+    setSortBy(newSort);
+    setPage(1);
+  };
+
+  const totalActiveFilterCount =
+    (searchQuery.trim() ? 1 : 0) +
+    selectedCategories.length +
+    selectedAgencies.length +
+    (minBudget !== null || maxBudget !== null || budgetPreset ? 1 : 0) +
+    (selectedDeadline ? 1 : 0);
 
   return (
-    <div className="page-content" id="dashboard-page">
+    <div className="page-content" id="opportunities-discovery-page">
+      {/* Page Header */}
       <div className="page-header">
         <h1 className="page-title">{L('dashboardTitle')}</h1>
         <p className="page-subtitle">{L('dashboardSub')}</p>
       </div>
 
+      {/* Live Data Ingestion Sync Bar */}
       <LiveSyncBar
-        onSyncComplete={() => loadProjects(activeFilter)}
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
+        onSyncComplete={() => {
+          void fetchOpportunities();
+        }}
+        activeFilter={sourceFilter}
+        onFilterChange={(filter) => {
+          setSourceFilter(filter);
+          setPage(1);
+        }}
       />
 
       {/* Stats Cards Row */}
       <div className="stats-row">
         <StatCard
           label={L('totalOpps')}
-          value={projects.length}
-          change={language === 'th' ? 'พร้อมยื่นข้อเสนอในระบบ' : 'Active opportunities'}
+          value={allProjects.length}
+          change={`+${newCount} ${L('newThisWeek')}`}
           changeType="positive"
           icon={ICONS.target}
           iconColor="blue"
         />
 
         <StatCard
-          label={language === 'th' ? 'โครงการประกาศใหม่' : 'New Announcements'}
+          label={L('newPublished')}
           value={newCount}
-          change={language === 'th' ? 'ในรอบ 7 วันที่ผ่านมา' : 'In the past 7 days'}
+          change={L('inPast3days')}
           changeType="positive"
-          icon={ICONS.sparkles}
+          icon={ICONS.star}
           iconColor="green"
         />
 
         <StatCard
           label={L('totalBudget')}
-          value={formatBudget(totalBudget, language)}
-          change={`${projects.length} ${L('projects')}`}
+          value={formatBudget(totalBudgetSum, language)}
+          change={`${allProjects.length} ${L('projects')}`}
           changeType="neutral"
           icon={ICONS.dollarSign}
           iconColor="amber"
         />
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="search-filter-bar">
-        <div className="search-input-wrapper">
-          {ICONS.search}
-          <input
-            type="text"
-            className="search-input"
-            id="searchInput"
-            placeholder={L('searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+      <div className="procurement-discovery-wrapper">
+        {/* Top Controls: Search Bar + Mobile Filter Toggle + Sort Dropdown */}
+        <div className="procurement-top-controls">
+          <div className="procurement-search-area">
+            <ProcurementSearchBar
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onSubmit={handleSearchChange}
+            />
+          </div>
+
+          <div className="procurement-sort-and-toggle">
+            {/* Mobile Filter Drawer Toggle Button */}
+            <button
+              type="button"
+              className="mobile-filter-toggle-btn"
+              onClick={() => setIsMobileFilterOpen(true)}
+              aria-label="Open filter options"
+              id="mobile-filter-toggle-btn"
+            >
+              <span>⚙ {L('filterDrawerTitle')}</span>
+              {totalActiveFilterCount > 0 && (
+                <span className="filter-badge-count">{totalActiveFilterCount}</span>
+              )}
+            </button>
+
+            {/* Publication Date & Budget Sorting Dropdown (Issue #154) */}
+            <ProcurementSort value={sortBy} onChange={handleSortChange} />
+          </div>
+        </div>
+
+        {/* Active Filter Chips Bar (Issues #152, #155, #156) */}
+        <ActiveFilterChips
+          filters={{
+            search: searchQuery,
+            categories: selectedCategories,
+            agencies: selectedAgencies,
+            minBudget,
+            maxBudget,
+            budgetPreset,
+            deadline: selectedDeadline,
+          }}
+          onRemoveSearch={handleRemoveSearch}
+          onRemoveCategory={handleRemoveCategory}
+          onRemoveAgency={handleRemoveAgency}
+          onRemoveBudget={handleRemoveBudget}
+          onRemoveDeadline={handleRemoveDeadline}
+          onClearAll={handleClearAll}
+        />
+
+        {/* Two-Column Discovery Layout: Filter Sidebar + Procurement List */}
+        <div className="procurement-discovery-grid">
+          {/* Filter Sidebar / Mobile Drawer (Issue #152) */}
+          <ProcurementFilterPanel
+            selectedCategories={selectedCategories}
+            onCategoryChange={handleCategoryChange}
+            selectedAgencies={selectedAgencies}
+            onAgencyChange={handleAgencyChange}
+            minBudget={minBudget}
+            maxBudget={maxBudget}
+            budgetPreset={budgetPreset}
+            onBudgetChange={handleBudgetChange}
+            selectedDeadline={selectedDeadline}
+            onDeadlineChange={handleDeadlineChange}
+            onClearAll={handleClearAll}
+            isOpenMobile={isMobileFilterOpen}
+            onCloseMobile={() => setIsMobileFilterOpen(false)}
+            categoryCounts={categoryCounts}
+            availableAgencies={availableAgencies}
+          />
+
+          {/* Results Area with Loading Skeleton, Empty State, and Pagination (Issue #156) */}
+          <ProcurementList
+            projects={resultItems}
+            isLoading={isLoading}
+            error={error}
+            onRetry={fetchOpportunities}
+            onClearFilters={handleClearAll}
+            totalCount={totalCount}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={(newPage) => setPage(newPage)}
           />
         </div>
-
-        <select
-          className="filter-select"
-          id="filterDept"
-          value={selectedDept}
-          onChange={(e) => setSelectedDept(e.target.value)}
-        >
-          <option value="">{L('allDepts')}</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="filter-select"
-          id="filterCategory"
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value as ProjectCategory | '')}
-        >
-          <option value="">{L('allCategories')}</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {CATEGORY_LABELS[language][c]}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="filter-select"
-          id="filterBudget"
-          value={selectedBudget}
-          onChange={(e) => setSelectedBudget(e.target.value)}
-        >
-          <option value="">{L('allBudgets')}</option>
-          <option value="under5m">{L('under5m')}</option>
-          <option value="5to10">{L('range5to10')}</option>
-          <option value="10to20">{L('range10to20')}</option>
-          <option value="above20m">{L('above20m')}</option>
-        </select>
-
-        <select
-          className="filter-select"
-          id="filterDeadline"
-          value={selectedDeadline}
-          onChange={(e) => setSelectedDeadline(e.target.value)}
-        >
-          <option value="">{L('allDeadlines')}</option>
-          <option value="within7">{L('within7days')}</option>
-          <option value="within30">{L('within30days')}</option>
-          <option value="moreThan30">{L('moreThan30')}</option>
-        </select>
       </div>
-
-      {/* Projects Grid or No Results */}
-      {filteredProjects.length === 0 ? (
-        <div className="no-results">
-          {ICONS.search}
-          <h3>{L('noResults')}</h3>
-          <p>{L('noResultsDesc')}</p>
-        </div>
-      ) : (
-        <div className="projects-grid">
-          {filteredProjects.map((project) => (
-            <ProjectCard key={project.externalId} project={project} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
 export default function OpportunitiesPage() {
   return (
-    <Suspense fallback={<div className="page-content"><p>Loading opportunities...</p></div>}>
+    <Suspense
+      fallback={
+        <div className="page-content">
+          <p>Loading procurement opportunities...</p>
+        </div>
+      }
+    >
       <OpportunitiesContent />
     </Suspense>
   );
