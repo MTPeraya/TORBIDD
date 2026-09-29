@@ -94,8 +94,16 @@ export interface Project {
 export interface ProjectFilters {
   search?: string;
   department?: string;
+  agency?: string;
+  agencies?: string | string[];
   category?: ProjectCategory;
+  categories?: string | string[];
   budget?: 'under5m' | '5to10' | '10to20' | 'above20m';
+  minBudget?: number;
+  maxBudget?: number;
   deadline?: 'within7' | 'within30' | 'moreThan30';
+  sortBy?: 'publishDate_desc' | 'publishDate_asc' | 'budget_desc' | 'budget_asc' | 'newest' | 'oldest';
+  page?: number;
+  limit?: number;
 }
 

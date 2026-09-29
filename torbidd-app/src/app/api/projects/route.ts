@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProjects, createProject } from '@/services/database/projects';
 import { ProjectFiltersSchema, ProjectCreateSchema } from '@/lib/validation';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
+import { executeProcurementSearch } from '@/services/procurement-search';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,24 @@ export async function GET(req: NextRequest) {
       // Fallback to initial dataset if DB not yet connected
     }
 
-    return NextResponse.json({ data: INITIAL_PROJECTS, total: INITIAL_PROJECTS.length });
+    const searchResult = executeProcurementSearch(INITIAL_PROJECTS, {
+      search: parsed.data.search,
+      categories: parsed.data.categories
+        ? (Array.isArray(parsed.data.categories) ? parsed.data.categories : [parsed.data.categories])
+        : (parsed.data.category ? [parsed.data.category] : undefined),
+      agencies: parsed.data.agencies
+        ? (Array.isArray(parsed.data.agencies) ? parsed.data.agencies : [parsed.data.agencies])
+        : (parsed.data.agency ? [parsed.data.agency] : (parsed.data.department ? [parsed.data.department] : undefined)),
+      minBudget: parsed.data.minBudget,
+      maxBudget: parsed.data.maxBudget,
+      budgetPreset: parsed.data.budget,
+      deadline: parsed.data.deadline,
+      sortBy: parsed.data.sortBy as any,
+      page: parsed.data.page,
+      limit: parsed.data.limit,
+    });
+
+    return NextResponse.json({ data: searchResult.items, total: searchResult.total });
   } catch (err) {
     console.error('[GET /api/projects]', err);
     return NextResponse.json({ data: INITIAL_PROJECTS, total: INITIAL_PROJECTS.length });

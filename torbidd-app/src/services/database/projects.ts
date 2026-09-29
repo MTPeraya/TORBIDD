@@ -20,17 +20,54 @@ export async function getProjects(filters: ProjectFilters = {}): Promise<IProjec
       { 'title.en': regex },
       { 'department.th': regex },
       { 'department.en': regex },
+      { category: regex },
     ];
   }
 
-  if (filters.department) {
-    query['department.th'] = filters.department;
+  // Agency / Department filtering (single or multiple)
+  const targetAgencies: string[] = [];
+  if (filters.department) targetAgencies.push(filters.department);
+  if (filters.agency) targetAgencies.push(filters.agency);
+  if (filters.agencies) {
+    if (Array.isArray(filters.agencies)) {
+      targetAgencies.push(...filters.agencies);
+    } else if (typeof filters.agencies === 'string') {
+      targetAgencies.push(...filters.agencies.split(',').map((s) => s.trim()));
+    }
   }
 
-  if (filters.category) {
-    query.category = filters.category;
+  if (targetAgencies.length === 1) {
+    query.$or = [
+      ...(query.$or ? [{ $or: query.$or }] : []),
+      { 'department.th': targetAgencies[0] },
+      { 'department.en': targetAgencies[0] },
+    ];
+  } else if (targetAgencies.length > 1) {
+    query.$or = [
+      ...(query.$or ? [{ $or: query.$or }] : []),
+      { 'department.th': { $in: targetAgencies } },
+      { 'department.en': { $in: targetAgencies } },
+    ];
   }
 
+  // Category filtering (single or multiple)
+  const targetCategories: string[] = [];
+  if (filters.category) targetCategories.push(filters.category);
+  if (filters.categories) {
+    if (Array.isArray(filters.categories)) {
+      targetCategories.push(...filters.categories);
+    } else if (typeof filters.categories === 'string') {
+      targetCategories.push(...filters.categories.split(',').map((s) => s.trim()));
+    }
+  }
+
+  if (targetCategories.length === 1) {
+    query.category = targetCategories[0];
+  } else if (targetCategories.length > 1) {
+    query.category = { $in: targetCategories };
+  }
+
+  // Budget preset filtering
   if (filters.budget) {
     switch (filters.budget) {
       case 'under5m':  query.budget = { $lt: 5_000_000 }; break;
@@ -40,7 +77,29 @@ export async function getProjects(filters: ProjectFilters = {}): Promise<IProjec
     }
   }
 
-  const projects = await Project.find(query).sort({ publishDate: -1 }).lean();
+  // Direct minBudget / maxBudget
+  if (filters.minBudget !== undefined || filters.maxBudget !== undefined) {
+    query.budget = query.budget || {};
+    if (filters.minBudget !== undefined && !isNaN(filters.minBudget)) {
+      query.budget.$gte = filters.minBudget;
+    }
+    if (filters.maxBudget !== undefined && !isNaN(filters.maxBudget)) {
+      query.budget.$lte = filters.maxBudget;
+    }
+  }
+
+  // Deterministic sorting with secondary key
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let sortCriteria: Record<string, any> = { publishDate: -1, externalId: -1 };
+  if (filters.sortBy === 'publishDate_asc' || filters.sortBy === 'oldest') {
+    sortCriteria = { publishDate: 1, externalId: 1 };
+  } else if (filters.sortBy === 'budget_desc') {
+    sortCriteria = { budget: -1, externalId: -1 };
+  } else if (filters.sortBy === 'budget_asc') {
+    sortCriteria = { budget: 1, externalId: 1 };
+  }
+
+  const projects = await Project.find(query).sort(sortCriteria).lean();
 
   if (filters.deadline) {
     return projects.filter((p) => {
