@@ -6,7 +6,7 @@
 // =============================================================================
 
 import React, { useState, useMemo } from 'react';
-import { BANGKOK_AGENCIES, Agency } from '@/types/agency';
+import { BANGKOK_AGENCIES } from '@/types/agency';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AgencyFilterProps {
@@ -26,7 +26,6 @@ export function AgencyFilter({
 }: AgencyFilterProps) {
   const { language, L } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Merge known reference agencies with any dynamically provided available agencies
   const allAgencyItems = useMemo(() => {
@@ -102,11 +101,7 @@ export function AgencyFilter({
           className="agency-search-input"
           placeholder={L('searchAgencyPlaceholder')}
           value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setIsDropdownOpen(true);
-          }}
-          onFocus={() => setIsDropdownOpen(true)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           aria-label={L('searchAgencyPlaceholder')}
         />
         {searchTerm && (

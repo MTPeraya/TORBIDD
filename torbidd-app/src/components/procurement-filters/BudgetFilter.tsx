@@ -5,7 +5,7 @@
 // (Supports Issue #150: Implement Budget Filter)
 // =============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface BudgetFilterProps {
@@ -31,6 +31,8 @@ export function BudgetFilter({
 }: BudgetFilterProps) {
   const { L } = useLanguage();
 
+  const [prevMin, setPrevMin] = useState(minBudget);
+  const [prevMax, setPrevMax] = useState(maxBudget);
   const [minInput, setMinInput] = useState<string>(
     minBudget !== null && minBudget !== undefined ? String(minBudget) : '',
   );
@@ -39,13 +41,15 @@ export function BudgetFilter({
   );
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  useEffect(() => {
+  if (minBudget !== prevMin) {
+    setPrevMin(minBudget);
     setMinInput(minBudget !== null && minBudget !== undefined ? String(minBudget) : '');
-  }, [minBudget]);
+  }
 
-  useEffect(() => {
+  if (maxBudget !== prevMax) {
+    setPrevMax(maxBudget);
     setMaxInput(maxBudget !== null && maxBudget !== undefined ? String(maxBudget) : '');
-  }, [maxBudget]);
+  }
 
   // Validate range: min <= max
   const validateAndNotify = (minStr: string, maxStr: string, preset: string) => {

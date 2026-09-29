@@ -9,7 +9,7 @@ import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'reac
 import { useSearchParams } from 'next/navigation';
 import { Project } from '@/types/project';
 import { SoftwareCategory, isSoftwareCategory } from '@/types/procurement-category';
-import { ProcurementSortOption } from '@/types/procurement';
+import { ProcurementSortOption, ProcurementFilters } from '@/types/procurement';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { StatCard } from '@/components/ui/StatCard';
@@ -26,7 +26,7 @@ import { ProcurementList } from '@/components/procurement-list/ProcurementList';
 
 function OpportunitiesContent() {
   const searchParams = useSearchParams();
-  const { language, L, getLocalized } = useLanguage();
+  const { language, L } = useLanguage();
 
   // Read initial query params from URL
   const initialSearch = searchParams.get('search') || '';
@@ -140,8 +140,8 @@ function OpportunitiesContent() {
         agencies: selectedAgencies,
         minBudget,
         maxBudget,
-        budgetPreset: budgetPreset as any,
-        deadline: selectedDeadline as any,
+        budgetPreset: budgetPreset as ProcurementFilters['budgetPreset'],
+        deadline: selectedDeadline as ProcurementFilters['deadline'],
         sortBy,
         page,
         limit: 12,
@@ -167,9 +167,12 @@ function OpportunitiesContent() {
     updateUrlParams,
   ]);
 
-  // Trigger query on parameter change
+  // Trigger query on parameter change (deferred to next tick to avoid cascading render warning)
   useEffect(() => {
-    fetchOpportunities();
+    const timer = setTimeout(() => {
+      void fetchOpportunities();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchOpportunities]);
 
   // Initial load to fetch all projects for stats and agency/category counts

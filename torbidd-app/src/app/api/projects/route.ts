@@ -7,6 +7,7 @@ import { getProjects, createProject } from '@/services/database/projects';
 import { ProjectFiltersSchema, ProjectCreateSchema } from '@/lib/validation';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { executeProcurementSearch } from '@/services/procurement-search';
+import { ProcurementSortOption } from '@/types/procurement';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
       maxBudget: parsed.data.maxBudget,
       budgetPreset: parsed.data.budget,
       deadline: parsed.data.deadline,
-      sortBy: parsed.data.sortBy as any,
+      sortBy: parsed.data.sortBy as ProcurementSortOption,
       page: parsed.data.page,
       limit: parsed.data.limit,
     });

@@ -34,7 +34,7 @@ export function ProcurementList({
   totalPages = 1,
   onPageChange,
 }: ProcurementListProps) {
-  const { language, L } = useLanguage();
+  const { L } = useLanguage();
 
   // 1. Error State
   if (error) {
@@ -110,9 +110,6 @@ export function ProcurementList({
   }
 
   // 4. Results List & Pagination
-  const startItem = (page - 1) * projects.length + 1;
-  const endItem = Math.min(startItem + projects.length - 1, totalCount);
-
   return (
     <div className="procurement-list-container">
       {/* Result counter header */}

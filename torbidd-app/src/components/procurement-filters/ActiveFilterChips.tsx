@@ -43,8 +43,8 @@ export function ActiveFilterChips({
   const { language, L } = useLanguage();
 
   const hasSearch = Boolean(filters.search && filters.search.trim().length > 0);
-  const hasCategories = filters.categories && filters.categories.length > 0;
-  const hasAgencies = filters.agencies && filters.agencies.length > 0;
+  const hasCategories = Boolean(filters.categories && filters.categories.length > 0);
+  const hasAgencies = Boolean(filters.agencies && filters.agencies.length > 0);
   const hasBudget =
     filters.minBudget !== null ||
     filters.maxBudget !== null ||
@@ -53,8 +53,8 @@ export function ActiveFilterChips({
 
   const totalActiveCount =
     (hasSearch ? 1 : 0) +
-    (filters.categories ? filters.categories.length : 0) +
-    (filters.agencies ? filters.agencies.length : 0) +
+    (hasCategories ? filters.categories.length : 0) +
+    (hasAgencies ? filters.agencies.length : 0) +
     (hasBudget ? 1 : 0) +
     (hasDeadline ? 1 : 0);
 
@@ -104,7 +104,7 @@ export function ActiveFilterChips({
         {hasSearch && (
           <span className="active-filter-chip chip-search">
             <span className="chip-type">{language === 'th' ? 'คำค้นหา:' : 'Keyword:'}</span>
-            <span className="chip-value">"{filters.search}"</span>
+            <span className="chip-value">&quot;{filters.search}&quot;</span>
             <button
               type="button"
               className="chip-remove-btn"

@@ -5,7 +5,7 @@
 // (Supports Issue #152: Procurement Filter UI)
 // =============================================================================
 
-import React, { useState } from 'react';
+import React from 'react';
 import { SoftwareCategory } from '@/types/procurement-category';
 import { CategoryFilter } from './CategoryFilter';
 import { AgencyFilter } from './AgencyFilter';

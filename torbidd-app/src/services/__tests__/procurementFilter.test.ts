@@ -136,8 +136,14 @@ describe('Procurement Filtering & Search Services', () => {
     });
 
     it('returns empty array when no projects match the selected category', () => {
-      const nonExistent = filterByCategory(MOCK_PROJECTS, ['Hardware' as any]);
+      const nonExistent = filterByCategory(MOCK_PROJECTS, ['Hardware']);
       expect(nonExistent).toHaveLength(0);
+    });
+
+    it('filterBySearch matches keywords against title and description', () => {
+      const results = filterBySearch(MOCK_PROJECTS, 'จราจร');
+      expect(results).toHaveLength(1);
+      expect(results[0].externalId).toBe(103);
     });
   });
 
@@ -213,7 +219,7 @@ describe('Procurement Filtering & Search Services', () => {
         {
           ...MOCK_PROJECTS[0],
           externalId: 999,
-          budget: undefined as any,
+          budget: undefined as unknown as number,
         },
       ];
 
@@ -221,6 +227,13 @@ describe('Procurement Filtering & Search Services', () => {
         const res = filterByBudget(edgeCaseProjects, { minBudget: 1000000 });
         expect(res).not.toContainEqual(expect.objectContaining({ externalId: 999 }));
       }).not.toThrow();
+    });
+
+    it('paginateProcurements slices items and calculates totalPages', () => {
+      const paginated = paginateProcurements(MOCK_PROJECTS, 1, 2);
+      expect(paginated.items).toHaveLength(2);
+      expect(paginated.totalPages).toBe(3);
+      expect(paginated.total).toBe(5);
     });
   });
 

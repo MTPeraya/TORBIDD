@@ -9,6 +9,7 @@ import { executeProcurementSearch } from '@/services/procurement-search';
 import { getProjects } from '@/services/database/projects';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { ProcurementSortOption } from '@/types/procurement';
+import { Project } from '@/types/project';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest) {
 
       if (dbProjects && dbProjects.length > 0) {
         // Apply pagination
-        const searchResult = executeProcurementSearch(dbProjects as any, {
+        const searchResult = executeProcurementSearch(dbProjects as unknown as Project[], {
           search: filterData.search,
           categories: categories.length > 0 ? categories : undefined,
           agencies: agencies.length > 0 ? agencies : (filterData.department ? [filterData.department] : undefined),

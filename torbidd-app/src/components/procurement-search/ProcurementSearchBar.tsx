@@ -5,7 +5,7 @@
 // (Supports Issues #155, #156)
 // =============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ICONS } from '@/components/ui/Icons';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -25,11 +25,13 @@ export function ProcurementSearchBar({
   id = 'procurement-search-input',
 }: ProcurementSearchBarProps) {
   const { L } = useLanguage();
+  const [prevValue, setPrevValue] = useState(value);
   const [internalValue, setInternalValue] = useState(value);
 
-  useEffect(() => {
+  if (value !== prevValue) {
+    setPrevValue(value);
     setInternalValue(value);
-  }, [value]);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nextVal = e.target.value;
