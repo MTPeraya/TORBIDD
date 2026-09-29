@@ -93,6 +93,13 @@ export interface Project {
   processedDate: string;
   aiConfidence: AiConfidence;
   aiClassificationModel?: string;
+  extractionStatus?: 'PENDING' | 'EXTRACTED' | 'FAILED';
+  timeline?: TimelineEvent[];
+  budgetBreakdown?: BudgetBreakdownItem[];
+  highlightedQualifications?: HighlightedQualification[];
+  documentSections?: DocumentSection[];
+  aiMetadata?: AiMetadata;
+  contactInfo?: ContactInfo;
   createdAt?: string;
   updatedAt?: string;
 }

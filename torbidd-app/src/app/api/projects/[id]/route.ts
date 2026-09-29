@@ -1,5 +1,5 @@
 // =============================================================================
-// app/api/projects/[id]/route.ts - GET /api/projects/[id]
+// app/api/projects/[id]/route.ts - GET, PUT, DELETE /api/projects/[id]
 // Returns project metadata and its associated documents.
 // =============================================================================
 
@@ -35,8 +35,10 @@ export async function GET(
       if (procurementData) {
         const { procurementToProject } = await import('@/lib/project-mapper');
         const mapped = procurementToProject(procurementData.project);
+        const enriched = enrichProjectDetail(mapped);
         return NextResponse.json({
           data: {
+            ...enriched,
             ...procurementData.project,
             ...mapped,
             documents: procurementData.documents,
@@ -53,15 +55,12 @@ export async function GET(
       try {
         const project = await getProjectByExternalId(numId);
         if (project) {
-          return NextResponse.json({
-            data: enrichProjectDetail(project as unknown as Project),
-          });
-        }
-        if (project) {
           const documents = await getDocumentsByProjectId(String(numId));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const projectObj = typeof (project as any).toObject === 'function' ? (project as any).toObject() : project;
           return NextResponse.json({
             data: {
-              ...(typeof project.toObject === 'function' ? project.toObject() : project),
+              ...enrichProjectDetail(projectObj as unknown as Project),
               documents,
             },
           });
@@ -72,31 +71,24 @@ export async function GET(
       if (fallback) {
         return NextResponse.json({
           data: {
-            ...fallback,
+            ...enrichProjectDetail(fallback),
             documents: [],
           },
         });
-      }
-      if (fallback) {
-        return NextResponse.json({ data: enrichProjectDetail(fallback) });
       }
     }
 
     // 3. Try ObjectId against existing Project model
     if (/^[0-9a-fA-F]{24}$/.test(cleanId)) {
       try {
-        const project = await getProjectById(id);
-        if (project) {
-          return NextResponse.json({
-            data: enrichProjectDetail(project as unknown as Project),
-          });
-        }
         const project = await getProjectById(cleanId);
         if (project) {
           const documents = await getDocumentsByProjectId(cleanId);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const projectObj = typeof (project as any).toObject === 'function' ? (project as any).toObject() : project;
           return NextResponse.json({
             data: {
-              ...(typeof project.toObject === 'function' ? project.toObject() : project),
+              ...enrichProjectDetail(projectObj as unknown as Project),
               documents,
             },
           });
@@ -173,4 +165,3 @@ export async function DELETE(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-

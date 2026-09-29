@@ -3,8 +3,9 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjects } from '@/services/database/projects';
-import { ProjectFiltersSchema } from '@/lib/validation';
+import { getProjects, createProject } from '@/services/database/projects';
+import { getProcurementProjects } from '@/services/database/procurement';
+import { ProjectFiltersSchema, ProjectCreateSchema } from '@/lib/validation';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { Project } from '@/types/project';
 import { procurementToProject } from '@/lib/project-mapper';
