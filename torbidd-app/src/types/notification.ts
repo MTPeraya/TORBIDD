@@ -69,15 +69,47 @@ export interface NotificationItem {
 
 export interface NotificationPreferences {
   recipientId?: string;
+  inAppNotif?: boolean;
   newOpportunity: boolean;
   savedUpdate: boolean;
   deadlineReminder: boolean;
   emailNotif: boolean;
   dailyDigest: boolean;
+  keywords?: string[];
   interestTags: string[];
+  agencies?: string[];
   budgetMin: number | null;
   budgetMax: number | null;
   language: 'th' | 'en';
+  email?: string | null;
+}
+
+export interface OpportunityEmailPayload {
+  recipientEmail: string;
+  recipientName?: string;
+  project: {
+    id: string | number;
+    title: { th: string; en: string } | string;
+    department?: { th: string; en: string } | string;
+    budget?: number;
+    deadline?: Date | string;
+    category?: string;
+    description?: { th: string; en: string } | string;
+  };
+  matchReasons?: string[];
+}
+
+export interface DeadlineReminderEmailPayload {
+  recipientEmail: string;
+  recipientName?: string;
+  project: {
+    id: string | number;
+    title: { th: string; en: string } | string;
+    department?: { th: string; en: string } | string;
+    budget?: number;
+    deadline: Date | string;
+  };
+  daysRemaining: number;
 }
 
 export interface NotificationFeedResponse {

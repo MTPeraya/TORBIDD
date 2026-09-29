@@ -252,4 +252,42 @@ describe('NotificationPreferencesPanel Component', () => {
 
     expect(screen.getAllByText(/งบประมาณสูงสุดต้องไม่น้อยกว่างบประมาณขั้นต่ำ|Maximum budget cannot be less than minimum budget/i)[0]).toBeInTheDocument();
   });
+
+  it('renders and allows interacting with In-App toggle, custom keywords, and agencies (UC-6)', async () => {
+    const onSave = jest.fn();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+
+    const { container } = renderWithProviders(
+      <NotificationPreferencesPanel
+        initialPreferences={mockPreferences}
+        onPreferencesSaved={onSave}
+      />,
+    );
+
+    // 1. In-App toggle
+    const toggleInApp = container.querySelector('#toggleInAppNotif') as HTMLInputElement;
+    expect(toggleInApp).toBeInTheDocument();
+    expect(toggleInApp).toBeChecked();
+    fireEvent.click(toggleInApp);
+    expect(toggleInApp).not.toBeChecked();
+
+    // 2. Custom Keywords Input
+    const keywordInput = container.querySelector('#inputKeyword') as HTMLInputElement;
+    const addBtn = container.querySelector('#addKeywordBtn') as HTMLButtonElement;
+    expect(keywordInput).toBeInTheDocument();
+    expect(addBtn).toBeInTheDocument();
+
+    fireEvent.change(keywordInput, { target: { value: 'Smart City' } });
+    fireEvent.click(addBtn);
+    expect(screen.getByText('Smart City')).toBeInTheDocument();
+
+    // 3. Agencies Selection
+    const strategyDept = screen.getByText('สำนักยุทธศาสตร์และประเมินผล');
+    expect(strategyDept).toBeInTheDocument();
+    fireEvent.click(strategyDept);
+    expect(strategyDept.textContent).toContain('✓');
+  });
 });

@@ -88,14 +88,47 @@ export const BookmarkCreateSchema = z.object({
 // ─── Settings (PUT /api/settings) ───────────────────────────────────────────
 
 export const SettingsUpdateSchema = z.object({
+  inAppNotif: z.boolean().optional(),
   emailNotif: z.boolean().optional(),
   dailyDigest: z.boolean().optional(),
   closingAlert: z.boolean().optional(),
   newProjectAlert: z.boolean().optional(),
+  newOpportunity: z.boolean().optional(),
+  savedUpdate: z.boolean().optional(),
+  deadlineReminder: z.boolean().optional(),
+  keywords: z.array(z.string().max(100)).max(30).optional(),
   interestTags: z.array(z.string().max(50)).max(20).optional(),
+  agencies: z.array(z.string().max(150)).max(50).optional(),
   budgetMin: z.number().min(0).nullable().optional(),
   budgetMax: z.number().min(0).nullable().optional(),
   language: z.enum(['th', 'en']).optional(),
+  email: z.string().email().nullable().optional(),
+}).refine(
+  (data) => {
+    if (data.budgetMin != null && data.budgetMax != null) {
+      return data.budgetMax >= data.budgetMin;
+    }
+    return true;
+  },
+  { message: 'budgetMax must be >= budgetMin', path: ['budgetMax'] },
+);
+
+// ─── Notification Preferences (PUT /api/notifications/preferences) ──────────
+
+export const NotificationPreferencesSchema = z.object({
+  inAppNotif: z.boolean().optional(),
+  newOpportunity: z.boolean().optional(),
+  savedUpdate: z.boolean().optional(),
+  deadlineReminder: z.boolean().optional(),
+  emailNotif: z.boolean().optional(),
+  dailyDigest: z.boolean().optional(),
+  keywords: z.array(z.string().max(100)).max(30).optional(),
+  interestTags: z.array(z.string().max(50)).max(20).optional(),
+  agencies: z.array(z.string().max(150)).max(50).optional(),
+  budgetMin: z.number().min(0).nullable().optional(),
+  budgetMax: z.number().min(0).nullable().optional(),
+  language: z.enum(['th', 'en']).optional(),
+  email: z.string().email().nullable().optional(),
 }).refine(
   (data) => {
     if (data.budgetMin != null && data.budgetMax != null) {

@@ -35,6 +35,29 @@ describe('Notification Preferences Service (Issue #137)', () => {
     expect(fetched.budgetMin).toBe(1000000);
   });
 
+  it('persists and updates keywords, agencies, and channel preferences (UC-6)', async () => {
+    const uc6User = `uc6_pref_user_${Date.now()}`;
+    const updated = await updateNotificationPreferences(uc6User, {
+      inAppNotif: false,
+      emailNotif: true,
+      keywords: ['CCTV', 'Smart City'],
+      agencies: ['สำนักการจราจรและขนส่ง'],
+      email: 'officer@bma.go.th',
+    });
+
+    expect(updated.inAppNotif).toBe(false);
+    expect(updated.emailNotif).toBe(true);
+    expect(updated.keywords).toEqual(['CCTV', 'Smart City']);
+    expect(updated.agencies).toEqual(['สำนักการจราจรและขนส่ง']);
+    expect(updated.email).toBe('officer@bma.go.th');
+
+    const fetched = await getNotificationPreferences(uc6User);
+    expect(fetched.inAppNotif).toBe(false);
+    expect(fetched.emailNotif).toBe(true);
+    expect(fetched.keywords).toContain('CCTV');
+    expect(fetched.agencies).toContain('สำนักการจราจรและขนส่ง');
+  });
+
   it('strictly respects category toggles in shouldDeliverNotification', async () => {
     // newOpportunity is false for recipientId
     const canSendMatch = await shouldDeliverNotification(recipientId, 'PROCUREMENT_MATCHED');

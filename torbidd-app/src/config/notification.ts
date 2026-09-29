@@ -18,16 +18,34 @@ export const NOTIFICATION_CONFIG = {
 
   // Default notification preferences for new users
   DEFAULT_PREFERENCES: {
+    inAppNotif: true,
     newOpportunity: true,
     savedUpdate: true,
     deadlineReminder: true,
     emailNotif: true,
     dailyDigest: true,
+    keywords: [],
     interestTags: ['Website', 'AI'],
+    agencies: [],
     budgetMin: null,
     budgetMax: null,
     language: 'th' as const,
+    email: null,
   } satisfies Omit<NotificationPreferences, 'recipientId'>,
+
+  // Controlled list of primary BMA departments for user convenience
+  AVAILABLE_AGENCIES: [
+    { th: 'สำนักยุทธศาสตร์และประเมินผล', en: 'Strategy and Evaluation Dept.' },
+    { th: 'สำนักการศึกษา', en: 'Education Dept.' },
+    { th: 'สำนักสิ่งแวดล้อม', en: 'Environment Dept.' },
+    { th: 'สำนักการแพทย์', en: 'Medical Services Dept.' },
+    { th: 'สำนักอนามัย', en: 'Health Dept.' },
+    { th: 'สำนักการจราจรและขนส่ง', en: 'Traffic and Transport Dept.' },
+    { th: 'สำนักการระบายน้ำ', en: 'Drainage and Sewerage Dept.' },
+    { th: 'สำนักการคลัง', en: 'Finance Dept.' },
+    { th: 'สำนักพัฒนาสังคม', en: 'Social Development Dept.' },
+    { th: 'สำนักวัฒนธรรม กีฬา และการท่องเที่ยว', en: 'Culture, Sports & Tourism Dept.' },
+  ],
 
   // Event Priority Mapping
   EVENT_PRIORITY: {

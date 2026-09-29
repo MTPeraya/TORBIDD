@@ -11,6 +11,8 @@ import {
   updateNotificationPreferences,
 } from '@/services/notification-preferences';
 
+import { NotificationPreferencesSchema } from '@/lib/validation';
+
 export const dynamic = 'force-dynamic';
 
 function resolveRecipientId(req: NextRequest): string {
@@ -39,7 +41,15 @@ export async function PUT(req: NextRequest) {
     const recipientId = resolveRecipientId(req);
     const body = await req.json();
 
-    const updated = await updateNotificationPreferences(recipientId, body);
+    const validationResult = NotificationPreferencesSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid preference values', details: validationResult.error.format() },
+        { status: 400 },
+      );
+    }
+
+    const updated = await updateNotificationPreferences(recipientId, validationResult.data);
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {
     console.error('[PUT /api/notifications/preferences]', err);
