@@ -10,7 +10,6 @@ import { ProjectCard } from '@/components/ui/ProjectCard';
 import {
   formatBudget,
   daysUntil,
-  isClosingSoon,
   isNew,
 } from '@/lib/utils';
 import { LiveSyncBar } from '@/components/ui/LiveSyncBar';
@@ -56,9 +55,6 @@ function OpportunitiesContent() {
     return Array.from(new Set(projects.map((p) => (getLocalized(p.department) as string))));
   }, [projects, getLocalized]);
 
-  const closingCount = useMemo(() => {
-    return projects.filter((p) => isClosingSoon(p.deadline)).length;
-  }, [projects]);
 
   const newCount = useMemo(() => {
     return projects.filter((p) => isNew(p.publishDate)).length;
@@ -141,14 +137,7 @@ function OpportunitiesContent() {
           icon={ICONS.target}
           iconColor="blue"
         />
-        <StatCard
-          label={L('closingSoon')}
-          value={closingCount}
-          change={L('within7days2')}
-          changeType="neutral"
-          icon={ICONS.clock}
-          iconColor="amber"
-        />
+
         <StatCard
           label={L('newPublished')}
           value={newCount}
@@ -163,7 +152,7 @@ function OpportunitiesContent() {
           change={`${projects.length} ${L('projects')}`}
           changeType="neutral"
           icon={ICONS.dollarSign}
-          iconColor="teal"
+          iconColor="amber"
         />
       </div>
 

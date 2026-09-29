@@ -4,6 +4,7 @@ import './globals.css';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { AppShell } from '@/components/layout/AppShell';
 
 const notoSansThai = Noto_Sans_Thai({
@@ -33,7 +34,9 @@ export default function RootLayout({
         <LanguageProvider>
           <ThemeProvider>
             <ToastProvider>
-              <AppShell>{children}</AppShell>
+              <AuthProvider>
+                <AppShell>{children}</AppShell>
+              </AuthProvider>
             </ToastProvider>
           </ThemeProvider>
         </LanguageProvider>

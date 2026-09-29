@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Project } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useBookmarks } from '@/hooks/useBookmarks';
 import { ICONS } from '@/components/ui/Icons';
 import { ProjectCard } from '@/components/ui/ProjectCard';
@@ -12,8 +13,16 @@ import { INITIAL_PROJECTS } from '@/lib/initialData';
 export default function SavedPage() {
   const router = useRouter();
   const { L } = useLanguage();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { isBookmarked } = useBookmarks();
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+
+  // Client-side auth guard (middleware is the primary guard)
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login?from=/saved');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
     fetch('/api/projects')
@@ -29,6 +38,9 @@ export default function SavedPage() {
   const savedProjects = useMemo(() => {
     return projects.filter((p) => isBookmarked(p.externalId));
   }, [projects, isBookmarked]);
+
+  // Show nothing while auth is loading to avoid flicker
+  if (authLoading || !isAuthenticated) return null;
 
   return (
     <div className="page-content">

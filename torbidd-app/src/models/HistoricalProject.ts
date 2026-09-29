@@ -10,10 +10,15 @@ export interface IHistoricalProject extends Document {
   year: number;
   category: 'Website' | 'Mobile App' | 'AI' | 'Database';
   budget: number;
+  description?: { th: string; en: string };
+  scope?: { th: string[]; en: string[] };
+  procurementType?: string;
+  awardedVendor?: { th: string; en: string };
   createdAt: Date;
 }
 
 const BilingualSchema = new Schema({ th: String, en: String }, { _id: false });
+const BilingualArraySchema = new Schema({ th: [String], en: [String] }, { _id: false });
 
 const HistoricalProjectSchema = new Schema<IHistoricalProject>(
   {
@@ -22,6 +27,10 @@ const HistoricalProjectSchema = new Schema<IHistoricalProject>(
     year: { type: Number, required: true },
     category: { type: String, required: true, enum: ['Website', 'Mobile App', 'AI', 'Database'] },
     budget: { type: Number, required: true, min: 0 },
+    description: { type: BilingualSchema, required: false },
+    scope: { type: BilingualArraySchema, required: false },
+    procurementType: { type: String, required: false },
+    awardedVendor: { type: BilingualSchema, required: false },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

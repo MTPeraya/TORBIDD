@@ -21,6 +21,11 @@ export function formatBudgetFull(amount: number, language: Language = 'th'): str
   return `${amount.toLocaleString('th-TH')} ${thbLabel}`;
 }
 
+export function formatTHB(amount: number, language: Language = 'th'): string {
+  return formatBudgetFull(amount, language);
+}
+
+
 // ─── Date Formatting ────────────────────────────────────────────────────────
 
 const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];

@@ -24,6 +24,51 @@ export interface ExtractedQualificationItem {
   mandatory: boolean;
 }
 
+export interface TimelineEvent {
+  id: string;
+  event: BilingualText;
+  date: string; // ISO date
+  description?: BilingualText;
+  status: 'completed' | 'active' | 'upcoming';
+}
+
+export interface BudgetBreakdownItem {
+  category: BilingualText;
+  amount: number;
+  percentage: number;
+}
+
+export interface HighlightedQualification {
+  type: 'critical' | 'standard';
+  title: BilingualText;
+  description: BilingualText;
+}
+
+export interface DocumentSection {
+  sectionId: string;
+  articleNumber?: string;
+  title: BilingualText;
+  page: number;
+  content: BilingualText;
+  extractedHighlights?: BilingualText[];
+}
+
+export interface AiMetadata {
+  model: string;
+  confidenceScore: number;
+  verifiedByHuman: boolean;
+  extractedClausesCount: number;
+  lastVerifiedDate: string;
+}
+
+export interface ContactInfo {
+  department: BilingualText;
+  division?: BilingualText;
+  phone?: string;
+  email?: string;
+  officer?: BilingualText;
+}
+
 export interface Project {
   _id?: string;
   externalId: number;
@@ -43,10 +88,11 @@ export interface Project {
   extractedQualifications?: ExtractedQualificationItem[]; // Issue #90: Detailed Qualifications
   historicalAvg: number;
   sourceDocument: string;
+  sourceUrl?: string;
+  documentUrl?: string;
   processedDate: string;
   aiConfidence: AiConfidence;
   aiClassificationModel?: string;
-  extractionStatus?: 'PENDING' | 'EXTRACTED' | 'FAILED'; // Issue #91: Auto extraction status
   createdAt?: string;
   updatedAt?: string;
 }
@@ -58,3 +104,4 @@ export interface ProjectFilters {
   budget?: 'under5m' | '5to10' | '10to20' | 'above20m';
   deadline?: 'within7' | 'within30' | 'moreThan30';
 }
+

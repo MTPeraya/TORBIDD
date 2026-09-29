@@ -1,29 +1,27 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 
 export function useBookmarks() {
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<number>>(new Set());
-  const { showToast } = useToast();
-  const { L } = useLanguage();
-
-  // Load saved bookmarks from localStorage on mount (and optionally sync with API)
-  useEffect(() => {
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<number>>(() => {
+    // Initialize from localStorage on first render ('use client' guarantees window exists)
     try {
       const saved = localStorage.getItem('torbidd_bookmarks');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setBookmarkedIds(new Set(parsed));
-        }
+        if (Array.isArray(parsed)) return new Set<number>(parsed);
       }
     } catch {
       // ignore JSON parse error
     }
-  }, []);
+    return new Set<number>();
+  });
+
+  const { showToast } = useToast();
+  const { L } = useLanguage();
 
   const toggleBookmark = useCallback(
     (id: number, e?: React.MouseEvent) => {
@@ -46,7 +44,9 @@ export function useBookmarks() {
         return next;
       });
     },
-    [showToast, L]
+    // showToast and L are stable references from context — safe to omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   const isBookmarked = useCallback(

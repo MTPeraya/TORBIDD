@@ -20,6 +20,9 @@ export const HistoricalFiltersSchema = z.object({
   category: z.enum(['Website', 'Mobile App', 'AI', 'Database']).optional(),
   department: z.string().max(200).optional(),
   year: z.coerce.number().int().min(2000).max(2200).optional(),
+  search: z.string().max(200).optional(),
+  stats: z.enum(['true', 'false']).optional(),
+  agencies: z.enum(['true', 'false']).optional(),
 });
 
 // ─── Bookmark (POST /api/bookmarks) ─────────────────────────────────────────
@@ -83,4 +86,38 @@ export const ProjectIdParamSchema = z.object({
     .trim()
     .regex(/^\d{11}$/, 'Project ID must contain exactly 11 numeric digits'),
 });
+
+
+// ─── Project Create & Update (Admin CRUD) ───────────────────────────────────
+
+export const BilingualStringSchema = z.object({
+  th: z.string().min(1).max(1000),
+  en: z.string().min(1).max(1000),
+});
+
+export const BilingualArraySchema = z.object({
+  th: z.array(z.string()).min(1),
+  en: z.array(z.string()).min(1),
+});
+
+export const ProjectCreateSchema = z.object({
+  externalId: z.coerce.number().int().positive().optional(),
+  title: BilingualStringSchema,
+  department: BilingualStringSchema,
+  budget: z.coerce.number().min(0),
+  publishDate: z.string().min(1),
+  deadline: z.string().min(1),
+  category: z.enum(['Website', 'Mobile App', 'AI', 'Database']),
+  procurementType: z.string().min(1).max(200),
+  description: BilingualStringSchema,
+  scope: BilingualArraySchema,
+  qualifications: BilingualArraySchema,
+  historicalAvg: z.coerce.number().min(0).optional(),
+  sourceDocument: z.string().optional().default(''),
+  sourceUrl: z.string().optional(),
+  documentUrl: z.string().optional(),
+  aiConfidence: z.enum(['High', 'Medium', 'Low']).optional().default('High'),
+});
+
+export const ProjectUpdateSchema = ProjectCreateSchema.partial();
 
