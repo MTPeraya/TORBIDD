@@ -24,14 +24,13 @@ global.fetch = jest.fn(() =>
 describe('ProjectDetailPage - Clause Breakdown Pop-up Modal', () => {
   const renderPage = async () => {
     const validId = String(INITIAL_PROJECTS[0].externalId);
-    const paramsPromise = Promise.resolve({ id: validId });
-    let utils: any;
+    let utils: ReturnType<typeof render> | undefined;
     await act(async () => {
       utils = render(
         <ToastProvider>
           <LanguageProvider>
             <Suspense fallback={<div>Loading...</div>}>
-              <ProjectDetailPage params={paramsPromise} />
+              <ProjectDetailPage params={Promise.resolve({ id: validId })} />
             </Suspense>
           </LanguageProvider>
         </ToastProvider>

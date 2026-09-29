@@ -292,12 +292,32 @@ export default function ProjectDetailPage({
             {/* Metadata Grid */}
             <div className="detail-meta-grid">
               <div className="detail-meta-item">
-                <div className="meta-label">{L('budget')}</div>
+                <div className="meta-label">{L('budgetApproved')}</div>
                 <div className="meta-value budget" style={{ fontWeight: 700 }}>
                   {formatBudgetFull(project.budget, language)}
                 </div>
                 <span className="ai-extract-label">{L('extractedFromTOR')}</span>
               </div>
+
+              {project.contractPrice && project.contractPrice !== project.budget && (
+                <div
+                  className="detail-meta-item"
+                  style={{
+                    borderColor: 'rgba(16, 185, 129, 0.4)',
+                    background: 'rgba(16, 185, 129, 0.06)',
+                  }}
+                >
+                  <div className="meta-label" style={{ color: '#047857' }}>
+                    {L('contractPrice')}
+                  </div>
+                  <div className="meta-value" style={{ fontWeight: 700, color: '#047857' }}>
+                    {formatBudgetFull(project.contractPrice, language)}
+                  </div>
+                  <span className="ai-extract-label" style={{ color: '#047857' }}>
+                    {L('contractPriceTag')}
+                  </span>
+                </div>
+              )}
 
               <div className="detail-meta-item">
                 <div className="meta-label">{L('procurementType')}</div>
@@ -633,6 +653,7 @@ export default function ProjectDetailPage({
             <BudgetBreakdownCard
               budget={project.budget}
               historicalAvg={project.historicalAvg}
+              contractPrice={project.contractPrice}
               budgetBreakdown={project.budgetBreakdown}
             />
 

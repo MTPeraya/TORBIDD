@@ -81,7 +81,7 @@ const BilingualSchema = new Schema({ th: { type: String, required: true }, en: {
 const OptionalBilingualSchema = new Schema({ th: { type: String, default: '' }, en: { type: String, default: '' } }, { _id: false });
 const BilingualArraySchema = new Schema({ th: [String], en: [String] }, { _id: false });
 
-const TimelineSchema = new Schema(
+export const TimelineSchema = new Schema(
   {
     id: { type: String, required: true },
     event: { type: BilingualSchema, required: true },
@@ -92,7 +92,7 @@ const TimelineSchema = new Schema(
   { _id: false },
 );
 
-const BudgetBreakdownSchema = new Schema(
+export const BudgetBreakdownSchema = new Schema(
   {
     category: { type: BilingualSchema, required: true },
     amount: { type: Number, required: true },
@@ -101,7 +101,7 @@ const BudgetBreakdownSchema = new Schema(
   { _id: false },
 );
 
-const HighlightedQualSchema = new Schema(
+export const HighlightedQualSchema = new Schema(
   {
     type: { type: String, enum: ['critical', 'standard'], default: 'standard' },
     title: { type: BilingualSchema, required: true },
@@ -110,7 +110,7 @@ const HighlightedQualSchema = new Schema(
   { _id: false },
 );
 
-const DocumentSectionSchema = new Schema(
+export const DocumentSectionSchema = new Schema(
   {
     sectionId: { type: String, required: true },
     articleNumber: { type: String },
@@ -122,7 +122,7 @@ const DocumentSectionSchema = new Schema(
   { _id: false },
 );
 
-const AiMetadataSchema = new Schema(
+export const AiMetadataSchema = new Schema(
   {
     model: { type: String, default: 'Gemini 1.5 Pro / Vertex AI' },
     confidenceScore: { type: Number, default: 95 },
@@ -133,7 +133,7 @@ const AiMetadataSchema = new Schema(
   { _id: false },
 );
 
-const ContactInfoSchema = new Schema(
+export const ContactInfoSchema = new Schema(
   {
     department: { type: BilingualSchema, required: true },
     division: { type: BilingualSchema },

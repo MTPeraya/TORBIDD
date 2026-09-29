@@ -173,10 +173,8 @@ export function TorDocumentViewer({
                 </div>
                 <div className="paper-header-meta">
                   <div className="paper-ref-number">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {language === 'th' ? 'รหัสอ้างอิงโครงการ: ' : 'Project Ref: '}
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {(project as any).externalProjectId || project.externalId}
+                    {(project as { externalProjectId?: string | number }).externalProjectId || project.externalId}
                   </div>
                   <div className="paper-publish-date">
                     {language === 'th' ? 'วันที่ประกาศ: ' : 'Announced: '}
@@ -202,10 +200,8 @@ export function TorDocumentViewer({
                   <div className="disclaimer-action">
                     <a
                       href={
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        (project as any)?.sourceUrl ||
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${(project as any)?.externalProjectId || project.externalId}`
+                        project.sourceUrl ||
+                        `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${(project as { externalProjectId?: string | number }).externalProjectId || project.externalId}`
                       }
                       target="_blank"
                       rel="noopener noreferrer"

@@ -21,6 +21,8 @@ const rawProjectSchema = z.object({
   dept_sub_name: z.string().optional(),
   agency_name: z.string().optional(),
   year: z.coerce.number().int(),
+  budget: z.coerce.number().optional(),
+  project_money: z.coerce.number().optional(),
   sum_price_agree: z.coerce.number().optional(),
   transaction_sub_type_name: z.string().optional(),
 });
@@ -211,6 +213,13 @@ export class GovSpendingClient {
       recordsByAgency[agency] = (recordsByAgency[agency] || 0) + 1;
       const detailUrl = `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${item.project_id}`;
 
+      const budget =
+        item.budget && item.budget > 0
+          ? item.budget
+          : item.project_money && item.project_money > 0
+            ? item.project_money
+            : item.sum_price_agree || 0;
+
       return {
         externalProjectId: item.project_id,
         projectName: item.project_name,
@@ -218,7 +227,8 @@ export class GovSpendingClient {
         fiscalYear: item.year,
         source: 'CKAN_GOVSPENDING',
         sourceUrl: detailUrl,
-        budget: item.sum_price_agree || 0,
+        budget,
+        contractPrice: item.sum_price_agree && item.sum_price_agree > 0 ? item.sum_price_agree : undefined,
         procurementType: item.transaction_sub_type_name || '',
       };
     });

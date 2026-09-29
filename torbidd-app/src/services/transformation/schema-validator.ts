@@ -27,6 +27,10 @@ export const NormalizedProcurementSchema = z.object({
   budget: z
     .number()
     .min(0, 'Budget must not be negative'),
+  contractPrice: z
+    .number()
+    .min(0, 'Contract price must not be negative')
+    .optional(),
   publishDate: z
     .string()
     .datetime({ message: 'Publish date must be a valid ISO-8601 UTC string' }),

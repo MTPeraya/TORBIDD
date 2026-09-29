@@ -11,6 +11,7 @@ export interface DiscoveredProject {
   source: string;
   sourceUrl: string;
   budget?: number;
+  contractPrice?: number;
   procurementType?: string;
   summary?: { th: string; en: string };
   requiredTechnologies?: string[];

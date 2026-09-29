@@ -29,7 +29,6 @@ export function sanitizeText(text: unknown, fallback = ''): string {
   str = str.replace(/[\u00a0\t\r]+/g, ' ');
 
   // Strip non-printable ASCII control characters except newline
-  // eslint-disable-next-line no-control-regex
   str = str.replace(/[\x00-\x09\x0B-\x1F\x7F]/g, '');
 
   // Collapse consecutive spaces

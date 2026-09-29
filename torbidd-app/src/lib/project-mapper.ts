@@ -32,7 +32,15 @@ export function procurementToProject(
     category = 'Database';
   }
 
-  const budgetVal = normalizeCurrency(p.budget ?? p.sum_price_agree ?? p.price);
+  const budgetVal = normalizeCurrency(
+    p.budget ?? p.project_money ?? p.projectMoney ?? p.price ?? p.amount ?? p.sum_price_agree ?? p.contract_price,
+  );
+  const rawContractPrice =
+    p.contractPrice ?? p.contract_price ?? p.sum_price_agree ?? p.sumPriceAgree;
+  const contractPriceVal =
+    rawContractPrice !== undefined && rawContractPrice !== null
+      ? normalizeCurrency(rawContractPrice)
+      : undefined;
 
   return {
     _id: p._id?.toString() || extId,
@@ -46,6 +54,7 @@ export function procurementToProject(
       en: deptText,
     },
     budget: budgetVal,
+    contractPrice: contractPriceVal && contractPriceVal > 0 ? contractPriceVal : undefined,
     publishDate: publishDateStr,
     deadline: deadlineStr,
     category,
@@ -57,8 +66,16 @@ export function procurementToProject(
     summary: p.summary?.th
       ? p.summary
       : {
-          th: `สรุปสาระสำคัญ: โครงการ${titleText} โดย${deptText} วงเงินงบประมาณ ${budgetVal.toLocaleString('th-TH')} บาท จัดหาด้วยวิธี ${p.procurementType || 'e-Bidding'} เพื่อดำเนินการพัฒนาระบบเทคโนโลยีสารสนเทศที่มีความมั่นคงปลอดภัยตามมาตรฐานภาครัฐ`,
-          en: `Executive Summary: Procurement for ${titleText} by ${deptText} with an allocated budget of ${budgetVal.toLocaleString('en-US')} THB via ${p.procurementType || 'e-Bidding'} method to deliver secure and compliant government IT solutions.`,
+          th: `สรุปสาระสำคัญ: โครงการ${titleText} โดย${deptText} วงเงินงบประมาณ ${budgetVal.toLocaleString('th-TH')} บาท${
+            contractPriceVal && contractPriceVal !== budgetVal
+              ? ` (ราคามูลค่าที่จัดหาได้ ${contractPriceVal.toLocaleString('th-TH')} บาท)`
+              : ''
+          } จัดหาด้วยวิธี ${p.procurementType || 'e-Bidding'} เพื่อดำเนินการพัฒนาระบบเทคโนโลยีสารสนเทศที่มีความมั่นคงปลอดภัยตามมาตรฐานภาครัฐ`,
+          en: `Executive Summary: Procurement for ${titleText} by ${deptText} with an allocated budget of ${budgetVal.toLocaleString('en-US')} THB${
+            contractPriceVal && contractPriceVal !== budgetVal
+              ? ` (awarded contract value ${contractPriceVal.toLocaleString('en-US')} THB)`
+              : ''
+          } via ${p.procurementType || 'e-Bidding'} method to deliver secure and compliant government IT solutions.`,
         },
     scope: p.scope || {
       th: [

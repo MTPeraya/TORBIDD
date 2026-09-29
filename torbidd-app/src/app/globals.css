@@ -1070,7 +1070,7 @@ body.dark-mode .project-card:hover {
 
 .detail-meta-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
   padding-top: 18px;
   border-top: 1px solid var(--gray-200);

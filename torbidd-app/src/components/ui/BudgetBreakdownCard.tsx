@@ -9,12 +9,14 @@ import { formatBudgetFull, formatBudget } from '@/lib/utils';
 interface BudgetBreakdownCardProps {
   budget: number;
   historicalAvg: number;
+  contractPrice?: number;
   budgetBreakdown?: BudgetBreakdownItem[];
 }
 
 export function BudgetBreakdownCard({
   budget,
   historicalAvg,
+  contractPrice,
   budgetBreakdown,
 }: BudgetBreakdownCardProps) {
   const { language, L, getLocalized } = useLanguage();
@@ -50,6 +52,39 @@ export function BudgetBreakdownCard({
             : `${isHigher ? L('budgetHigher') : L('budgetLower')} ${diffPct}% (${isHigher ? '+' : '-'}${formatBudget(Math.abs(diff), language)})`}
         </span>
       </div>
+
+      {/* Awarded Contract Price Comparison (if distinct from budget) */}
+      {contractPrice && contractPrice !== budget && (
+        <div
+          style={{
+            margin: '10px 0 14px 0',
+            padding: '10px 12px',
+            background: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#047857' }}>
+              {language === 'th' ? 'ราคามูลค่าที่จัดหาได้ (e-GP)' : 'Awarded Contract Value'}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#047857' }}>
+              {formatBudgetFull(contractPrice, language)}
+            </span>
+          </div>
+          {budget > contractPrice && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#065f46' }}>
+              <span>{language === 'th' ? 'ประหยัดงบประมาณรัฐ' : 'Government Savings'}</span>
+              <span style={{ fontWeight: 600 }}>
+                {formatBudgetFull(budget - contractPrice, language)} ({(((budget - contractPrice) / budget) * 100).toFixed(2)}%)
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Allocation Bars */}
       {budgetBreakdown && budgetBreakdown.length > 0 && (

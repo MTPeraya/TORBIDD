@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Project, ProjectCategory } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -29,7 +29,7 @@ function OpportunitiesContent() {
   const [selectedDeadline, setSelectedDeadline] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'live' | 'bma'>('all');
 
-  const loadProjects = (filterMode = activeFilter) => {
+  const loadProjects = useCallback((filterMode = activeFilter) => {
     let url = '/api/projects';
     if (filterMode === 'live') {
       url = '/api/projects?source=CKAN_GOVSPENDING';
@@ -45,11 +45,11 @@ function OpportunitiesContent() {
         }
       })
       .catch(() => {});
-  };
+  }, [activeFilter]);
 
   useEffect(() => {
     loadProjects(activeFilter);
-  }, [activeFilter]);
+  }, [activeFilter, loadProjects]);
 
   const departments = useMemo(() => {
     return Array.from(new Set(projects.map((p) => (getLocalized(p.department) as string))));

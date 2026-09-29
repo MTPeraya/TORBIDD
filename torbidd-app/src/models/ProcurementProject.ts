@@ -12,6 +12,7 @@ export interface IProcurementProject extends Document {
   source: string;
   sourceUrl: string;
   budget?: number;
+  contractPrice?: number;
   procurementType?: string;
   summary?: { th: string; en: string };
   requiredTechnologies?: string[];
@@ -71,6 +72,10 @@ const ProcurementProjectSchema = new Schema<IProcurementProject>(
       type: Number,
       min: 0,
       default: 0,
+    },
+    contractPrice: {
+      type: Number,
+      min: 0,
     },
     procurementType: {
       type: String,

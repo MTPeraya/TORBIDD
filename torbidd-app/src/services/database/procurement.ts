@@ -154,6 +154,7 @@ export async function upsertDiscoveredProjects(
       source: p.source || 'CKAN_GOVSPENDING',
       sourceUrl: p.sourceUrl || '',
       budget: p.budget ?? 0,
+      contractPrice: p.contractPrice,
       procurementType: p.procurementType || '',
       contentHash: hash,
       updatedAt: new Date(),
@@ -492,8 +493,8 @@ export async function getProjectWithDocuments(
             const isTor = file.toLowerCase().includes('tor') || file.includes('ขอบเขต');
             const stat = fs.statSync(path.join(projectDir, file));
             diskDocs.push({
-              _id: file as any,
-              projectId: found.externalProjectId as any,
+              _id: file as unknown,
+              projectId: found.externalProjectId as unknown,
               externalProjectId: found.externalProjectId,
               documentType: isTor ? 'ATTACH_TOR' : 'ANNOUNCEMENT',
               fileName: file,

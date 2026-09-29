@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ICONS } from '@/components/ui/Icons';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export interface SyncStatusData {
@@ -36,16 +35,15 @@ export function LiveSyncBar({
   const [isSyncing, setIsSyncing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const fetchStatus = async () => {
-    try {
-      const res = await fetch('/api/ingestion/status');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.status) {
+  const fetchStatus = () => {
+    fetch('/api/ingestion/status')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.status) {
           setSyncStatus(json.status);
         }
-      }
-    } catch {}
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -89,7 +87,7 @@ export function LiveSyncBar({
             : `⚠️ Notice: ${json.message || 'CKAN unavailable, displaying latest cached data'}`,
         );
       }
-    } catch (err) {
+    } catch {
       setMessage(
         language === 'th'
           ? '⚠️ การเชื่อมต่อขัดข้อง กำลังแสดงข้อมูลที่บันทึกไว้ล่าสุด'

@@ -43,6 +43,25 @@ describe('ETL Transformation Adapter', () => {
     expect(result.data!.contentHash).toHaveLength(64);
   });
 
+  it('1b. should prioritize approved budget over sum_price_agree when both exist (e.g. Data Center project)', () => {
+    const dataCenterPayload: RawAgencyPayload = {
+      project_id: '67059199407',
+      project_name: 'ประกวดราคาซื้อจัดซื้อระบบคอมพิวเตอร์พร้อมซอฟต์แวร์สำหรับศูนย์ข้อมูล (Data Center)',
+      dept_name: 'สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน',
+      year: 2567,
+      budget: '77,169,600.00 บาท', // วงเงินงบประมาณ
+      sum_price_agree: 76840000, // ราคามูลค่าที่จัดหาได้ / ราคาตกลงซื้อจ้าง
+      transaction_sub_type_name: 'ประกวดราคาอิเล็กทรอนิกส์ (e-bidding)',
+    };
+
+    const result = adapter.transform(dataCenterPayload);
+
+    expect(result.status).toBe('VALID');
+    expect(result.data).toBeDefined();
+    expect(result.data!.budget).toBe(77169600); // Must be approved budget
+    expect(result.data!.contractPrice).toBe(76840000); // Must be contract/awarded price
+  });
+
   it('2. should normalize Bangkok Metropolitan Administration (BMA) payload with Thai dates & currency strings', () => {
     const bmaPayload: RawAgencyPayload = {
       projectId: '67119538991',

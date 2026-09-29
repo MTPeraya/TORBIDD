@@ -10,10 +10,14 @@ import {
   formatBudget,
   formatDate,
   daysUntil,
-  isClosingSoon,
   getCategoryClass,
 } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/labels';
+
+interface ExtendedProject extends Project {
+  externalProjectId?: string | number;
+  source?: string;
+}
 
 interface ProjectCardProps {
   project: Project;
@@ -24,7 +28,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
 
-  const closing = isClosingSoon(project.deadline);
+  const extProject = project as ExtendedProject;
   const days = daysUntil(project.deadline);
   const catClass = getCategoryClass(project.category);
   const catLabel = CATEGORY_LABELS[language][project.category] || project.category;
@@ -35,7 +39,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const statusText = language === 'th' ? '● เปิดรับข้อเสนอ' : '● Open';
 
   const handleCardClick = () => {
-    const targetId = (project as any).externalProjectId || project.externalId;
+    const targetId = extProject.externalProjectId || project.externalId;
     router.push(`/opportunities/${targetId}`);
   };
 
@@ -44,7 +48,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <div>
         <div className="project-card-header">
           <div className="project-card-tags">
-            {((project as any).externalProjectId || project.sourceDocument?.includes('Attach_TOR_') || (project as any).source === 'CKAN_GOVSPENDING') && (
+            {(extProject.externalProjectId || project.sourceDocument?.includes('Attach_TOR_') || extProject.source === 'CKAN_GOVSPENDING') && (
               <span
                 className="tag"
                 style={{
@@ -113,6 +117,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="meta-item">
             <span className="meta-label">{L('budget')}</span>
             <span className="meta-value budget">{formatBudget(project.budget, language)}</span>
+            {project.contractPrice && project.contractPrice !== project.budget && (
+              <span style={{ fontSize: 10, color: '#047857', fontWeight: 600 }}>
+                {language === 'th' ? `จัดหาได้: ${formatBudget(project.contractPrice, language)}` : `Awarded: ${formatBudget(project.contractPrice, language)}`}
+              </span>
+            )}
             <span style={{ fontSize: 10, color: 'var(--gray-500)' }}>{L('aiExtracted')}</span>
           </div>
 

@@ -307,7 +307,7 @@ export function enrichProjectDetail(project: Project): Project {
     documentUrl:
       project.documentUrl && !project.documentUrl.startsWith('/docs/')
         ? project.documentUrl
-        : `/api/documents/${(project as any).externalProjectId || project.externalId}/${encodeURIComponent(project.sourceDocument || `TOR_${project.externalId}.pdf`)}`,
+        : `/api/documents/${(project as { externalProjectId?: string | number }).externalProjectId || project.externalId}/${encodeURIComponent(project.sourceDocument || `TOR_${project.externalId}.pdf`)}`,
     timeline,
     budgetBreakdown,
     highlightedQualifications,

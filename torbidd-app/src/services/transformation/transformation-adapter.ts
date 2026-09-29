@@ -44,16 +44,29 @@ export class TransformationAdapter {
       raw.organization;
     const agencyName = sanitizeAgencyName(rawAgency);
 
-    // 4. Extract and normalize budget
+    // 4. Extract and normalize budget (approved budget has highest priority)
     const rawBudget =
       raw.budget ??
-      raw.sum_price_agree ??
-      raw.contract_price ??
+      raw.project_money ??
+      raw.projectMoney ??
       raw.price ??
-      raw.amount;
+      raw.amount ??
+      raw.sum_price_agree ??
+      raw.contract_price;
     const isNegativeExplicit =
       typeof rawBudget === 'string' && (rawBudget.trim().startsWith('-') || rawBudget.includes('ติดลบ'));
     const budget = normalizeCurrency(rawBudget, { allowNegative: true });
+
+    // 4b. Extract and normalize contract/procured price (sum_price_agree / contract_price)
+    const rawContractPrice =
+      raw.contract_price ??
+      raw.contractPrice ??
+      raw.sum_price_agree ??
+      raw.sumPriceAgree;
+    const contractPrice =
+      rawContractPrice !== undefined && rawContractPrice !== null
+        ? normalizeCurrency(rawContractPrice, { allowNegative: false })
+        : undefined;
 
     // 5. Extract and normalize date (supporting Thai Buddhist Era พ.ศ.)
     const rawDate =
@@ -119,6 +132,7 @@ export class TransformationAdapter {
       agencyName,
       fiscalYear,
       budget,
+      contractPrice: contractPrice && contractPrice > 0 ? contractPrice : undefined,
       publishDate,
       procurementType,
       source: (raw.source as string) || 'CENTRAL_API',

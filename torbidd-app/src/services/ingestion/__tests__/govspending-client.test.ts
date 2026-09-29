@@ -61,6 +61,7 @@ describe('GovSpendingClient (CKAN / Open Data)', () => {
       source: 'CKAN_GOVSPENDING',
       sourceUrl: `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${MOCK_PROJECT_ID}`,
       budget: 5000000,
+      contractPrice: 5000000,
       procurementType: 'จ้างพัฒนาหรือปรับปรุงระบบงานคอมพิวเตอร์',
     });
 
@@ -68,6 +69,40 @@ describe('GovSpendingClient (CKAN / Open Data)', () => {
     expect(url.searchParams.get('api-key')).toBe(TEST_API_KEY);
     expect(url.searchParams.get('keyword')).toBe('ซอฟต์แวร์');
     expect(url.searchParams.get('year')).toBe('2568');
+  });
+
+  it('1b. should accurately distinguish between approved budget and sum_price_agree (awarded contract value)', async () => {
+    const mockFetch = jest.fn().mockImplementation(async () => {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          total: 1,
+          data: [
+            {
+              project_id: '67059199407',
+              project_name: 'ประกวดราคาซื้อจัดซื้อระบบคอมพิวเตอร์พร้อมซอฟต์แวร์สำหรับศูนย์ข้อมูล (Data Center)',
+              agency_name: 'สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน',
+              year: 2567,
+              budget: 77169600,
+              sum_price_agree: 76840000,
+              transaction_sub_type_name: 'ประกวดราคาอิเล็กทรอนิกส์ (e-bidding)',
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    });
+
+    const client = new GovSpendingClient({
+      apiKey: TEST_API_KEY,
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    });
+
+    const result = await client.searchProjects({ fiscalYear: 2567 });
+    expect(result.projects).toHaveLength(1);
+    const p = result.projects[0];
+    expect(p.budget).toBe(77169600); // วงเงินงบประมาณ
+    expect(p.contractPrice).toBe(76840000); // ราคามูลค่าที่จัดหาได้ / ตกลงซื้อจ้าง
   });
 
   // ─── 2. CKAN API Authentication Failure ──────────────────────────────────

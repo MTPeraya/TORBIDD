@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Project } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
@@ -21,7 +20,7 @@ export default function HomePage() {
   const [searchVal, setSearchVal] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'live' | 'bma'>('all');
 
-  const loadProjects = (filterMode = activeFilter) => {
+  const loadProjects = useCallback((filterMode = activeFilter) => {
     let url = '/api/projects';
     if (filterMode === 'live') {
       url = '/api/projects?source=CKAN_GOVSPENDING';
@@ -37,11 +36,11 @@ export default function HomePage() {
         }
       })
       .catch(() => {});
-  };
+  }, [activeFilter]);
 
   useEffect(() => {
     loadProjects(activeFilter);
-  }, [activeFilter]);
+  }, [activeFilter, loadProjects]);
 
   const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
   const closingCount = projects.filter((p) => isClosingSoon(p.deadline)).length;

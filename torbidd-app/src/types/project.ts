@@ -75,6 +75,7 @@ export interface Project {
   title: BilingualText;
   department: Department;
   budget: number; // in THB
+  contractPrice?: number; // in THB (ราคามูลค่าที่จัดหาได้ / ราคาตกลงซื้อจ้าง)
   publishDate: string; // ISO date string
   deadline: string; // ISO date string
   category: ProjectCategory;

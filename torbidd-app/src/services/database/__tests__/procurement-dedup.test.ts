@@ -11,7 +11,6 @@ import {
   checkProjectDeduplication,
 } from '../procurement';
 import ProcurementProject from '@/models/ProcurementProject';
-import connectToDatabase from '@/lib/mongodb';
 import { DiscoveredProject } from '@/types/procurement';
 
 jest.mock('@/lib/mongodb', () => jest.fn().mockResolvedValue(true));

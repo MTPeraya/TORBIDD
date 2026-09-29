@@ -25,8 +25,12 @@ export interface RawAgencyPayload {
 
   // Budget keys
   budget?: string | number;
+  project_money?: string | number;
+  projectMoney?: string | number;
   sum_price_agree?: string | number;
+  sumPriceAgree?: string | number;
   contract_price?: string | number;
+  contractPrice?: string | number;
   price?: string | number;
   amount?: string | number;
 
@@ -70,6 +74,7 @@ export interface NormalizedProcurementProject {
   agencyName: string;
   fiscalYear: number;
   budget: number;
+  contractPrice?: number;
   publishDate: string; // ISO-8601 UTC
   procurementType: string;
   source: string;
