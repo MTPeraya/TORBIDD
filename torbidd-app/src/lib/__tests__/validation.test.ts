@@ -3,6 +3,7 @@ import {
   HistoricalFiltersSchema,
   BookmarkCreateSchema,
   SettingsUpdateSchema,
+  NotificationPreferencesSchema,
   AiClassifySchema,
 } from '../validation';
 
@@ -67,7 +68,6 @@ describe('lib/validation.ts', () => {
 
   describe('NotificationPreferencesSchema (UC-6)', () => {
     it('accepts full UC-6 preferences payload', () => {
-      const { NotificationPreferencesSchema } = require('../validation');
       const result = NotificationPreferencesSchema.safeParse({
         inAppNotif: true,
         emailNotif: true,
@@ -87,7 +87,6 @@ describe('lib/validation.ts', () => {
     });
 
     it('rejects invalid email address', () => {
-      const { NotificationPreferencesSchema } = require('../validation');
       const result = NotificationPreferencesSchema.safeParse({
         email: 'invalid-email-address',
       });
@@ -95,7 +94,6 @@ describe('lib/validation.ts', () => {
     });
 
     it('rejects invalid budget range where budgetMax < budgetMin', () => {
-      const { NotificationPreferencesSchema } = require('../validation');
       const result = NotificationPreferencesSchema.safeParse({
         budgetMin: 10_000_000,
         budgetMax: 2_000_000,
