@@ -16,6 +16,14 @@ export interface Department {
   en: string;
 }
 
+export interface ExtractedQualificationItem {
+  id: string;
+  description: BilingualText;
+  category: 'Legal' | 'Financial' | 'Experience' | 'Technical';
+  threshold?: string;
+  mandatory: boolean;
+}
+
 export interface TimelineEvent {
   id: string;
   event: BilingualText;
@@ -67,13 +75,18 @@ export interface Project {
   title: BilingualText;
   department: Department;
   budget: number; // in THB
+  contractPrice?: number; // in THB (ราคามูลค่าที่จัดหาได้ / ราคาตกลงซื้อจ้าง)
   publishDate: string; // ISO date string
   deadline: string; // ISO date string
   category: ProjectCategory;
   procurementType: string;
   description: BilingualText;
+  summary?: BilingualText; // Issue #87: TOR Executive Summary
   scope: { th: string[]; en: string[] };
   qualifications: { th: string[]; en: string[] };
+  requiredTechnologies?: string[]; // Issue #89: Required Tech Stack tags
+  technicalRequirements?: { th: string[]; en: string[] }; // Issue #89: Technical Requirements
+  extractedQualifications?: ExtractedQualificationItem[]; // Issue #90: Detailed Qualifications
   historicalAvg: number;
   sourceDocument: string;
   sourceUrl?: string;
@@ -81,6 +94,7 @@ export interface Project {
   processedDate: string;
   aiConfidence: AiConfidence;
   aiClassificationModel?: string;
+  extractionStatus?: 'PENDING' | 'EXTRACTED' | 'FAILED';
   timeline?: TimelineEvent[];
   budgetBreakdown?: BudgetBreakdownItem[];
   highlightedQualifications?: HighlightedQualification[];

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Project, ProjectCategory } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -12,6 +12,7 @@ import {
   daysUntil,
   isNew,
 } from '@/lib/utils';
+import { LiveSyncBar } from '@/components/ui/LiveSyncBar';
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
 
@@ -26,17 +27,29 @@ function OpportunitiesContent() {
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
   const [selectedBudget, setSelectedBudget] = useState('');
   const [selectedDeadline, setSelectedDeadline] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'live' | 'bma'>('all');
 
-  useEffect(() => {
-    fetch('/api/projects')
+  const loadProjects = useCallback((filterMode = activeFilter) => {
+    let url = '/api/projects';
+    if (filterMode === 'live') {
+      url = '/api/projects?source=CKAN_GOVSPENDING';
+    } else if (filterMode === 'bma') {
+      url = '/api/projects?source=BMA';
+    }
+
+    fetch(url)
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.data && Array.isArray(json.data)) {
           setProjects(json.data);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [activeFilter]);
+
+  useEffect(() => {
+    loadProjects(activeFilter);
+  }, [activeFilter, loadProjects]);
 
   const departments = useMemo(() => {
     return Array.from(new Set(projects.map((p) => (getLocalized(p.department) as string))));
@@ -108,25 +121,32 @@ function OpportunitiesContent() {
         <p className="page-subtitle">{L('dashboardSub')}</p>
       </div>
 
+      <LiveSyncBar
+        onSyncComplete={() => loadProjects(activeFilter)}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
+
       {/* Stats Cards Row */}
       <div className="stats-row">
         <StatCard
           label={L('totalOpps')}
           value={projects.length}
-          change={`+${newCount} ${L('newThisWeek')}`}
+          change={language === 'th' ? 'พร้อมยื่นข้อเสนอในระบบ' : 'Active opportunities'}
           changeType="positive"
           icon={ICONS.target}
           iconColor="blue"
         />
 
         <StatCard
-          label={L('newPublished')}
+          label={language === 'th' ? 'โครงการประกาศใหม่' : 'New Announcements'}
           value={newCount}
-          change={L('inPast3days')}
+          change={language === 'th' ? 'ในรอบ 7 วันที่ผ่านมา' : 'In the past 7 days'}
           changeType="positive"
-          icon={ICONS.star}
+          icon={ICONS.sparkles}
           iconColor="green"
         />
+
         <StatCard
           label={L('totalBudget')}
           value={formatBudget(totalBudget, language)}
