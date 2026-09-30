@@ -76,6 +76,55 @@ export function verifySession(token: string): AuthSessionPayload | null {
   }
 }
 
+/**
+ * Signs an OAuth state token containing random nonce and returnUrl with HMAC to prevent tampering.
+ */
+export function signOAuthState(nonce: string, returnUrl = '/'): string {
+  const secret = getSecretKey();
+  const payloadStr = Buffer.from(
+    JSON.stringify({
+      nonce,
+      returnUrl,
+      exp: Math.floor(Date.now() / 1000) + 600, // 10 minutes
+    }),
+  ).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(payloadStr).digest('base64url');
+  return `${payloadStr}.${signature}`;
+}
+
+/**
+ * Verifies HMAC-signed OAuth state token. Returns decoded nonce and returnUrl or null if tampered/expired.
+ */
+export function verifyOAuthState(token: string): { nonce: string; returnUrl: string } | null {
+  try {
+    if (!token || !token.includes('.')) return null;
+    const [payloadStr, signature] = token.split('.');
+    if (!payloadStr || !signature) return null;
+
+    const secret = getSecretKey();
+    const expectedSig = crypto.createHmac('sha256', secret).update(payloadStr).digest('base64url');
+
+    const sigBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expectedSig);
+    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+      return null;
+    }
+
+    const data = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf-8'));
+    const now = Math.floor(Date.now() / 1000);
+    if (data.exp && data.exp < now) {
+      return null;
+    }
+
+    return {
+      nonce: data.nonce,
+      returnUrl: typeof data.returnUrl === 'string' && data.returnUrl.startsWith('/') ? data.returnUrl : '/',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface CookieReader {
   cookies: {
     get: (name: string) => { value?: string } | undefined;

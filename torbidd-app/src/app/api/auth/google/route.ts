@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { OAUTH_STATE_COOKIE } from '@/lib/auth';
+import { OAUTH_STATE_COOKIE, signOAuthState } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -15,17 +15,19 @@ export async function GET(req: NextRequest) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
   const redirectUri = `${appUrl}/api/auth/callback/google`;
+  const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
 
   // If credentials are not set and developer mock mode is requested or in local dev fallback
   if (!clientId || !clientSecret || isMock) {
     if (process.env.NODE_ENV !== 'production') {
-      const mockState = crypto.randomBytes(16).toString('hex');
+      const mockNonce = crypto.randomBytes(16).toString('hex');
+      const signedMockState = signOAuthState(mockNonce, returnUrl);
       const res = NextResponse.redirect(
-        `${appUrl}/api/auth/callback/google?code=mock_dev_code&state=${mockState}&mock=true`,
+        `${appUrl}/api/auth/callback/google?code=mock_dev_code&state=${signedMockState}&mock=true`,
       );
-      res.cookies.set(OAUTH_STATE_COOKIE, JSON.stringify({ state: mockState, returnUrl }), {
+      res.cookies.set(OAUTH_STATE_COOKIE, JSON.stringify({ state: signedMockState, nonce: mockNonce, returnUrl }), {
         httpOnly: true,
-        secure: false,
+        secure: isHttps,
         sameSite: 'lax',
         maxAge: 600, // 10 minutes
         path: '/',
@@ -39,23 +41,24 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Generate secure random state and store with returnUrl
-  const stateVal = crypto.randomBytes(16).toString('hex');
-  const stateData = JSON.stringify({ state: stateVal, returnUrl });
+  // Generate secure random nonce and HMAC-sign state token
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const signedState = signOAuthState(nonce, returnUrl);
+  const stateData = JSON.stringify({ state: signedState, nonce, returnUrl });
 
   const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   googleAuthUrl.searchParams.set('client_id', clientId);
   googleAuthUrl.searchParams.set('redirect_uri', redirectUri);
   googleAuthUrl.searchParams.set('response_type', 'code');
   googleAuthUrl.searchParams.set('scope', 'openid email profile');
-  googleAuthUrl.searchParams.set('state', stateVal);
+  googleAuthUrl.searchParams.set('state', signedState);
   googleAuthUrl.searchParams.set('access_type', 'offline');
   googleAuthUrl.searchParams.set('prompt', 'select_account');
 
   const response = NextResponse.redirect(googleAuthUrl.toString());
   response.cookies.set(OAUTH_STATE_COOKIE, stateData, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps,
     sameSite: 'lax',
     maxAge: 600,
     path: '/',
