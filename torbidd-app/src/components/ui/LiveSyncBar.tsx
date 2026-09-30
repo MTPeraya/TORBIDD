@@ -76,7 +76,7 @@ export function LiveSyncBar({
       const res = await fetch('/api/ingestion/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword: 'ซอฟต์แวร์', limit: 100 }),
+        body: JSON.stringify({ keyword: 'ซอฟต์แวร์', limit: 1000 }),
       });
 
       const json = await res.json();

@@ -162,15 +162,15 @@ export async function upsertDiscoveredProjects(
       updatedAt: new Date(),
     };
 
-    if (p.is_software !== undefined) updateSet.is_software = p.is_software;
-    if (p.software_category !== undefined) updateSet.software_category = p.software_category;
-    if (p.ai_confidence !== undefined) updateSet.ai_confidence = p.ai_confidence;
-    if (p.classification_reason !== undefined) updateSet.classification_reason = p.classification_reason;
-    if (p.classified_by !== undefined) updateSet.classified_by = p.classified_by;
-    if (p.classified_at !== undefined) {
-      updateSet.classified_at = p.classified_at instanceof Date ? p.classified_at : new Date(p.classified_at);
-    }
-    if (p.admin_reviewed !== undefined) updateSet.admin_reviewed = p.admin_reviewed;
+    updateSet.is_software = p.is_software ?? true;
+    updateSet.software_category = p.software_category ?? 'Software / IT';
+    updateSet.ai_confidence = p.ai_confidence ?? 'High';
+    updateSet.classification_reason = p.classification_reason ?? '';
+    updateSet.classified_by = p.classified_by ?? 'rule';
+    updateSet.classified_at = p.classified_at
+      ? (p.classified_at instanceof Date ? p.classified_at : new Date(p.classified_at))
+      : new Date();
+    updateSet.admin_reviewed = p.admin_reviewed ?? false;
 
     if (newRev !== undefined) {
       updateSet.revision = newRev;
@@ -184,13 +184,6 @@ export async function upsertDiscoveredProjects(
           $setOnInsert: {
             externalProjectId: p.externalProjectId,
             revision: 1,
-            is_software: p.is_software ?? true,
-            software_category: p.software_category ?? 'Software / IT',
-            ai_confidence: p.ai_confidence ?? 'High',
-            classification_reason: p.classification_reason ?? '',
-            classified_by: p.classified_by ?? 'rule',
-            classified_at: p.classified_at ? (p.classified_at instanceof Date ? p.classified_at : new Date(p.classified_at)) : new Date(),
-            admin_reviewed: p.admin_reviewed ?? false,
             discoveredAt: new Date(),
             createdAt: new Date(),
           },

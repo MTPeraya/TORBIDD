@@ -190,7 +190,7 @@ export async function triggerImmediateSync(options: {
     const result = await service.discoverProjects({
       keyword: options.keyword || 'ซอฟต์แวร์',
       fiscalYear: options.fiscalYear,
-      limit: options.limit || 100,
+      limit: options.limit || 1000,
     });
 
     if (result.projects && result.projects.length > 0) {
