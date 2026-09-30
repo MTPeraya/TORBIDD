@@ -483,8 +483,8 @@ const RAW_PROJECTS: Project[] = [
 
 export const INITIAL_PROJECTS: Project[] = RAW_PROJECTS.map((p) => ({
   ...enrichProjectDetail(p),
-  isSoftwareRelated: (p as { isSoftwareRelated?: boolean }).isSoftwareRelated ?? true, // UC-10
-  classificationReviewStatus: (p as { classificationReviewStatus?: string }).classificationReviewStatus ?? 'PENDING_REVIEW', // UC-10
+  isSoftwareRelated: (p as { isSoftwareRelated?: boolean }).isSoftwareRelated ?? true,  // UC-10
+  classificationReviewStatus: ((p as { classificationReviewStatus?: string }).classificationReviewStatus ?? 'PENDING_REVIEW') as import('@/types/project').ClassificationReviewStatus, // UC-10
 }));
 
 export const INITIAL_HISTORICAL: HistoricalProject[] = [

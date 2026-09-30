@@ -5,8 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthSessionFromRequest } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import Project from '@/models/Project';
 
@@ -19,8 +18,8 @@ const QueueQuerySchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     // ── Auth guard: admins only ─────────────────────────────────────────────
-    const session = await getServerSession(authOptions);
-    if (!session?.user || (session.user as { role?: string }).role !== 'admin') {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || authUser.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

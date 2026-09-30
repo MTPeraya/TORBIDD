@@ -92,7 +92,7 @@ function ReviewModal({ project, isOpen, onClose, onSave }: ReviewModalProps) {
             <span style={{ marginLeft: 8 }}>Review Classification #{project.externalId}</span>
           </h2>
           <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">
-            {ICONS.close}
+            {ICONS.x}
           </button>
         </div>
 
@@ -142,7 +142,7 @@ function ReviewModal({ project, isOpen, onClose, onSave }: ReviewModalProps) {
               id="reviewCategorySelect"
               className="form-input"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => setCategory(e.target.value as import('@/types/project').ProjectCategory)}
               disabled={!isSoftwareRelated}
             >
               {CATEGORIES.map((cat) => (

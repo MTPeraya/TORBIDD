@@ -90,7 +90,7 @@ export interface Project {
   publishDate: string; // ISO date string
   deadline: string; // ISO date string
   category: ProjectCategory;
-  isSoftwareRelated: boolean;         // UC-10: software vs non-software flag
+  isSoftwareRelated?: boolean;         // UC-10: software vs non-software flag (default: true)
   classificationReviewStatus?: ClassificationReviewStatus; // UC-10: admin review
   procurementType: string;
   description: BilingualText;
