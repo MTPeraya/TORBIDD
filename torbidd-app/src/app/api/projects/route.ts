@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProjects, createProject } from '@/services/database/projects';
 import { getProcurementProjects } from '@/services/database/procurement';
 import { ProjectFiltersSchema, ProjectCreateSchema } from '@/lib/validation';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { executeProcurementSearch } from '@/services/procurement-search';
 import { ProcurementSortOption } from '@/types/procurement';
 import { Project } from '@/types/project';
@@ -58,7 +57,7 @@ export async function GET(req: NextRequest) {
         bmaDbProjects = ((await getProjects(parsed.data)) as unknown as Project[]) || [];
       } catch {}
 
-      const bmaList = bmaDbProjects.length > 0 ? bmaDbProjects : INITIAL_PROJECTS;
+      const bmaList = bmaDbProjects;
       const searchResult = executeProcurementSearch(bmaList, {
         search: parsed.data.search,
         categories: parsed.data.categories
@@ -95,17 +94,13 @@ export async function GET(req: NextRequest) {
       }
     } catch {}
 
-    // 4. Fetch BMA database projects or fallback to INITIAL_PROJECTS
+    // 4. Fetch custom database projects
     let bmaProjects: Project[] = [];
     try {
       bmaProjects = ((await getProjects(parsed.data)) as unknown as Project[]) || [];
     } catch {}
 
-    if (bmaProjects.length === 0) {
-      bmaProjects = INITIAL_PROJECTS;
-    }
-
-    // 5. Combine discovered live projects with BMA projects and run full search/filter/sort
+    // 5. Combine real database projects and run full search/filter/sort
     const combined = [...discoveredProjectsMapped, ...bmaProjects];
     const searchResult = executeProcurementSearch(combined, {
       search: parsed.data.search,
@@ -132,8 +127,8 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[GET /api/projects]', err);
     return NextResponse.json({
-      data: INITIAL_PROJECTS,
-      total: INITIAL_PROJECTS.length,
+      data: [],
+      total: 0,
       syncStatus: getSyncStatus(),
     });
   }

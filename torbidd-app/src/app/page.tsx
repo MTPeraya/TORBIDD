@@ -8,13 +8,10 @@ import { ICONS } from '@/components/ui/Icons';
 import { ProjectCarousel } from '@/components/ui/ProjectCarousel';
 import { isClosingSoon } from '@/lib/utils';
 
-// Static fallback data so the page renders even before MongoDB is connected
-import { INITIAL_PROJECTS } from '@/lib/initialData';
-
 export default function HomePage() {
   const router = useRouter();
   const { language, L } = useLanguage();
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [searchVal, setSearchVal] = useState('');
 
   const loadProjects = useCallback(() => {

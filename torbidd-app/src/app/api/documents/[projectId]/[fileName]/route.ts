@@ -4,7 +4,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'node:path';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
+import connectToDatabase from '@/lib/mongodb';
+import ProcurementProject from '@/models/ProcurementProject';
+import Project from '@/models/Project';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,15 +21,23 @@ export async function GET(
     // Resolve project ID (handle 11-digit e-GP ID or internal ID)
     let targetExtId = cleanProjectId;
     if (cleanProjectId.length !== 11) {
-      const numId = parseInt(cleanProjectId, 10);
-      const found = INITIAL_PROJECTS.find((p) => p.externalId === numId);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (found && (found as any).externalProjectId) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        targetExtId = String((found as any).externalProjectId);
-      } else {
-        targetExtId = '66119169049';
-      }
+      try {
+        await connectToDatabase();
+        const numId = parseInt(cleanProjectId, 10);
+        if (!isNaN(numId)) {
+          const pp = await ProcurementProject.findOne({
+            $or: [{ externalProjectId: cleanProjectId }, { revision: numId }],
+          }).lean();
+          if (pp?.externalProjectId) {
+            targetExtId = pp.externalProjectId;
+          } else {
+            const p = await Project.findOne({ externalId: numId }).lean();
+            if (p && (p as unknown as Record<string, unknown>).externalProjectId) {
+              targetExtId = String((p as unknown as Record<string, unknown>).externalProjectId);
+            }
+          }
+        }
+      } catch {}
     }
 
     const egpPortalUrl = `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${targetExtId}`;

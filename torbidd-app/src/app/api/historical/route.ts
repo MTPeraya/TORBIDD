@@ -4,11 +4,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllHistoricalProjects } from '@/services/database/historical';
+import { getProcurementProjects } from '@/services/database/procurement';
+import { procurementToProject } from '@/lib/project-mapper';
 import { HistoricalFiltersSchema } from '@/lib/validation';
-import { INITIAL_HISTORICAL, INITIAL_PROJECTS } from '@/lib/initialData';
+import { INITIAL_HISTORICAL } from '@/lib/initialData';
 import { calculateCategoryStats, aggregateAgencyMetrics } from '@/lib/historicalAnalytics';
 import { HistoricalProject } from '@/types/historical';
-import { ProjectCategory } from '@/types/project';
+import { ProjectCategory, Project } from '@/types/project';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,7 +77,14 @@ export async function GET(req: NextRequest) {
     }
 
     if (agencies === 'true') {
-      responsePayload.agencies = aggregateAgencyMetrics(allData, INITIAL_PROJECTS);
+      let activeProjects: Project[] = [];
+      try {
+        const { projects: discProjects } = await getProcurementProjects();
+        if (discProjects) {
+          activeProjects = discProjects.map(procurementToProject);
+        }
+      } catch {}
+      responsePayload.agencies = aggregateAgencyMetrics(allData, activeProjects);
     }
 
     return NextResponse.json(responsePayload);

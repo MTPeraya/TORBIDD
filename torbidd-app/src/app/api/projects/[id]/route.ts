@@ -15,7 +15,6 @@ import {
   getDocumentsByProjectId,
 } from '@/services/database/procurement';
 import { ProjectUpdateSchema } from '@/lib/validation';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { enrichProjectDetail } from '@/lib/projectDetailHelper';
 import { Project } from '@/types/project';
 import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
@@ -68,15 +67,6 @@ export async function GET(
         }
       } catch {}
 
-      const fallback = INITIAL_PROJECTS.find((p) => p.externalId === numId);
-      if (fallback) {
-        return NextResponse.json({
-          data: {
-            ...enrichProjectDetail(fallback),
-            documents: [],
-          },
-        });
-      }
     }
 
     // 3. Try ObjectId against existing Project model

@@ -14,7 +14,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { StatCard } from '@/components/ui/StatCard';
 import { formatBudget, isNew } from '@/lib/utils';
-import { INITIAL_PROJECTS, INITIAL_DEPARTMENTS } from '@/lib/initialData';
 import { executeProcurementSearch } from '@/services/procurement-search';
 
 // Discovery Components
@@ -48,7 +47,7 @@ function OpportunitiesContent() {
   const initialPage = searchParams.get('page') ? Number(searchParams.get('page')) : 1;
 
   // State Management
-  const [allProjects, setAllProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategories, setSelectedCategories] = useState<SoftwareCategory[]>(initialCategories);
   const [selectedAgencies, setSelectedAgencies] = useState<string[]>(initialAgencies);
@@ -180,7 +179,7 @@ function OpportunitiesContent() {
     fetch('/api/projects')
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.data && Array.isArray(json.data)) {
           setAllProjects(json.data);
         }
       })
@@ -206,7 +205,6 @@ function OpportunitiesContent() {
   // Available agencies for autocomplete
   const availableAgencies = useMemo(() => {
     const map = new Map<string, { th: string; en: string }>();
-    INITIAL_DEPARTMENTS.forEach((d) => map.set(d.th, d));
     allProjects.forEach((p) => {
       if (p.department?.th && !map.has(p.department.th)) {
         map.set(p.department.th, p.department);

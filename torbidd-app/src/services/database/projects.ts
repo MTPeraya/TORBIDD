@@ -4,6 +4,7 @@
 
 import connectToDatabase from '@/lib/mongodb';
 import Project, { IProject } from '@/models/Project';
+import ProcurementProject from '@/models/ProcurementProject';
 import { ProjectFilters } from '@/types/project';
 import { daysUntil } from '@/lib/utils';
 
@@ -255,14 +256,21 @@ export async function getAdminProjectStats(): Promise<{
   confidenceCounts: Record<string, number>;
 }> {
   await connectToDatabase();
-  const projects = await Project.find().lean();
+  const [projects, procurementProjects] = await Promise.all([
+    Project.find().lean(),
+    ProcurementProject.find().lean().catch(() => []),
+  ]);
   const now = new Date();
 
   const stats = {
-    totalProjects: projects.length,
-    totalBudget: projects.reduce((acc, p) => acc + (p.budget || 0), 0),
-    activeProjects: projects.filter((p) => new Date(p.deadline) >= now).length,
-    aiEnrichedCount: projects.filter((p) => !!p.aiMetadata?.model || !!p.aiConfidence).length,
+    totalProjects: projects.length + procurementProjects.length,
+    totalBudget:
+      projects.reduce((acc, p) => acc + (p.budget || 0), 0) +
+      procurementProjects.reduce((acc, p) => acc + (p.budget || 0), 0),
+    activeProjects: projects.filter((p) => new Date(p.deadline) >= now).length + procurementProjects.length,
+    aiEnrichedCount:
+      projects.filter((p) => !!p.aiMetadata?.model || !!p.aiConfidence).length +
+      procurementProjects.filter((p) => p.extractionStatus === 'EXTRACTED').length,
     categoryCounts: {} as Record<string, number>,
     confidenceCounts: { High: 0, Medium: 0, Low: 0 } as Record<string, number>,
   };
@@ -272,6 +280,14 @@ export async function getAdminProjectStats(): Promise<{
     if (p.aiConfidence && p.aiConfidence in stats.confidenceCounts) {
       stats.confidenceCounts[p.aiConfidence]++;
     }
+  }
+
+  // Count software projects from procurement ingestion
+  for (const pp of procurementProjects) {
+    const isSw = (pp as unknown as Record<string, unknown>).is_software ?? true;
+    const cat = ((pp as unknown as Record<string, unknown>).software_category as string) || (isSw ? 'Software / IT' : 'Other');
+    stats.categoryCounts[cat] = (stats.categoryCounts[cat] || 0) + 1;
+    stats.confidenceCounts.High++;
   }
 
   return stats;

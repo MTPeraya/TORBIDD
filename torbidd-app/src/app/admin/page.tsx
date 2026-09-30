@@ -6,7 +6,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ICONS } from '@/components/ui/Icons';
 import { Project } from '@/types/project';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { formatTHB } from '@/lib/utils';
 import { ProjectFormModal } from '@/components/admin/ProjectFormModal';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
@@ -42,7 +41,7 @@ export default function AdminPage() {
   const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'classification' | 'crawler' | 'audit'>('overview');
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
 
   // Search and filter for Projects tab
@@ -92,10 +91,12 @@ export default function AdminPage() {
         const json = await statsRes.value.json();
         if (json.data) {
           setStats(json.data);
+        } else if (json.totalProjects !== undefined) {
+          setStats(json);
         }
       }
     } catch {
-      // Fallback already defaults to INITIAL_PROJECTS
+      // Offline fallback: keep current state
     }
   }, []);
 

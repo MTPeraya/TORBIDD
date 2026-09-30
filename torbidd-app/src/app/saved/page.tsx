@@ -8,14 +8,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBookmarks } from '@/hooks/useBookmarks';
 import { ICONS } from '@/components/ui/Icons';
 import { ProjectCard } from '@/components/ui/ProjectCard';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
 
 export default function SavedPage() {
   const router = useRouter();
   const { L } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { isBookmarked } = useBookmarks();
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // Client-side auth guard (middleware is the primary guard)
   useEffect(() => {
@@ -28,7 +27,7 @@ export default function SavedPage() {
     fetch('/api/projects')
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.data && Array.isArray(json.data)) {
           setProjects(json.data);
         }
       })
