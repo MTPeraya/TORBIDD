@@ -69,6 +69,12 @@ export function ProjectFormModal({
   const [aiConfidence, setAiConfidence] = useState<'High' | 'Medium' | 'Low'>(
     (isEdit && (initialProject.aiConfidence as 'High' | 'Medium' | 'Low')) || 'High',
   );
+  const [isSoftwareRelated, setIsSoftwareRelated] = useState<boolean>(
+    isEdit && initialProject.isSoftwareRelated !== undefined
+      ? initialProject.isSoftwareRelated
+      : true,
+  );
+  const [deleteOnConfirmNonSoftware, setDeleteOnConfirmNonSoftware] = useState<boolean>(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -134,6 +140,8 @@ export function ProjectFormModal({
             : ['Registered legal entity in Thailand'],
       },
       aiConfidence,
+      isSoftwareRelated,
+      deleteOnConfirmNonSoftware,
     };
 
     if (mode === 'edit' && initialProject) {
@@ -210,6 +218,77 @@ export function ProjectFormModal({
             )}
 
             <div className="admin-form-grid">
+              {/* UC-4: Software vs Non-Software Classification */}
+              <div
+                className="admin-form-field full-width"
+                style={{
+                  background: isSoftwareRelated ? 'rgba(59, 130, 246, 0.05)' : 'rgba(239, 68, 68, 0.06)',
+                  border: `1px solid ${isSoftwareRelated ? 'rgba(59, 130, 246, 0.25)' : 'rgba(239, 68, 68, 0.35)'}`,
+                  borderRadius: 10,
+                  padding: '16px 18px',
+                  marginBottom: 6,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <label className="admin-form-label" style={{ fontWeight: 700, fontSize: '0.95rem', margin: 0 }}>
+                      {language === 'th' ? 'การจัดหมวดหมู่โครงการ (UC-4: ซอฟต์แวร์ / ไม่ใช่ซอฟต์แวร์)' : 'Project Classification (UC-4: Software vs Non-Software)'}
+                    </label>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                      {isSoftwareRelated
+                        ? (language === 'th'
+                          ? '✓ โครงการนี้เกี่ยวกับซอฟต์แวร์ และจะแสดงบนแดชบอร์ดโอกาสงานสำหรับผู้เสนอราคา'
+                          : '✓ This project is software-related and visible on the public opportunity dashboard.')
+                        : (language === 'th'
+                          ? '✗ โครงการนี้ไม่ใช่ซอฟต์แวร์ (Non-Software) จะถูกคัดแยกออกจากแดชบอร์ดสาธารณะตามข้อกำหนด UC-4'
+                          : '✗ Confirmed Non-Software listing. Excluded from public opportunities dashboard per UC-4.')}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${isSoftwareRelated ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => {
+                        setIsSoftwareRelated(true);
+                        setDeleteOnConfirmNonSoftware(false);
+                      }}
+                      id="projectFormIsSoftwareYes"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+                    >
+                      {ICONS.check} {language === 'th' ? 'ซอฟต์แวร์ (Software)' : 'Software-Related'}
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${!isSoftwareRelated ? 'btn-danger' : 'btn-secondary'}`}
+                      onClick={() => setIsSoftwareRelated(false)}
+                      id="projectFormIsSoftwareNo"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+                    >
+                      {ICONS.x} {language === 'th' ? 'ไม่ใช่ซอฟต์แวร์ (Non-Software)' : 'Non-Software'}
+                    </button>
+                  </div>
+                </div>
+
+                {!isSoftwareRelated && (
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed rgba(239, 68, 68, 0.3)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem', color: '#b91c1c', fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        checked={deleteOnConfirmNonSoftware}
+                        onChange={(e) => setDeleteOnConfirmNonSoftware(e.target.checked)}
+                        id="deleteOnConfirmNonSoftwareCheckbox"
+                      />
+                      <span>
+                        {language === 'th'
+                          ? 'ลบ/ตัดรายการนี้ออกจากฐานข้อมูลอย่างถาวรทันที (ตามนโยบายการจัดเก็บข้อมูล UC-4 A5)'
+                          : 'Permanently remove/delete record from database upon saving (UC-4 A5 retention policy)'}
+                      </span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
               {/* Project Title TH */}
               <div className="admin-form-field full-width">
                 <label className="admin-form-label">

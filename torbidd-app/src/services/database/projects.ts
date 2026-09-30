@@ -4,8 +4,8 @@
 
 import connectToDatabase from '@/lib/mongodb';
 import Project, { IProject } from '@/models/Project';
-import ProcurementProject from '@/models/ProcurementProject';
-import { ProjectFilters } from '@/types/project';
+import ProcurementProject, { IProcurementProject } from '@/models/ProcurementProject';
+import { Project as ProjectType, ProjectFilters } from '@/types/project';
 import { daysUntil } from '@/lib/utils';
 
 export async function getProjects(filters: ProjectFilters = {}): Promise<IProject[]> {
@@ -204,7 +204,7 @@ export async function createProject(data: Record<string, unknown>): Promise<IPro
 export async function updateProject(
   idOrExternalId: string | number,
   data: Record<string, unknown>,
-): Promise<IProject | null> {
+): Promise<IProject | IProcurementProject | ProjectType | null> {
   await connectToDatabase();
 
   const updatePayload = { ...data };
@@ -215,7 +215,8 @@ export async function updateProject(
     updatePayload.deadline = new Date(updatePayload.deadline as string);
   }
 
-  const isNumeric = !isNaN(Number(idOrExternalId)) && typeof idOrExternalId !== 'string' ? true : /^\d+$/.test(String(idOrExternalId));
+  const idStr = String(idOrExternalId).trim();
+  const isNumeric = !isNaN(Number(idOrExternalId)) && typeof idOrExternalId !== 'string' ? true : /^\d+$/.test(idStr);
 
   let updated: IProject | null = null;
   if (isNumeric) {
@@ -224,7 +225,7 @@ export async function updateProject(
       { $set: updatePayload },
       { new: true },
     ).lean();
-  } else {
+  } else if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
     updated = await Project.findByIdAndUpdate(
       idOrExternalId,
       { $set: updatePayload },
@@ -232,19 +233,96 @@ export async function updateProject(
     ).lean();
   }
 
-  return updated;
+  if (updated) {
+    return updated;
+  }
+
+  // If not found in Project, update in ProcurementProject
+  const procUpdate: Record<string, unknown> = {};
+  if (data.title) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const t = data.title as any;
+    procUpdate.projectName = t.th || t.en || String(t);
+  } else if (data.projectName) {
+    procUpdate.projectName = String(data.projectName);
+  }
+
+  if (data.department) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data.department as any;
+    procUpdate.agencyName = d.th || d.en || String(d);
+  } else if (data.agencyName) {
+    procUpdate.agencyName = String(data.agencyName);
+  }
+
+  if (data.budget !== undefined) procUpdate.budget = Number(data.budget);
+  if (data.category) procUpdate.software_category = String(data.category);
+  if (data.procurementType) procUpdate.procurementType = String(data.procurementType);
+  if (data.aiConfidence) procUpdate.ai_confidence = data.aiConfidence;
+
+  if (data.isSoftwareRelated !== undefined) {
+    procUpdate.is_software = Boolean(data.isSoftwareRelated);
+    procUpdate.admin_reviewed = true;
+    procUpdate.classified_by = 'admin';
+    procUpdate.classified_at = new Date();
+    procUpdate.classification_reason = data.isSoftwareRelated
+      ? 'Administrator confirmed software classification (UC-10)'
+      : 'Administrator confirmed non-software listing (UC-4 A5)';
+  }
+
+  if (data.description) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const desc = data.description as any;
+    procUpdate.summary = { th: desc.th || desc, en: desc.en || desc };
+  } else if (data.summary) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = data.summary as any;
+    procUpdate.summary = { th: s.th || s, en: s.en || s };
+  }
+
+  const queryOr: Array<Record<string, unknown>> = [{ externalProjectId: idStr }];
+  if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
+    queryOr.push({ _id: idStr });
+  }
+
+  const procDoc = await ProcurementProject.findOneAndUpdate(
+    { $or: queryOr },
+    { $set: procUpdate },
+    { new: true },
+  ).lean();
+
+  if (procDoc) {
+    const { procurementToProject } = await import('@/lib/project-mapper');
+    return procurementToProject(procDoc);
+  }
+
+  return null;
 }
 
 export async function deleteProject(idOrExternalId: string | number): Promise<boolean> {
   await connectToDatabase();
-  const isNumeric = !isNaN(Number(idOrExternalId)) && typeof idOrExternalId !== 'string' ? true : /^\d+$/.test(String(idOrExternalId));
+  const idStr = String(idOrExternalId).trim();
+  const isNumeric = !isNaN(Number(idOrExternalId)) && typeof idOrExternalId !== 'string' ? true : /^\d+$/.test(idStr);
 
+  let deleted = false;
   if (isNumeric) {
     const res = await Project.deleteOne({ externalId: Number(idOrExternalId) });
-    return res.deletedCount > 0;
+    if (res.deletedCount > 0) deleted = true;
+  } else if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
+    const res = await Project.findByIdAndDelete(idOrExternalId);
+    if (res) deleted = true;
   }
-  const res = await Project.findByIdAndDelete(idOrExternalId);
-  return !!res;
+
+  // Also check and delete from ProcurementProject
+  const queryOr: Array<Record<string, unknown>> = [{ externalProjectId: idStr }];
+  if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
+    queryOr.push({ _id: idStr });
+  }
+
+  const procRes = await ProcurementProject.deleteOne({ $or: queryOr });
+  if (procRes.deletedCount > 0) deleted = true;
+
+  return deleted;
 }
 
 export async function getAdminProjectStats(): Promise<{

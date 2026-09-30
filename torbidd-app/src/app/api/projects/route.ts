@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
         sortBy: parsed.data.sortBy as ProcurementSortOption,
         page: parsed.data.page,
         limit: parsed.data.limit,
+        isSoftwareRelated: parsed.data.isSoftwareRelated,
       });
 
       return NextResponse.json({
@@ -131,6 +132,7 @@ export async function GET(req: NextRequest) {
       sortBy: parsed.data.sortBy as ProcurementSortOption,
       page: parsed.data.page,
       limit: effectiveLimit,
+      isSoftwareRelated: parsed.data.isSoftwareRelated,
     });
 
     return NextResponse.json({

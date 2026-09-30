@@ -28,6 +28,7 @@ export interface ProcurementFilters {
   sortBy?: ProcurementSortOption;
   page?: number;
   limit?: number;
+  isSoftwareRelated?: boolean;
 }
 
 export interface ProcurementQueryResult {

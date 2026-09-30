@@ -240,5 +240,10 @@ export function applyProcurementFilters(
     result = filterByDeadline(result, filters.deadline);
   }
 
+  // 6. Software-related filter (UC-4 / UC-10)
+  if (filters.isSoftwareRelated !== undefined) {
+    result = result.filter((p) => Boolean(p.isSoftwareRelated) === filters.isSoftwareRelated);
+  }
+
   return result;
 }
