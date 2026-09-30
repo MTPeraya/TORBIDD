@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
-import { Project } from '@/types/project';
+import { Project, ProjectCategory } from '@/types/project';
 import { INITIAL_DEPARTMENTS } from '@/lib/initialData';
 
 interface ProjectFormModalProps {
@@ -35,7 +35,7 @@ export function ProjectFormModal({
   const [deptEn, setDeptEn] = useState(
     isEdit ? initialProject.department?.en || '' : INITIAL_DEPARTMENTS[0].en,
   );
-  const [category, setCategory] = useState<'Website' | 'Mobile App' | 'AI' | 'Database'>(
+  const [category, setCategory] = useState<ProjectCategory>(
     isEdit ? initialProject.category || 'Website' : 'Website',
   );
   const [budget, setBudget] = useState<number>(isEdit ? initialProject.budget || 0 : 15000000);
@@ -275,13 +275,17 @@ export function ProjectFormModal({
                   className="admin-form-input"
                   value={category}
                   onChange={(e) =>
-                    setCategory(e.target.value as 'Website' | 'Mobile App' | 'AI' | 'Database')
+                    setCategory(e.target.value as ProjectCategory)
                   }
                 >
                   <option value="Website">Website / Portal</option>
                   <option value="Mobile App">Mobile App</option>
                   <option value="AI">AI / GIS Mapping</option>
                   <option value="Database">Database / Data Warehouse</option>
+                  <option value="ERP">ERP</option>
+                  <option value="Cloud">Cloud</option>
+                  <option value="Data Analytics">Data Analytics</option>
+                  <option value="Information System">Information System</option>
                 </select>
               </div>
 

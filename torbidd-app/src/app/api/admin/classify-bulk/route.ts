@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
 
     // Build query: only PENDING_REVIEW unless force=true
-    const query = force ? {} : { classificationReviewStatus: 'PENDING_REVIEW' };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: Record<string, any> = force ? {} : { classificationReviewStatus: 'PENDING_REVIEW' };
 
     const projects = await Project.find(query)
       .select('_id externalId title description isSoftwareRelated category classificationReviewStatus')

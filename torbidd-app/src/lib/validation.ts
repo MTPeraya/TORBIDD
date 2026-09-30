@@ -23,7 +23,12 @@ export const ProjectFiltersSchema = z.object({
   agencies: z.union([z.string(), z.array(z.string())]).optional(),
   category: z.enum(VALID_CATEGORIES).optional(),
   categories: z.union([z.string(), z.array(z.string())]).optional(),
-  isSoftwareRelated: z.enum(['true', 'false']).optional(), // UC-10
+  isSoftwareRelated: z
+    .preprocess((v) => {
+      if (v === 'true' || v === true) return true;
+      if (v === 'false' || v === false) return false;
+      return undefined;
+    }, z.boolean().optional()), // UC-10
   classificationReviewStatus: z.enum(['PENDING_REVIEW', 'APPROVED', 'CORRECTED']).optional(), // UC-10
   budget: z.enum(['under5m', '5to10', '10to20', 'above20m']).optional(),
   minBudget: z.coerce.number().min(0).optional(),
@@ -56,7 +61,12 @@ export const ProcurementFiltersSchema = z.object({
   agencies: z.union([z.string(), z.array(z.string())]).optional(),
   category: z.enum(VALID_CATEGORIES).optional(),
   categories: z.union([z.string(), z.array(z.string())]).optional(),
-  isSoftwareRelated: z.enum(['true', 'false']).optional(),                    // UC-10
+  isSoftwareRelated: z
+    .preprocess((v) => {
+      if (v === 'true' || v === true) return true;
+      if (v === 'false' || v === false) return false;
+      return undefined;
+    }, z.boolean().optional()), // UC-10
   classificationReviewStatus: z.enum(['PENDING_REVIEW', 'APPROVED', 'CORRECTED']).optional(), // UC-10
   budget: z.enum(['under5m', '5to10', '10to20', 'above20m']).optional(),
   minBudget: z.coerce.number().min(0).optional(),

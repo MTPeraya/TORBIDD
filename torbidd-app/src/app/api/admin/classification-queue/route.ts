@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
 
     await connectToDatabase();
 
-    const query = status === 'all' ? {} : { classificationReviewStatus: status };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: Record<string, any> = status === 'all' ? {} : { classificationReviewStatus: status };
 
     const [total, projects] = await Promise.all([
       Project.countDocuments(query),

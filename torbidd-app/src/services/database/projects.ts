@@ -67,6 +67,16 @@ export async function getProjects(filters: ProjectFilters = {}): Promise<IProjec
     query.category = { $in: targetCategories };
   }
 
+  // UC-10: Software related flag filtering
+  if (filters.isSoftwareRelated !== undefined) {
+    query.isSoftwareRelated = filters.isSoftwareRelated;
+  }
+
+  // UC-10: Classification review status filtering
+  if (filters.classificationReviewStatus) {
+    query.classificationReviewStatus = filters.classificationReviewStatus;
+  }
+
   // Budget preset filtering
   if (filters.budget) {
     switch (filters.budget) {

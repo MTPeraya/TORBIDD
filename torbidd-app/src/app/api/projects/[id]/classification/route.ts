@@ -20,7 +20,7 @@ const ClassificationOverrideSchema = z.object({
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // ── Auth guard: admins only ─────────────────────────────────────────────
@@ -40,7 +40,7 @@ export async function PATCH(
 
     await connectToDatabase();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Support both numeric externalId and MongoDB _id
     const filter = /^\d+$/.test(id) ? { externalId: Number(id) } : { _id: id };
@@ -85,7 +85,7 @@ export async function PATCH(
 // GET /api/projects/:id/classification — fetch classification detail only
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const authUser = getAuthSessionFromRequest(req);
@@ -95,7 +95,7 @@ export async function GET(
 
     await connectToDatabase();
 
-    const { id } = params;
+    const { id } = await params;
     const filter = /^\d+$/.test(id) ? { externalId: Number(id) } : { _id: id };
 
     const project = await Project.findOne(filter).select(
