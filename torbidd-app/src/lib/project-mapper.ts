@@ -2,7 +2,7 @@
 // lib/project-mapper.ts - Maps ProcurementProject/DiscoveredProject to Project
 // =============================================================================
 
-import { Project, ProjectCategory } from '@/types/project';
+import { Project, ProjectCategory, AiConfidence } from '@/types/project';
 import { DiscoveredProject } from '@/types/procurement';
 import { IProcurementProject } from '@/models/ProcurementProject';
 import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';

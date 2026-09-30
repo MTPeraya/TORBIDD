@@ -167,7 +167,9 @@ export async function upsertDiscoveredProjects(
     if (p.ai_confidence !== undefined) updateSet.ai_confidence = p.ai_confidence;
     if (p.classification_reason !== undefined) updateSet.classification_reason = p.classification_reason;
     if (p.classified_by !== undefined) updateSet.classified_by = p.classified_by;
-    if (p.classified_at !== undefined) updateSet.classified_at = p.classified_at;
+    if (p.classified_at !== undefined) {
+      updateSet.classified_at = p.classified_at instanceof Date ? p.classified_at : new Date(p.classified_at);
+    }
     if (p.admin_reviewed !== undefined) updateSet.admin_reviewed = p.admin_reviewed;
 
     if (newRev !== undefined) {
@@ -187,7 +189,7 @@ export async function upsertDiscoveredProjects(
             ai_confidence: p.ai_confidence ?? 'High',
             classification_reason: p.classification_reason ?? '',
             classified_by: p.classified_by ?? 'rule',
-            classified_at: p.classified_at ?? new Date(),
+            classified_at: p.classified_at ? (p.classified_at instanceof Date ? p.classified_at : new Date(p.classified_at)) : new Date(),
             admin_reviewed: p.admin_reviewed ?? false,
             discoveredAt: new Date(),
             createdAt: new Date(),
