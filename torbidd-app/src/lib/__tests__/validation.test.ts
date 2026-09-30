@@ -3,6 +3,7 @@ import {
   HistoricalFiltersSchema,
   BookmarkCreateSchema,
   SettingsUpdateSchema,
+  NotificationPreferencesSchema,
   AiClassifySchema,
 } from '../validation';
 
@@ -60,6 +61,42 @@ describe('lib/validation.ts', () => {
       const result = SettingsUpdateSchema.safeParse({
         budgetMin: 10_000_000,
         budgetMax: 5_000_000,
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('NotificationPreferencesSchema (UC-6)', () => {
+    it('accepts full UC-6 preferences payload', () => {
+      const result = NotificationPreferencesSchema.safeParse({
+        inAppNotif: true,
+        emailNotif: true,
+        newOpportunity: true,
+        savedUpdate: true,
+        deadlineReminder: true,
+        dailyDigest: false,
+        keywords: ['AI', 'Smart City'],
+        interestTags: ['Website', 'AI'],
+        agencies: ['สำนักการจราจรและขนส่ง'],
+        budgetMin: 1_000_000,
+        budgetMax: 20_000_000,
+        language: 'th',
+        email: 'officer@bma.go.th',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects invalid email address', () => {
+      const result = NotificationPreferencesSchema.safeParse({
+        email: 'invalid-email-address',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid budget range where budgetMax < budgetMin', () => {
+      const result = NotificationPreferencesSchema.safeParse({
+        budgetMin: 10_000_000,
+        budgetMax: 2_000_000,
       });
       expect(result.success).toBe(false);
     });
