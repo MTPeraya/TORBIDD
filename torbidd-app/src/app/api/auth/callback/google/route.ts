@@ -156,32 +156,43 @@ export async function GET(req: NextRequest) {
 
       // 3. Connect to MongoDB and upsert User
       let userId = profile.sub;
-      let userRole = 'BMA Officer';
+      const adminEmails = (process.env.ADMIN_EMAILS || '')
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+      const isConfiguredAdmin = adminEmails.includes(profile.email.toLowerCase().trim());
+
+      let userRole = isConfiguredAdmin ? 'admin' : 'BMA Officer';
       let userOrg = 'กรุงเทพมหานคร';
 
       if (process.env.MONGODB_URI) {
         try {
           await connectToDatabase();
+          const updateFields: Record<string, unknown> = {
+            email: profile.email,
+            name: profile.name || '',
+            picture: profile.picture || '',
+            lastLoginAt: new Date(),
+          };
+          if (isConfiguredAdmin) {
+            updateFields.role = 'admin';
+          }
+
           const dbUser = await User.findOneAndUpdate(
             { googleId: profile.sub },
             {
-              $set: {
-                email: profile.email,
-                name: profile.name || '',
-                picture: profile.picture || '',
-                lastLoginAt: new Date(),
-              },
+              $set: updateFields,
               $setOnInsert: {
-                role: 'BMA Officer',
+                role: isConfiguredAdmin ? 'admin' : 'BMA Officer',
                 org: 'กรุงเทพมหานคร',
               },
             },
-            { new: true, upsert: true },
+            { returnDocument: 'after', upsert: true },
           );
 
           if (dbUser?._id) {
             userId = dbUser._id.toString();
-            userRole = dbUser.role || 'BMA Officer';
+            userRole = isConfiguredAdmin ? 'admin' : (dbUser.role || 'BMA Officer');
             userOrg = dbUser.org || 'กรุงเทพมหานคร';
           }
         } catch (dbErr) {
