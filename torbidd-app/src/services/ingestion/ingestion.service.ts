@@ -134,11 +134,20 @@ export class IngestionService {
     // 4. Automatically classify all discovered projects as software / category (UC-10)
     await this.classifyDiscoveredProjects(allProjects);
 
-    // Persist discovered projects idempotently
+    // 5. Filter: only persist projects that are software-related (is_software === true)
+    const softwareProjects = allProjects.filter((p) => p.is_software === true);
+    const filteredOutCount = allProjects.length - softwareProjects.length;
+    if (filteredOutCount > 0) {
+      console.info(
+        `[IngestionService] Filtered out ${filteredOutCount} non-software projects. Persisting ${softwareProjects.length} software-related projects.`,
+      );
+    }
+
+    // 6. Persist software-only discovered projects idempotently
     let upsertStats = { upsertedCount: 0, modifiedCount: 0 };
     try {
-      if (allProjects.length > 0) {
-        const stats = await upsertDiscoveredProjects(allProjects);
+      if (softwareProjects.length > 0) {
+        const stats = await upsertDiscoveredProjects(softwareProjects);
         upsertStats = {
           upsertedCount: stats.upsertedCount,
           modifiedCount: stats.modifiedCount,
@@ -149,11 +158,11 @@ export class IngestionService {
     }
 
     return {
-      totalProjects: allProjects.length,
+      totalProjects: softwareProjects.length,
       upsertedCount: upsertStats.upsertedCount,
       modifiedCount: upsertStats.modifiedCount,
       bySource,
-      projects: allProjects,
+      projects: softwareProjects,
     };
   }
 
@@ -216,15 +225,22 @@ export class IngestionService {
     // 1.5 Classify all discovered projects (UC-10)
     await this.classifyDiscoveredProjects(searchResult.projects);
 
+    // 1.6 Filter: only continue with software-related projects
+    const softwareProjects = searchResult.projects.filter((p) => p.is_software === true);
+    const filteredOut = searchResult.projects.length - softwareProjects.length;
+    if (filteredOut > 0) {
+      console.info(`[IngestionService] discoverProjects: filtered out ${filteredOut} non-software, keeping ${softwareProjects.length}.`);
+    }
+
     // 2. Pre-ingestion check: Detect duplicates and identify version revisions before downstream queuing
     let dedupCheck: DeduplicationCheckResult | null = null;
     try {
-      dedupCheck = await checkProjectDeduplication(searchResult.projects);
+      dedupCheck = await checkProjectDeduplication(softwareProjects);
     } catch {
       // Offline fallback
     }
 
-    // 3. Persist discovered projects idempotently with conflict resolution
+    // 3. Persist software-only projects idempotently with conflict resolution
     let upsertStats: {
       upsertedCount: number;
       modifiedCount: number;
@@ -236,13 +252,15 @@ export class IngestionService {
       matchedCount: 0,
     };
     try {
-      upsertStats = await upsertDiscoveredProjects(searchResult.projects);
+      upsertStats = await upsertDiscoveredProjects(softwareProjects);
     } catch (dbErr) {
       console.warn('[IngestionService] Database upsert skipped or offline:', dbErr);
     }
 
     return {
       ...searchResult,
+      projects: softwareProjects,
+      total: softwareProjects.length,
       upsertedCount: upsertStats.upsertedCount,
       modifiedCount: upsertStats.modifiedCount,
       deduplication: dedupCheck?.metrics ?? upsertStats.dedupMetrics,
