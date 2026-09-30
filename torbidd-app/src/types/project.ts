@@ -27,12 +27,40 @@ export interface Department {
   en: string;
 }
 
+export type QualificationCriteriaType =
+  | 'registered_capital'
+  | 'past_project_value'
+  | 'certifications'
+  | 'personnel_experience'
+  | 'legal_status'
+  | 'other';
+
+export type ClauseRiskLevel = 'Safe' | 'Low' | 'Medium' | 'High';
+
+export interface RestrictiveClauseAssessment {
+  isRestrictive: boolean;
+  riskLevel: ClauseRiskLevel;
+  flagReason?: { th: string; en: string };
+  legalReference?: string;
+  recommendation?: { th: string; en: string };
+}
+
+export interface QualificationCriteriaValue {
+  key: string; // e.g. 'min_past_project_value', 'min_registered_capital', 'min_personnel_years'
+  value: string | number;
+  unit?: string;
+  numericValue?: number;
+}
+
 export interface ExtractedQualificationItem {
   id: string;
   description: BilingualText;
   category: 'Legal' | 'Financial' | 'Experience' | 'Technical';
   threshold?: string;
   mandatory: boolean;
+  criteriaType?: QualificationCriteriaType;
+  criteriaValue?: QualificationCriteriaValue;
+  riskAssessment?: RestrictiveClauseAssessment;
 }
 
 export interface TimelineEvent {
