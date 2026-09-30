@@ -263,7 +263,25 @@ export class EgpClient {
         return { total: 0, projects: [] };
       }
 
-      const text = await response.text();
+      const arrayBuffer = await response.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+
+      // Detect encoding or default to windows-874 / tis-620 for Thai government feeds
+      let text = '';
+      try {
+        const sniff = new TextDecoder('ascii', { fatal: false }).decode(bytes.slice(0, 200));
+        const match = sniff.match(/encoding=["']([^"']+)["']/i);
+        const encoding = match ? match[1].toLowerCase() : 'windows-874';
+
+        if (encoding.includes('utf-8')) {
+          text = new TextDecoder('utf-8').decode(bytes);
+        } else {
+          text = new TextDecoder('windows-874').decode(bytes);
+        }
+      } catch {
+        text = new TextDecoder('windows-874').decode(bytes);
+      }
+
       const projects = this.parseRssXml(text, options.limit ?? 100);
 
       return {

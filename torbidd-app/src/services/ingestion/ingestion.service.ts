@@ -165,19 +165,28 @@ export class IngestionService {
     if (!projects || projects.length === 0) return;
     try {
       const { classifyProject } = await import('@/services/ai/classifier');
+      const { classifyByKeywords } = await import('@/services/ai/adapters');
+
+      // For bulk discovery (>20), use instant rule-based classification to prevent 429 quota exhaustion.
+      // Small batches / single items use configured AI provider.
+      const isBulk = projects.length > 20;
+
       for (const p of projects) {
         if (p.is_software !== undefined && p.software_category) continue;
         try {
-          const res = await classifyProject(p.projectName, p.summary?.th || p.projectName);
+          const res = isBulk
+            ? classifyByKeywords(p.projectName, p.summary?.th || p.projectName)
+            : await classifyProject(p.projectName, p.summary?.th || p.projectName);
+
           p.is_software = res.isSoftwareRelated;
           p.software_category = res.category;
           p.ai_confidence = res.confidence;
           p.classification_reason = res.reasoning;
-          p.classified_by = res.provider ? 'ai' : 'rule';
+          p.classified_by = isBulk ? 'rule' : (res.provider ? 'ai' : 'rule');
           p.classified_at = new Date();
         } catch {
           p.is_software = true;
-          p.software_category = 'Software / IT';
+          p.software_category = 'Website';
           p.ai_confidence = 'Medium';
           p.classified_by = 'rule';
           p.classified_at = new Date();

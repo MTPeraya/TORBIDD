@@ -37,7 +37,7 @@ describe('AI Classifier Adapters', () => {
     it('reports configured when apiKey is provided', () => {
       const adapter = new GoogleAiStudioAdapter({ apiKey: 'test-google-key' });
       expect(adapter.isConfigured()).toBe(true);
-      expect(adapter.model).toBe('gemini-2.0-flash');
+      expect(adapter.model).toBe('gemini-2.5-flash');
     });
 
     it('falls back to keyword classification when not configured', async () => {
@@ -75,7 +75,7 @@ describe('AI Classifier Adapters', () => {
 
       const adapter = new GoogleAiStudioAdapter({
         apiKey: 'test-google-key',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
         fetchImpl: mockFetch as unknown as typeof fetch,
       });
 
@@ -86,14 +86,14 @@ describe('AI Classifier Adapters', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const calledUrl = mockFetch.mock.calls[0][0];
-      expect(calledUrl).toContain('gemini-2.0-flash:generateContent');
+      expect(calledUrl).toContain('gemini-2.5-flash:generateContent');
       expect(calledUrl).toContain('key=test-google-key');
 
       expect(result.category).toBe('Mobile App');
       expect(result.isSoftwareRelated).toBe(true);
       expect(result.confidence).toBe('High');
       expect(result.provider).toBe('google-ai-studio');
-      expect(result.model).toBe('gemini-2.0-flash');
+      expect(result.model).toBe('gemini-2.5-flash');
     });
 
     it('falls back gracefully on HTTP error status from Google AI Studio', async () => {

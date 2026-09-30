@@ -33,11 +33,18 @@ export class GoogleAiStudioAdapter implements AiClassifierAdapter {
       ''
     ).trim();
 
-    this.model = (
+    const rawModel = (
       options.model ??
       process.env.GEMINI_MODEL ??
-      'gemini-2.0-flash'
+      'gemini-2.5-flash'
     ).trim();
+
+    // Map deprecated Gemini models to active gemini-2.5-flash
+    if (rawModel === 'gemini-2.0-flash' || rawModel === 'gemini-1.5-flash' || rawModel === 'gemini-1.5-pro') {
+      this.model = 'gemini-2.5-flash';
+    } else {
+      this.model = rawModel;
+    }
 
     this.baseUrl = (
       options.baseUrl ??
@@ -64,52 +71,66 @@ export class GoogleAiStudioAdapter implements AiClassifierAdapter {
     const prompt = buildClassificationPrompt(title, description);
     const endpoint = `${this.baseUrl}/${encodeURIComponent(this.model)}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
 
-    try {
-      const response = await this.fetchImpl(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.1,
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await this.fetchImpl(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        }),
-        signal: AbortSignal.timeout(this.timeoutMs),
-      });
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.1,
+            },
+          }),
+          signal: AbortSignal.timeout(this.timeoutMs),
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
+        if (response.status === 503 && attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          console.warn(
+            `[GoogleAiStudioAdapter] API returned HTTP ${response.status}: ${errorText.slice(0, 200)} — falling back to keyword classifier.`,
+          );
+          return classifyByKeywords(title, description);
+        }
+
+        const data = await response.json();
+        const rawText =
+          data?.candidates?.[0]?.content?.parts?.[0]?.text ??
+          data?.candidates?.[0]?.text ??
+          '';
+
+        return parseAndValidateAiResponse(
+          rawText,
+          () => classifyByKeywords(title, description),
+          { provider: this.provider, model: this.model },
+        );
+      } catch (err) {
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          continue;
+        }
         console.warn(
-          `[GoogleAiStudioAdapter] API returned HTTP ${response.status}: ${errorText.slice(0, 200)} — falling back to keyword classifier.`,
+          '[GoogleAiStudioAdapter] Request failed — falling back to keyword classifier:',
+          err instanceof Error ? err.message : String(err),
         );
         return classifyByKeywords(title, description);
       }
-
-      const data = await response.json();
-      const rawText =
-        data?.candidates?.[0]?.content?.parts?.[0]?.text ??
-        data?.candidates?.[0]?.text ??
-        '';
-
-      return parseAndValidateAiResponse(
-        rawText,
-        () => classifyByKeywords(title, description),
-        { provider: this.provider, model: this.model },
-      );
-    } catch (err) {
-      console.warn(
-        '[GoogleAiStudioAdapter] Request failed — falling back to keyword classifier:',
-        err instanceof Error ? err.message : String(err),
-      );
-      return classifyByKeywords(title, description);
     }
+
+    return classifyByKeywords(title, description);
   }
 
   public async classifyBulk(
