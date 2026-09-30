@@ -38,6 +38,26 @@ export async function POST(
 
     const cleanId = parsed.data.projectId;
     const project = await getProcurementProjectByExternalId(cleanId);
+
+    // Prevent redundant LLM calls if already extracted and cached in database (unless ?force=true)
+    const force = _req.nextUrl.searchParams.get('force') === 'true';
+    if (!force && project?.extractionStatus === 'EXTRACTED' && project?.summary?.th) {
+      return NextResponse.json({
+        success: true,
+        message: 'TOR document summary already extracted and cached in database',
+        cached: true,
+        projectId: cleanId,
+        confidence: 'High',
+        extraction: {
+          summary: project.summary,
+          requiredTechnologies: project.requiredTechnologies || [],
+          technicalRequirements: project.technicalRequirements || { th: [], en: [] },
+          extractedQualifications: project.extractedQualifications || [],
+        },
+        updatedProject: project,
+      });
+    }
+
     const documents = await getDocumentsByProjectId(cleanId);
 
     // Look for ATTACH_TOR document

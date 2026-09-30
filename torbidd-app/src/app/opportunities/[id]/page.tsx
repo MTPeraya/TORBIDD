@@ -12,6 +12,7 @@ import { ProcurementTimeline } from '@/components/ui/ProcurementTimeline';
 import { BudgetBreakdownCard } from '@/components/ui/BudgetBreakdownCard';
 import { TorDocumentViewer } from '@/components/ui/TorDocumentViewer';
 import { SetAlertModal } from '@/components/ui/SetAlertModal';
+import { TechStackRequirements } from '@/components/ui/TechStackRequirements';
 import {
   formatBudgetFull,
   formatDate,
@@ -212,16 +213,6 @@ export default function ProjectDetailPage({
   const summaryText = project.summary
     ? ((language === 'th' ? project.summary.th : project.summary.en) || project.summary.th)
     : (getLocalized(project.description) as string);
-
-  // Tech Stack (Issue #89)
-  const techStack = project.requiredTechnologies && project.requiredTechnologies.length > 0
-    ? project.requiredTechnologies
-    : ['React / Next.js', 'Node.js', 'PostgreSQL', 'Docker', 'REST API', 'Cybersecurity / PDPA'];
-
-  // Technical Requirements (Issue #89)
-  const technicalReqList = project.technicalRequirements
-    ? ((language === 'th' ? project.technicalRequirements.th : project.technicalRequirements.en) || project.technicalRequirements.th || [])
-    : [];
 
   return (
     <div className="page-content">
@@ -535,72 +526,12 @@ export default function ProjectDetailPage({
             </div>
           </div>
 
-          {/* Issue #89: Required Technologies & Technical Requirements */}
-          <div className="detail-card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 className="detail-card-title" style={{ margin: 0 }}>
-                {ICONS.sparkles}
-                <span>{language === 'th' ? 'เทคโนโลยีและข้อกำหนดทางเทคนิค (Tech Stack & Specs)' : 'Required Technologies & Technical Specs'}</span>
-              </h2>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gray-700)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                🏷️ {language === 'th' ? 'เทคโนโลยีและทักษะที่ต้องใช้ (Required Technologies):' : 'Required Technologies & Frameworks:'}
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {techStack.map((tech, idx) => (
-                  <span
-                    key={idx}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      fontSize: 12.5,
-                      fontWeight: 600,
-                      padding: '5px 12px',
-                      borderRadius: 999,
-                      background: 'rgba(14, 165, 233, 0.08)',
-                      color: '#0369a1',
-                      border: '1px solid rgba(14, 165, 233, 0.3)',
-                    }}
-                  >
-                    <span style={{ fontSize: 8 }}>●</span>
-                    <span>{tech}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {technicalReqList.length > 0 && (
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gray-700)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  ⚙️ {language === 'th' ? 'ข้อกำหนดด้านสถาปัตยกรรมและความมั่นคงปลอดภัย (Technical Specifications):' : 'Architecture & Security Specifications:'}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {technicalReqList.map((reqItem, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 10,
-                        fontSize: 13,
-                        color: 'var(--gray-800)',
-                        background: 'var(--gray-50)',
-                        padding: '8px 12px',
-                        borderRadius: 6,
-                        borderLeft: '3px solid #0284c7',
-                      }}
-                    >
-                      <span style={{ color: '#0284c7', fontWeight: 700 }}>✓</span>
-                      <span>{reqItem}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Issue #89: Tech Stack & Requirements with Tag Filters and Interactive Checklist */}
+          <TechStackRequirements
+            projectId={project._id || project.externalId || id}
+            rawTechnologies={project.requiredTechnologies}
+            rawRequirements={project.technicalRequirements}
+          />
 
           {/* Description Card */}
           <div className="detail-card">
@@ -644,6 +575,7 @@ export default function ProjectDetailPage({
             structuredQualifications={project.extractedQualifications}
             checkedIndices={checkedIndices}
             onToggle={handleToggleCheck}
+            budget={project.budget}
           />
         </div>
 
