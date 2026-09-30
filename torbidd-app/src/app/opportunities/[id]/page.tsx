@@ -575,6 +575,7 @@ export default function ProjectDetailPage({
             structuredQualifications={project.extractedQualifications}
             checkedIndices={checkedIndices}
             onToggle={handleToggleCheck}
+            budget={project.budget}
           />
         </div>
 

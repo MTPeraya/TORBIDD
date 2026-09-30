@@ -89,7 +89,6 @@ export function TechStackRequirements({
         Promise.resolve().then(() => setCheckedReqIds(JSON.parse(saved)));
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   const toggleRequirement = (id: string) => {

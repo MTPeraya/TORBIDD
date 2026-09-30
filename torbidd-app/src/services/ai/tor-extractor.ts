@@ -8,14 +8,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getVertexAI, VERTEX_MODEL_PRO } from './vertex-ai';
-
-export interface ExtractedQualificationItem {
-  id: string;
-  description: { th: string; en: string };
-  category: 'Legal' | 'Financial' | 'Experience' | 'Technical';
-  threshold?: string;
-  mandatory: boolean;
-}
+import { ExtractedQualificationItem } from '@/types/project';
+import { validateAndEnrichQualifications } from './qualification-validator';
 
 export interface TorExtractResult {
   title: { th: string; en: string } | null;
@@ -68,6 +62,12 @@ Analyze the provided TOR PDF document thoroughly and extract the following struc
       "description": { "th": "...", "en": "..." },
       "category": "Legal" | "Financial" | "Experience" | "Technical",
       "threshold": "e.g. >= 5,000,000 THB or >= 3 years",
+      "criteriaType": "registered_capital" | "past_project_value" | "certifications" | "personnel_experience" | "legal_status",
+      "criteriaValue": {
+        "key": "min_past_project_value" | "min_registered_capital" | "required_certifications" | "min_personnel_years",
+        "value": "e.g. 5M THB or 5 Years",
+        "numericValue": 5000000
+      },
       "mandatory": true
     }
 
@@ -341,7 +341,7 @@ export function extractTorHeuristic(
       th: specificTechReqTh,
       en: specificTechReqEn,
     },
-    extractedQualifications: structuredQualifications,
+    extractedQualifications: validateAndEnrichQualifications(structuredQualifications, budget).items,
     confidence: 'Medium',
     rawText: `Document: ${fileName} | Domain: ${domain}`,
   };
@@ -377,9 +377,13 @@ export async function extractTorFromBuffer(
       const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
       const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleaned) as TorExtractResult;
-      if (parsed && (parsed.title || parsed.summary || parsed.requiredTechnologies)) {
+      if (parsed && (parsed.title || parsed.summary || parsed.requiredTechnologies || parsed.extractedQualifications)) {
+        const enrichedQuals = parsed.extractedQualifications
+          ? validateAndEnrichQualifications(parsed.extractedQualifications, parsed.budget || 0).items
+          : [];
         return {
           ...parsed,
+          extractedQualifications: enrichedQuals,
           confidence: 'High',
         };
       }
