@@ -2,12 +2,21 @@
 // app/api/admin/sync/route.ts - POST /api/admin/sync
 // =============================================================================
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const startTime = Date.now();
 
     // Simulated sync pipeline

@@ -18,6 +18,7 @@ import { ProjectUpdateSchema } from '@/lib/validation';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { enrichProjectDetail } from '@/lib/projectDetailHelper';
 import { Project } from '@/types/project';
+import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,6 +109,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await req.json();
     const parsed = ProjectUpdateSchema.safeParse(body);
@@ -146,10 +152,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const { id } = await params;
     try {
       const deleted = await deleteProject(id);

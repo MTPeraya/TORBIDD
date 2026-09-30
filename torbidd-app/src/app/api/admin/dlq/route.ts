@@ -9,11 +9,17 @@ import {
   getDlqStats,
   updateDlqItemStatus,
 } from '@/services/database/dlq';
+import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const limit = Number(req.nextUrl.searchParams.get('limit') || 20);
     const [stats, items] = await Promise.all([
       getDlqStats(),
@@ -36,6 +42,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { id, action, notes, resolvedBy } = body;
 

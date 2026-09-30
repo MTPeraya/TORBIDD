@@ -13,6 +13,20 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/admin',
 }));
 
+// Mock AuthContext
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'admin_test_1', name: 'Admin User', email: 'admin@bma.go.th', role: 'admin' },
+    isAuthenticated: true,
+    isAdmin: true,
+    isLoading: false,
+    login: jest.fn(),
+    logout: jest.fn(),
+    refreshUser: jest.fn(),
+    updateProfile: jest.fn(),
+  }),
+}));
+
 // Mock global fetch
 beforeEach(() => {
   global.fetch = jest.fn((url: RequestInfo | URL) => {

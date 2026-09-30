@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthSessionFromRequest, signSession, AUTH_COOKIE_NAME, AuthSessionUser } from '@/lib/auth';
+import { getAuthSessionFromRequest, signSession, AUTH_COOKIE_NAME, AuthSessionUser, isAdminUser } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
 
@@ -11,12 +11,18 @@ export async function GET(req: NextRequest) {
   const user = getAuthSessionFromRequest(req);
 
   if (!user) {
-    return NextResponse.json({ authenticated: false, user: null });
+    return NextResponse.json({ authenticated: false, user: null, isAdmin: false });
   }
+
+  const isAdmin = isAdminUser(user);
 
   return NextResponse.json({
     authenticated: true,
-    user,
+    user: {
+      ...user,
+      isAdmin,
+    },
+    isAdmin,
   });
 }
 
@@ -31,11 +37,25 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const { name, org, role, avatar } = body;
 
+    const currentIsAdmin = isAdminUser(user);
+    let resolvedRole = user.role;
+    if (typeof role === 'string' && role.trim()) {
+      const requestedLower = role.trim().toLowerCase();
+      // Only existing admins can assign the admin role
+      if (requestedLower === 'admin' || requestedLower === 'administrator') {
+        if (currentIsAdmin) {
+          resolvedRole = role.trim();
+        }
+      } else {
+        resolvedRole = role.trim();
+      }
+    }
+
     const updatedUser: AuthSessionUser = {
       ...user,
       name: typeof name === 'string' && name.trim() ? name.trim() : user.name,
       org: typeof org === 'string' && org.trim() ? org.trim() : user.org,
-      role: typeof role === 'string' && role.trim() ? role.trim() : user.role,
+      role: resolvedRole,
       picture: avatar !== undefined ? avatar : user.picture,
     };
 

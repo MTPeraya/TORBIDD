@@ -4,22 +4,22 @@
 
 import crypto from 'crypto';
 
-import { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE } from './auth-constants';
-export { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE };
+import {
+  AUTH_COOKIE_NAME,
+  OAUTH_STATE_COOKIE,
+  AuthSessionUser,
+  AuthSessionPayload,
+  isAdminUser,
+  decodeSessionPayload,
+} from './auth-constants';
 
-export interface AuthSessionUser {
-  id: string;
-  email: string;
-  name: string;
-  picture: string;
-  role: string;
-  org: string;
-}
-
-export interface AuthSessionPayload {
-  user: AuthSessionUser;
-  exp: number; // expiration timestamp in seconds
-}
+export {
+  AUTH_COOKIE_NAME,
+  OAUTH_STATE_COOKIE,
+  isAdminUser,
+  decodeSessionPayload,
+};
+export type { AuthSessionUser, AuthSessionPayload };
 
 // 7 days session duration
 const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 7;

@@ -12,6 +12,7 @@ import { ProcurementSortOption } from '@/types/procurement';
 import { Project } from '@/types/project';
 import { procurementToProject } from '@/lib/project-mapper';
 import { getSyncStatus } from '@/services/ingestion/sync-state';
+import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,6 +141,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const body = await req.json();
     const parsed = ProjectCreateSchema.safeParse(body);
 

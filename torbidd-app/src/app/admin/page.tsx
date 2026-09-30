@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ICONS } from '@/components/ui/Icons';
 import { Project } from '@/types/project';
 import { INITIAL_PROJECTS } from '@/lib/initialData';
@@ -38,6 +39,7 @@ interface AdminStats {
 
 export default function AdminPage() {
   const { L, language } = useLanguage();
+  const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'classification' | 'crawler' | 'audit'>('overview');
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
@@ -98,6 +100,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    if (!isAdmin) return;
     let ignore = false;
     async function loadData() {
       try {
@@ -124,7 +127,7 @@ export default function AdminPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [isAdmin]);
 
 
   // Handle project creation
@@ -265,6 +268,132 @@ export default function AdminPage() {
     const now = new Date();
     return projects.filter((p) => new Date(p.deadline) >= now).length;
   }, [projects]);
+
+  if (isLoading) {
+    return (
+      <div className="admin-page-container" style={{ padding: '80px 24px', textAlign: 'center' }}>
+        <div
+          style={{
+            display: 'inline-block',
+            width: 36,
+            height: 36,
+            border: '3px solid var(--gray-300)',
+            borderTopColor: 'var(--primary)',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+          }}
+        />
+        <p style={{ marginTop: 16, color: 'var(--gray-500)', fontSize: '0.95rem' }}>
+          {language === 'th' ? 'กำลังตรวจสอบสิทธิ์ผู้ดูแลระบบ...' : 'Verifying admin authorization...'}
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="admin-page-container" style={{ maxWidth: 560, margin: '60px auto', padding: '0 20px' }}>
+        <div
+          style={{
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
+            borderRadius: 16,
+            padding: '36px 32px',
+            textAlign: 'center',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              fontSize: 28,
+            }}
+          >
+            🔒
+          </div>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--gray-900)', marginBottom: 8 }}>
+            {language === 'th' ? 'กรุณาเข้าสู่ระบบ' : 'Authentication Required'}
+          </h2>
+          <p style={{ color: 'var(--gray-600)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: 24 }}>
+            {language === 'th'
+              ? 'คุณต้องเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบเพื่อเข้าถึงแผงควบคุมระบบ'
+              : 'You must sign in with an administrator account to access the BMA admin console.'}
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <Link href="/login?from=/admin" className="btn btn-primary" style={{ padding: '10px 24px', fontWeight: 600 }}>
+              {language === 'th' ? 'เข้าสู่ระบบ (Sign In)' : 'Sign In'}
+            </Link>
+            <Link href="/" className="btn btn-secondary" style={{ padding: '10px 20px' }}>
+              {language === 'th' ? 'กลับหน้าหลัก' : 'Home'}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="admin-page-container" style={{ maxWidth: 560, margin: '60px auto', padding: '0 20px' }}>
+        <div
+          style={{
+            background: 'var(--white)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            borderRadius: 16,
+            padding: '36px 32px',
+            textAlign: 'center',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              fontSize: 28,
+            }}
+          >
+            🛡️
+          </div>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--gray-900)', marginBottom: 8 }}>
+            {language === 'th' ? 'ไม่มีสิทธิ์เข้าถึง (Access Denied)' : 'Admin Privileges Required'}
+          </h2>
+          <p style={{ color: 'var(--gray-600)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: 8 }}>
+            {language === 'th'
+              ? 'บัญชีของคุณไม่มีสิทธิ์ผู้ดูแลระบบ (Administrator) ในการเข้าถึงหน้านี้'
+              : 'Your current account does not have administrator privileges to access this console.'}
+          </p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: 24 }}>
+            {language === 'th'
+              ? `เข้าสู่ระบบในฐานะ: ${user?.email || user?.name} (${user?.role || 'Normal User'})`
+              : `Signed in as: ${user?.email || user?.name} (${user?.role || 'Normal User'})`}
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <Link href="/" className="btn btn-primary" style={{ padding: '10px 24px', fontWeight: 600 }}>
+              {language === 'th' ? 'กลับสู่หน้าหลัก' : 'Back to Home'}
+            </Link>
+            <Link href="/opportunities" className="btn btn-secondary" style={{ padding: '10px 20px' }}>
+              {language === 'th' ? 'ดูโครงการจัดซื้อจัดจ้าง' : 'Browse Opportunities'}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-page-container">

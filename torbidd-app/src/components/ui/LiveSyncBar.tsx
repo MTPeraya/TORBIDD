@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface SyncStatusData {
   lastSuccessfulSyncAt?: string;
@@ -31,6 +32,7 @@ export function LiveSyncBar({
   onFilterChange,
 }: LiveSyncBarProps) {
   const { language } = useLanguage();
+  const { isAuthenticated, isAdmin } = useAuth();
   const [syncStatus, setSyncStatus] = useState<SyncStatusData | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -53,6 +55,16 @@ export function LiveSyncBar({
   }, []);
 
   const handleSyncNow = async () => {
+    if (!isAuthenticated || !isAdmin) {
+      setMessage(
+        language === 'th'
+          ? '⚠️ เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถสั่งการซิงค์ข้อมูลได้'
+          : '⚠️ Only administrators can trigger manual data synchronization',
+      );
+      setTimeout(() => setMessage(null), 4000);
+      return;
+    }
+
     setIsSyncing(true);
     setMessage(
       language === 'th'
@@ -289,48 +301,50 @@ export function LiveSyncBar({
             </div>
           )}
 
-          <button
-            type="button"
-            id="syncLiveGovBtn"
-            onClick={handleSyncNow}
-            disabled={isSyncing}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 18px',
-              borderRadius: 8,
-              border: 'none',
-              background: isSyncing
-                ? 'var(--gray-400)'
-                : 'linear-gradient(135deg, #2773a5 0%, #1b557c 100%)',
-              color: '#ffffff',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: isSyncing ? 'not-allowed' : 'pointer',
-              boxShadow: '0 2px 8px rgba(39, 115, 165, 0.25)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <span
+          {isAuthenticated && isAdmin && (
+            <button
+              type="button"
+              id="syncLiveGovBtn"
+              onClick={handleSyncNow}
+              disabled={isSyncing}
               style={{
-                display: 'inline-block',
-                transform: isSyncing ? 'rotate(360deg)' : 'none',
-                transition: 'transform 1s linear infinite',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 18px',
+                borderRadius: 8,
+                border: 'none',
+                background: isSyncing
+                  ? 'var(--gray-400)'
+                  : 'linear-gradient(135deg, #2773a5 0%, #1b557c 100%)',
+                color: '#ffffff',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: isSyncing ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 8px rgba(39, 115, 165, 0.25)',
+                transition: 'all 0.2s ease',
               }}
             >
-              🔄
-            </span>
-            <span>
-              {isSyncing
-                ? language === 'th'
-                  ? 'กำลังซิงค์ข้อมูลสด...'
-                  : 'Syncing live data...'
-                : language === 'th'
-                  ? 'อัปเดตข้อมูลสดเดี๋ยวนี้'
-                  : 'Sync Now'}
-            </span>
-          </button>
+              <span
+                style={{
+                  display: 'inline-block',
+                  transform: isSyncing ? 'rotate(360deg)' : 'none',
+                  transition: 'transform 1s linear infinite',
+                }}
+              >
+                🔄
+              </span>
+              <span>
+                {isSyncing
+                  ? language === 'th'
+                    ? 'กำลังซิงค์ข้อมูลสด...'
+                    : 'Syncing live data...'
+                  : language === 'th'
+                    ? 'อัปเดตข้อมูลสดเดี๋ยวนี้ (Admin)'
+                    : 'Sync Now (Admin)'}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

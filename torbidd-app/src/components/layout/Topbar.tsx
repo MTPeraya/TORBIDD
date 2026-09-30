@@ -44,7 +44,7 @@ export function Topbar() {
   const router = useRouter();
   const { language, setLanguage, L } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const { user: authUser, isAuthenticated, logout: authLogout } = useAuth();
+  const { user: authUser, isAuthenticated, isAdmin, logout: authLogout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
@@ -259,16 +259,18 @@ export function Topbar() {
 
                 <div className="user-dropdown-divider" />
 
-                <Link
-                  href="/admin"
-                  className="user-dropdown-item"
-                  id="dropdownAdminLink"
-                  role="menuitem"
-                  onClick={() => setDropdownOpen(false)}
-                >
-                  {ICONS.shield}
-                  <span>{L('navAdmin')}</span>
-                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="user-dropdown-item"
+                    id="dropdownAdminLink"
+                    role="menuitem"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    {ICONS.shield}
+                    <span>{L('navAdmin')}</span>
+                  </Link>
+                )}
 
                 <Link
                   href="/settings"
