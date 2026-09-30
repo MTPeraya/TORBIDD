@@ -103,21 +103,34 @@ export async function GET(req: NextRequest) {
 
     // 5. Combine real database projects and run full search/filter/sort
     const combined = [...discoveredProjectsMapped, ...bmaProjects];
+
+    const resolvedCategories = parsed.data.categories
+      ? (typeof parsed.data.categories === 'string'
+          ? parsed.data.categories.split(',')
+          : parsed.data.categories)
+      : (parsed.data.category ? [parsed.data.category] : undefined);
+
+    const resolvedAgencies = parsed.data.agencies
+      ? (typeof parsed.data.agencies === 'string'
+          ? parsed.data.agencies.split(',')
+          : parsed.data.agencies)
+      : (parsed.data.agency ? [parsed.data.agency] : (parsed.data.department ? [parsed.data.department] : undefined));
+
+    const effectiveLimit = params.all === 'true' || params.limit === 'all'
+      ? (combined.length || 1000)
+      : parsed.data.limit;
+
     const searchResult = executeProcurementSearch(combined, {
       search: parsed.data.search,
-      categories: parsed.data.categories
-        ? (Array.isArray(parsed.data.categories) ? parsed.data.categories : [parsed.data.categories])
-        : (parsed.data.category ? [parsed.data.category] : undefined),
-      agencies: parsed.data.agencies
-        ? (Array.isArray(parsed.data.agencies) ? parsed.data.agencies : [parsed.data.agencies])
-        : (parsed.data.agency ? [parsed.data.agency] : (parsed.data.department ? [parsed.data.department] : undefined)),
+      categories: resolvedCategories,
+      agencies: resolvedAgencies,
       minBudget: parsed.data.minBudget,
       maxBudget: parsed.data.maxBudget,
       budgetPreset: parsed.data.budget,
       deadline: parsed.data.deadline,
       sortBy: parsed.data.sortBy as ProcurementSortOption,
       page: parsed.data.page,
-      limit: parsed.data.limit,
+      limit: effectiveLimit,
     });
 
     return NextResponse.json({

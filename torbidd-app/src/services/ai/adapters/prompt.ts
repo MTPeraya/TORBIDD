@@ -35,7 +35,14 @@ Then, if it is software-related, classify it into exactly one of these categorie
 - Data Analytics: Business intelligence, BI dashboards, data warehouses, big data pipelines
 - Information System: Management systems, e-government registration, EMR, document management, MIS
 
-If the project is NOT software-related (e.g., construction, physical equipment, roads, renovation), set isSoftwareRelated to false.
+If the project is NOT software-related, set isSoftwareRelated to false.
+The following are NOT software-related (isSoftwareRelated: false):
+- Hardware/display/screen rentals or event logistics (e.g., เช่าจอ LCD, เช่าสถานที่, เช่าระบบเสียง, จัดประชุมเชิงปฏิบัติการ, จัดสัมมนา, อาหารว่าง) even if the event topic mentions software or AI.
+- Off-the-shelf consumer/retail tool subscriptions or single licenses (e.g., buying licenses for ChatGPT Plus, Claude, Canva, Zoom, Microsoft 365 Family, domain name renewals).
+- Physical computer hardware/laptop/printer purchases (even if bundled with Windows/OS).
+- Construction, roads, furniture, vehicles, air conditioning, electrical work, renovation.
+
+A project is ONLY software-related (isSoftwareRelated: true) if it involves genuine software engineering: custom software/web/mobile development, enterprise system implementation, data platforms, or enterprise software maintenance.
 
 Project Title: ${title}
 Project Description: ${description}

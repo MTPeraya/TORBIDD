@@ -48,20 +48,6 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <div>
         <div className="project-card-header">
           <div className="project-card-tags">
-            {(extProject.externalProjectId || project.sourceDocument?.includes('Attach_TOR_') || extProject.source === 'CKAN_GOVSPENDING') && (
-              <span
-                className="tag"
-                style={{
-                  background: '#e8f5ef',
-                  color: '#1e7e53',
-                  border: '1px solid rgba(30, 126, 83, 0.25)',
-                  fontWeight: 600,
-                }}
-              >
-                🟢 e-GP รัฐบาล
-              </span>
-            )}
-            <span className="tag software">{L('softwareProject')}</span>
             <span className={`tag category ${catClass}`}>{catLabel}</span>
             {days >= 0 && <span className={statusTagClass}>{statusText}</span>}
           </div>

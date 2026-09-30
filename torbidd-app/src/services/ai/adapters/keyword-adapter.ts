@@ -85,10 +85,45 @@ const KEYWORD_RULES: KeywordRule[] = [
 ];
 
 // --------------------------------------------------------------------------
+// Hard non-software patterns: ANY match immediately disqualifies the project.
+// These CANNOT be overridden by software keywords (even if title contains 'ซอฟต์แวร์').
+// E.g.: "เช่าจอ LCD สำหรับโครงการประชุมเชิงปฏิบัติการ... ซอฟต์แวร์" is an LCD rental for an event.
+// E.g.: "ซื้อสิทธิ์การใช้งานซอฟต์แวร์ ChatGPT Plus" is a consumer subscription buy.
+// --------------------------------------------------------------------------
+const HARD_NON_SOFTWARE_PATTERNS = [
+  // Display, screen, projector, and AV hardware rentals
+  'เช่าจอ', 'จอ lcd', 'lcd สำหรับ', 'จอภาพ', 'จอแสดงภาพ', 'จอโปรเจคเตอร์',
+  'เช่าเครื่องฉาย', 'เช่าระบบเสียง', 'เช่าเครื่องเสียง', 'เช่าเครื่องคอมพิวเตอร์',
+  'เช่าโน้ตบุ๊ก', 'เช่าแท็บเล็ต',
+
+  // Event logistics, venue rental, catering, meetings, workshops
+  'เช่าสถานที่', 'เช่าสถานที่ประชุม', 'เช่าสถานที่จัด', 'ค่าอาหาร', 'อาหารว่าง',
+  'จัดเลี้ยง', 'เช่าเต็นท์', 'เช่าโต๊ะ', 'เช่าเก้าอี้', 'จัดนิทรรศการ',
+  'จัดประชุม', 'จัดสัมมนา', 'ประชุมเชิงปฏิบัติการ', 'จัดฝึกอบรม', 'ค่าตอบแทนวิทยากร',
+  'ยานพาหนะ', 'เช่ารถ', 'จัดจ้างจัดประชุม',
+
+  // Off-the-shelf consumer/retail tool subscriptions & seat licenses
+  // (Software engineering firms build systems, they don't supply retail single licenses)
+  'chatgpt', 'claude', 'canva', 'turnitin', 'zoom', 'midjourney',
+  'gptzero', 'google ai pro', 'microsoft office 365 family', 'microsoft 365 family',
+  'office 365 family', 'office 365 personal', 'office 365 home',
+  'ต่ออายุโดเมน', 'โดเมนเนม', 'domain name',
+
+  // Office hardware purchases (PCs, laptops, printers, scanners with bundled Windows/OS)
+  'เครื่องคอมพิวเตอร์สำหรับสำนักงาน', 'คอมพิวเตอร์สำหรับสำนักงาน', 'เครื่องคอมพิวเตอร์โน้ตบุ๊ก',
+  'คอมพิวเตอร์แบบพกพา', 'คอมพิวเตอร์ตั้งโต๊ะ', 'เครื่องพิมพ์', 'เครื่องสแกนเนอร์',
+  'เครื่องถ่ายเอกสาร', 'ซื้อครุภัณฑ์คอมพิวเตอร์', 'จัดซื้อครุภัณฑ์คอมพิวเตอร์',
+  'ซื้อเครื่องคอมพิวเตอร์', 'จัดซื้อเครื่องคอมพิวเตอร์', 'ซื้อคอมพิวเตอร์',
+  'จัดซื้อคอมพิวเตอร์', 'แป้นพิมพ์และเม้าส์', 'แป้นพิมพ์และเมาส์',
+];
+
+// --------------------------------------------------------------------------
 // Comprehensive list of terms that indicate NON-software procurement.
-// If any match: immediately classify as isSoftwareRelated=false.
 // --------------------------------------------------------------------------
 const NON_SOFTWARE_KEYWORDS = [
+  // Display / event hardware rental
+  'เช่าจอ', 'จอ lcd', 'lcd สำหรับ', 'เช่าสถานที่', 'เช่าสถานที่ประชุม',
+  'จอโปรเจคเตอร์', 'เช่าวัสดุ', 'เช่าอุปกรณ์',
   // Construction & civil works
   'ก่อสร้าง', 'ก่อสร้างทาง', 'ก่อสร้างอาคาร', 'ปรับปรุงอาคาร', 'ปรับปรุงถนน',
   'จ้างก่อสร้าง', 'ก่อสร้างจ้างเหมา', 'construction', 'road construction',
@@ -113,15 +148,15 @@ const NON_SOFTWARE_KEYWORDS = [
 
 // --------------------------------------------------------------------------
 // Strong software-positive keywords: any single match strongly indicates software
-// (used to rescue projects that contain non-software words but are primarily software)
+// (used to rescue projects that contain non-software words but are primarily software development)
 // --------------------------------------------------------------------------
 const STRONG_SOFTWARE_KEYWORDS = [
   'ซอฟต์แวร์', 'software', 'โปรแกรม', 'application', 'แอปพลิเคชัน',
   'ระบบสารสนเทศ', 'system development', 'พัฒนาระบบ', 'พัฒนาโปรแกรม',
   'ระบบคอมพิวเตอร์', 'information technology', 'digital', 'ดิจิทัล',
-  'ลิขสิทธิ์ซอฟต์แวร์', 'license', 'subscription', 'บริการซอฟต์แวร์',
-  'บำรุงรักษาซอฟต์แวร์', 'maintenance software', 'it service', 'บริการไอที',
-  'cloud service', 'บริการคลาวด์', 'เช่าซอฟต์แวร์', 'เช่าระบบ',
+  'บริการซอฟต์แวร์', 'บำรุงรักษาซอฟต์แวร์', 'maintenance software',
+  'it service', 'บริการไอที', 'cloud service', 'บริการคลาวด์',
+  'เช่าซอฟต์แวร์', 'เช่าระบบ', 'บำรุงรักษาระบบ',
   // Single words that unambiguously imply software in procurement context
   ' app', 'app ', ' system', 'system ', ' platform', 'platform ',
 ];
@@ -132,9 +167,23 @@ export function classifyByKeywords(
 ): ClassificationResult {
   const text = `${title} ${description}`.toLowerCase();
 
-  // 1. Check for strong software-positive signals first — these OVERRIDE non-software terms.
+  // 0. Hard non-software patterns: ANY match immediately disqualifies the project.
+  //    No strong software keyword can override these.
+  const matchedHard = HARD_NON_SOFTWARE_PATTERNS.find((p) => text.includes(p.toLowerCase()));
+  if (matchedHard) {
+    return {
+      category: 'Information System',
+      isSoftwareRelated: false,
+      confidence: 'High',
+      reasoning: `Non-software procurement detected — matched non-software term: "${matchedHard}".`,
+      provider: 'keyword',
+      model: 'rule-based',
+    };
+  }
+
+  // 1. Check for strong software-positive signals — these override standard non-software terms.
   //    e.g. "จัดซื้อครุภัณฑ์คอมพิวเตอร์ ซอฟต์แวร์ พร้อมพัฒนาระบบ" is mixed, but
-  //    "ซ่อมบำรุงรักษาซอฟต์แวร์ครุภัณฑ์" means software maintenance, not equipment.
+  //    "ซ่อมบำรุงรักษาซอฟต์แวร์ครุภัณฑ์" means software maintenance.
   const hasStrongSoftware = STRONG_SOFTWARE_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
 
   // 2. Check for non-software indicators

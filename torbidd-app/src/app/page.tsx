@@ -15,7 +15,7 @@ export default function HomePage() {
   const [searchVal, setSearchVal] = useState('');
 
   const loadProjects = useCallback(() => {
-    fetch('/api/projects')
+    fetch('/api/projects?limit=1000&all=true')
       .then((res) => res.json())
       .then((json) => {
         if (json.data && Array.isArray(json.data)) {

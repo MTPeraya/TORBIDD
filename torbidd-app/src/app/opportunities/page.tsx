@@ -176,7 +176,7 @@ function OpportunitiesContent() {
 
   // Initial load to fetch all projects for stats and agency/category counts
   useEffect(() => {
-    fetch('/api/projects')
+    fetch('/api/projects?limit=1000&all=true')
       .then((res) => res.json())
       .then((json) => {
         if (json.data && Array.isArray(json.data)) {
@@ -186,17 +186,12 @@ function OpportunitiesContent() {
       .catch(() => {});
   }, []);
 
-  // Compute category counts for badge counters
+  // Compute category counts for badge counters across all categories
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      Website: 0,
-      'Mobile App': 0,
-      AI: 0,
-      Database: 0,
-    };
+    const counts: Record<string, number> = {};
     allProjects.forEach((p) => {
-      if (p.category && p.category in counts) {
-        counts[p.category]++;
+      if (p.category) {
+        counts[p.category] = (counts[p.category] || 0) + 1;
       }
     });
     return counts;

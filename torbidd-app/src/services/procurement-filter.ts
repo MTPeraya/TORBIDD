@@ -14,19 +14,21 @@ import { daysUntil } from '@/lib/utils';
  */
 export function filterByCategory(
   projects: Project[],
-  categories?: (string | null | undefined)[],
+  categories?: (string | null | undefined)[] | string | null,
 ): Project[] {
-  if (!categories || categories.length === 0) return projects;
+  if (!categories) return projects;
 
-  const validCategories = categories
-    .filter((c): c is string => Boolean(c && typeof c === 'string' && c.trim().length > 0))
-    .map((c) => c.trim().toLowerCase());
+  const rawArray = Array.isArray(categories) ? categories : [categories];
+  const validCategories = rawArray
+    .flatMap((c) => (typeof c === 'string' ? c.split(',') : []))
+    .map((c) => c.trim().toLowerCase())
+    .filter((c) => c.length > 0);
 
   if (validCategories.length === 0) return projects;
 
   return projects.filter((p) => {
     if (!p.category) return false;
-    const catLower = p.category.toLowerCase();
+    const catLower = p.category.toLowerCase().trim();
     return validCategories.includes(catLower);
   });
 }
@@ -37,13 +39,15 @@ export function filterByCategory(
  */
 export function filterByAgency(
   projects: Project[],
-  agencies?: (string | null | undefined)[],
+  agencies?: (string | null | undefined)[] | string | null,
 ): Project[] {
-  if (!agencies || agencies.length === 0) return projects;
+  if (!agencies) return projects;
 
-  const validAgencies = agencies
-    .filter((a): a is string => Boolean(a && typeof a === 'string' && a.trim().length > 0))
-    .map((a) => a.trim());
+  const rawArray = Array.isArray(agencies) ? agencies : [agencies];
+  const validAgencies = rawArray
+    .flatMap((a) => (typeof a === 'string' ? a.split(',') : []))
+    .map((a) => a.trim())
+    .filter((a) => a.length > 0);
 
   if (validAgencies.length === 0) return projects;
 

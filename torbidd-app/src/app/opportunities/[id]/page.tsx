@@ -244,7 +244,6 @@ export default function ProjectDetailPage({
           {/* Hero Card */}
           <div className="detail-card detail-hero">
             <div className="detail-hero-tags">
-              <span className="tag software">{L('softwareProject')}</span>
               <span className={`tag category ${catClass}`}>{catLabel}</span>
               <span className={statusTagClass}>{statusText}</span>
               <span

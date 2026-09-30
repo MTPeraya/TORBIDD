@@ -49,7 +49,7 @@ async function main() {
               software_category: result.category,
               ai_confidence: result.confidence,
               classification_reason: result.reasoning,
-              classified_by: 'rule',
+              classified_by: 'rule' as const,
               classified_at: new Date(),
             },
           },

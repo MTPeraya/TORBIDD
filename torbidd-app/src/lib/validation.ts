@@ -38,7 +38,7 @@ export const ProjectFiltersSchema = z.object({
     .enum(['publishDate_desc', 'publishDate_asc', 'budget_desc', 'budget_asc', 'newest', 'oldest'])
     .optional(),
   page: z.coerce.number().int().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(2000).optional(),
 }).refine(
   (data) => {
     if (data.minBudget !== undefined && data.maxBudget !== undefined) {
@@ -76,7 +76,7 @@ export const ProcurementFiltersSchema = z.object({
     .enum(['publishDate_desc', 'publishDate_asc', 'budget_desc', 'budget_asc', 'newest', 'oldest'])
     .optional(),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(12),
+  limit: z.coerce.number().int().min(1).max(2000).default(12),
 }).refine(
   (data) => {
     if (data.minBudget !== undefined && data.maxBudget !== undefined) {
