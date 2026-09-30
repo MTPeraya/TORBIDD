@@ -264,7 +264,7 @@ export class EgpClient {
       }
 
       const text = await response.text();
-      const projects = this.parseRssXml(text, options.limit ?? 50);
+      const projects = this.parseRssXml(text, options.limit ?? 100);
 
       return {
         total: projects.length,

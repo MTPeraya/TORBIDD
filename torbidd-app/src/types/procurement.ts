@@ -71,6 +71,13 @@ export interface DiscoveredProject {
   extractionStatus?: 'PENDING' | 'EXTRACTED' | 'FAILED';
   contentHash?: string;
   revision?: number;
+  is_software?: boolean;
+  software_category?: string;
+  ai_confidence?: 'High' | 'Medium' | 'Low';
+  classification_reason?: string;
+  classified_by?: 'ai' | 'admin' | 'rule';
+  classified_at?: Date | string;
+  admin_reviewed?: boolean;
   discoveredAt?: Date | string;
   updatedAt?: Date | string;
 }

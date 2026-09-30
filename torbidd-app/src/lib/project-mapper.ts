@@ -23,27 +23,49 @@ export function procurementToProject(
     parseToIsoDate(p.deadline) || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(); // 14 days from now
 
   let category: ProjectCategory = 'Website';
+  const rawCat = p.software_category || p.softwareCategory || p.category;
+  const validCategories: ProjectCategory[] = [
+    'Website',
+    'Mobile App',
+    'AI',
+    'Database',
+    'ERP',
+    'Cloud',
+    'Data Analytics',
+    'Information System',
+  ];
+
   const titleLower = titleText.toLowerCase();
-  // UC-10: expanded category detection
-  if (titleLower.includes('โมบาย') || titleLower.includes('แอปพลิเคชัน') || titleLower.includes('app') || titleLower.includes('mobile')) {
-    category = 'Mobile App';
-  } else if (titleLower.includes('ai') || titleLower.includes('ปัญญาประดิษฐ์') || titleLower.includes('gis') || titleLower.includes('แผนที่')) {
-    category = 'AI';
-  } else if (titleLower.includes('erp') || titleLower.includes('ทรัพยากรบุคคล') || titleLower.includes('เงินเดือน') || titleLower.includes('payroll')) {
-    category = 'ERP';
-  } else if (titleLower.includes('cloud') || titleLower.includes('คลาวด์') || titleLower.includes('saas') || titleLower.includes('iaas')) {
-    category = 'Cloud';
-  } else if (titleLower.includes('วิเคราะห์ข้อมูล') || titleLower.includes('data analytics') || titleLower.includes('business intelligence') || titleLower.includes(' bi ')) {
-    category = 'Data Analytics';
-  } else if (titleLower.includes('ฐานข้อมูล') || titleLower.includes('database') || titleLower.includes('server') || titleLower.includes('storage')) {
-    category = 'Database';
-  } else if (titleLower.includes('สารสนเทศ') || titleLower.includes('information system') || titleLower.includes('mis') || titleLower.includes('ทะเบียน')) {
-    category = 'Information System';
+
+  if (rawCat && validCategories.includes(rawCat as ProjectCategory)) {
+    category = rawCat as ProjectCategory;
+  } else {
+    // UC-10: expanded category detection
+    if (titleLower.includes('โมบาย') || titleLower.includes('แอปพลิเคชัน') || titleLower.includes('app') || titleLower.includes('mobile')) {
+      category = 'Mobile App';
+    } else if (titleLower.includes('ai') || titleLower.includes('ปัญญาประดิษฐ์') || titleLower.includes('gis') || titleLower.includes('แผนที่')) {
+      category = 'AI';
+    } else if (titleLower.includes('erp') || titleLower.includes('ทรัพยากรบุคคล') || titleLower.includes('เงินเดือน') || titleLower.includes('payroll')) {
+      category = 'ERP';
+    } else if (titleLower.includes('cloud') || titleLower.includes('คลาวด์') || titleLower.includes('saas') || titleLower.includes('iaas')) {
+      category = 'Cloud';
+    } else if (titleLower.includes('วิเคราะห์ข้อมูล') || titleLower.includes('data analytics') || titleLower.includes('business intelligence') || titleLower.includes(' bi ')) {
+      category = 'Data Analytics';
+    } else if (titleLower.includes('ฐานข้อมูล') || titleLower.includes('database') || titleLower.includes('server') || titleLower.includes('storage')) {
+      category = 'Database';
+    } else if (titleLower.includes('สารสนเทศ') || titleLower.includes('information system') || titleLower.includes('mis') || titleLower.includes('ทะเบียน')) {
+      category = 'Information System';
+    }
   }
 
   // UC-10: determine software relatedness
   const NON_SW_TERMS = ['ก่อสร้าง', 'construction', 'ถนน', 'road', 'ครุภัณฑ์', 'equipment', 'ยานพาหนะ', 'vehicle', 'เฟอร์นิเจอร์', 'furniture'];
-  const isSoftwareRelated = !NON_SW_TERMS.some((t) => titleLower.includes(t));
+  const isSoftwareRelated =
+    p.is_software !== undefined && p.is_software !== null
+      ? Boolean(p.is_software)
+      : p.isSoftwareRelated !== undefined && p.isSoftwareRelated !== null
+        ? Boolean(p.isSoftwareRelated)
+        : !NON_SW_TERMS.some((t) => titleLower.includes(t));
 
   const budgetVal = normalizeCurrency(
     p.budget ?? p.project_money ?? p.projectMoney ?? p.price ?? p.amount ?? p.sum_price_agree ?? p.contract_price,
@@ -71,8 +93,10 @@ export function procurementToProject(
     publishDate: publishDateStr,
     deadline: deadlineStr,
     category,
-    isSoftwareRelated: p.isSoftwareRelated ?? isSoftwareRelated,   // UC-10
-    classificationReviewStatus: p.classificationReviewStatus ?? 'PENDING_REVIEW', // UC-10
+    isSoftwareRelated,
+    classificationReviewStatus: (p.admin_reviewed || p.adminReviewed)
+      ? 'APPROVED'
+      : (p.classificationReviewStatus ?? 'PENDING_REVIEW'),
     procurementType: p.procurementType || 'e-Bidding',
     description: {
       th: `${titleText} (โครงการจัดซื้อจัดจ้างภาครัฐ ตรวจสอบจากระบบ e-GP กรมบัญชีกลาง รหัส: ${extId})`,
@@ -190,7 +214,8 @@ export function procurementToProject(
     historicalAvg: budgetVal,
     sourceDocument: `Attach_TOR_${extId}.pdf`,
     processedDate: new Date().toISOString(),
-    aiConfidence: p.aiConfidence || 'High',
+    aiConfidence: (p.ai_confidence || p.aiConfidence || 'High') as AiConfidence,
+    aiClassificationModel: p.classified_by || p.aiClassificationModel,
     extractionStatus: p.extractionStatus || (p.summary ? 'EXTRACTED' : 'PENDING'),
     createdAt: publishDateStr,
     updatedAt: new Date().toISOString(),

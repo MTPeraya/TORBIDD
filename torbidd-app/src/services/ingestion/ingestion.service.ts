@@ -131,6 +131,9 @@ export class IngestionService {
       console.warn('[IngestionService] e-GP RSS poll skipped/failed:', egpErr);
     }
 
+    // 4. Automatically classify all discovered projects as software / category (UC-10)
+    await this.classifyDiscoveredProjects(allProjects);
+
     // Persist discovered projects idempotently
     let upsertStats = { upsertedCount: 0, modifiedCount: 0 };
     try {
@@ -155,6 +158,37 @@ export class IngestionService {
   }
 
   /**
+   * UC-10: Automatically classify discovered projects into software or non-software,
+   * assigning software_category, ai_confidence, classification_reason, and classified_by.
+   */
+  private async classifyDiscoveredProjects(projects: DiscoveredProject[]): Promise<void> {
+    if (!projects || projects.length === 0) return;
+    try {
+      const { classifyProject } = await import('@/services/ai/classifier');
+      for (const p of projects) {
+        if (p.is_software !== undefined && p.software_category) continue;
+        try {
+          const res = await classifyProject(p.projectName, p.summary?.th || p.projectName);
+          p.is_software = res.isSoftwareRelated;
+          p.software_category = res.category;
+          p.ai_confidence = res.confidence;
+          p.classification_reason = res.reasoning;
+          p.classified_by = res.provider ? 'ai' : 'rule';
+          p.classified_at = new Date();
+        } catch {
+          p.is_software = true;
+          p.software_category = 'Software / IT';
+          p.ai_confidence = 'Medium';
+          p.classified_by = 'rule';
+          p.classified_at = new Date();
+        }
+      }
+    } catch (err) {
+      console.warn('[IngestionService] Project classification skipped:', err);
+    }
+  }
+
+  /**
    * Step 1: Discover procurement projects from CKAN / Open Government Data.
    * Performs pre-ingestion duplicate check and idempotently saves discovered projects to MongoDB.
    */
@@ -169,6 +203,9 @@ export class IngestionService {
   > {
     // 1. Query CKAN / GovSpending API
     const searchResult = await this.govSpendingClient.searchProjects(params);
+
+    // 1.5 Classify all discovered projects (UC-10)
+    await this.classifyDiscoveredProjects(searchResult.projects);
 
     // 2. Pre-ingestion check: Detect duplicates and identify version revisions before downstream queuing
     let dedupCheck: DeduplicationCheckResult | null = null;

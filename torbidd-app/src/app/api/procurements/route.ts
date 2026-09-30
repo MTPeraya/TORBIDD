@@ -77,6 +77,7 @@ export async function GET(req: NextRequest) {
     try {
       const { projects: discProjects } = await getProcurementProjects({
         search: filterData.search,
+        limit: 1000,
       });
       if (discProjects && discProjects.length > 0) {
         discoveredMapped = discProjects.map(procurementToProject);

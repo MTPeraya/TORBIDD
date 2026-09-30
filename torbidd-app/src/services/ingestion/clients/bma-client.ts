@@ -88,7 +88,7 @@ export class BmaClient {
    * Parses project listings or falls back to public announcement feeds.
    */
   public async searchProjects(params: BmaSearchParams = {}): Promise<BmaSearchResult> {
-    const limit = Math.min(Math.max(params.limit ?? 50, 1), 200);
+    const limit = Math.min(Math.max(params.limit ?? 100, 1), 1000);
     const page = Math.max(params.page ?? 1, 1);
     const keyword = params.keyword?.trim() || '';
 

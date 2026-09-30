@@ -162,6 +162,14 @@ export async function upsertDiscoveredProjects(
       updatedAt: new Date(),
     };
 
+    if (p.is_software !== undefined) updateSet.is_software = p.is_software;
+    if (p.software_category !== undefined) updateSet.software_category = p.software_category;
+    if (p.ai_confidence !== undefined) updateSet.ai_confidence = p.ai_confidence;
+    if (p.classification_reason !== undefined) updateSet.classification_reason = p.classification_reason;
+    if (p.classified_by !== undefined) updateSet.classified_by = p.classified_by;
+    if (p.classified_at !== undefined) updateSet.classified_at = p.classified_at;
+    if (p.admin_reviewed !== undefined) updateSet.admin_reviewed = p.admin_reviewed;
+
     if (newRev !== undefined) {
       updateSet.revision = newRev;
     }
@@ -174,6 +182,13 @@ export async function upsertDiscoveredProjects(
           $setOnInsert: {
             externalProjectId: p.externalProjectId,
             revision: 1,
+            is_software: p.is_software ?? true,
+            software_category: p.software_category ?? 'Software / IT',
+            ai_confidence: p.ai_confidence ?? 'High',
+            classification_reason: p.classification_reason ?? '',
+            classified_by: p.classified_by ?? 'rule',
+            classified_at: p.classified_at ?? new Date(),
+            admin_reviewed: p.admin_reviewed ?? false,
             discoveredAt: new Date(),
             createdAt: new Date(),
           },
@@ -239,6 +254,7 @@ import { getCachedDiscoveredProjects, cacheDiscoveredProjects } from '@/services
 export async function getProcurementProjects(params: {
   search?: string;
   fiscalYear?: number;
+  softwareOnly?: boolean;
   limit?: number;
   offset?: number;
 } = {}): Promise<{ projects: (IProcurementProject | DiscoveredProject)[]; total: number }> {
@@ -261,7 +277,11 @@ export async function getProcurementProjects(params: {
       query.fiscalYear = params.fiscalYear;
     }
 
-    const limit = Math.min(params.limit ?? 50, 200);
+    if (params.softwareOnly) {
+      query.is_software = { $ne: false };
+    }
+
+    const limit = Math.min(params.limit ?? 100, 1000);
     const offset = params.offset ?? 0;
 
     const [projects, total] = await Promise.all([
@@ -293,9 +313,12 @@ export async function getProcurementProjects(params: {
   if (params.fiscalYear) {
     cached = cached.filter((p) => p.fiscalYear === params.fiscalYear);
   }
+  if (params.softwareOnly) {
+    cached = cached.filter((p) => p.is_software !== false);
+  }
 
   const total = cached.length;
-  const limit = Math.min(params.limit ?? 50, 200);
+  const limit = Math.min(params.limit ?? 100, 1000);
   const offset = params.offset ?? 0;
   const sliced = cached.slice(offset, offset + limit);
 
