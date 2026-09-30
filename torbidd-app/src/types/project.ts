@@ -2,7 +2,18 @@
 // Types: Project
 // =============================================================================
 
-export type ProjectCategory = 'Website' | 'Mobile App' | 'AI' | 'Database';
+// UC-10: Expanded software categories
+export type ProjectCategory =
+  | 'Website'
+  | 'Mobile App'
+  | 'AI'
+  | 'Database'
+  | 'ERP'
+  | 'Cloud'
+  | 'Data Analytics'
+  | 'Information System';
+
+export type ClassificationReviewStatus = 'PENDING_REVIEW' | 'APPROVED' | 'CORRECTED';
 
 export type AiConfidence = 'High' | 'Medium' | 'Low';
 
@@ -79,6 +90,8 @@ export interface Project {
   publishDate: string; // ISO date string
   deadline: string; // ISO date string
   category: ProjectCategory;
+  isSoftwareRelated: boolean;         // UC-10: software vs non-software flag
+  classificationReviewStatus?: ClassificationReviewStatus; // UC-10: admin review
   procurementType: string;
   description: BilingualText;
   summary?: BilingualText; // Issue #87: TOR Executive Summary
@@ -112,6 +125,8 @@ export interface ProjectFilters {
   agencies?: string | string[];
   category?: ProjectCategory;
   categories?: string | string[];
+  isSoftwareRelated?: boolean;        // UC-10: filter by software flag
+  classificationReviewStatus?: ClassificationReviewStatus;
   budget?: 'under5m' | '5to10' | '10to20' | 'above20m';
   minBudget?: number;
   maxBudget?: number;

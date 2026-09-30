@@ -11,7 +11,16 @@ export interface IProject extends Document {
   budget: number;
   publishDate: Date;
   deadline: Date;
-  category: 'Website' | 'Mobile App' | 'AI' | 'Database';
+  // UC-10: expanded software categories
+  category:
+    | 'Website'
+    | 'Mobile App'
+    | 'AI'
+    | 'Database'
+    | 'ERP'
+    | 'Cloud'
+    | 'Data Analytics'
+    | 'Information System';
   procurementType: string;
   description: { th: string; en: string };
   summary?: { th: string; en: string };
@@ -33,6 +42,11 @@ export interface IProject extends Document {
   processedDate: Date;
   aiConfidence: 'High' | 'Medium' | 'Low';
   aiClassificationModel?: string;
+  isSoftwareRelated: boolean;                          // UC-10
+  classificationReviewStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'CORRECTED'; // UC-10
+  classificationReviewedBy?: string;                   // UC-10: admin userId
+  classificationReviewedAt?: Date;                     // UC-10
+  classificationReviewNote?: string;                   // UC-10: admin note
   extractionStatus?: 'PENDING' | 'EXTRACTED' | 'FAILED';
   timeline?: Array<{
     id: string;
@@ -152,7 +166,11 @@ const ProjectSchema = new Schema<IProject>(
     budget: { type: Number, required: true, min: 0 },
     publishDate: { type: Date, required: true },
     deadline: { type: Date, required: true },
-    category: { type: String, required: true, enum: ['Website', 'Mobile App', 'AI', 'Database'] },
+    category: {
+      type: String,
+      required: true,
+      enum: ['Website', 'Mobile App', 'AI', 'Database', 'ERP', 'Cloud', 'Data Analytics', 'Information System'],
+    },
     procurementType: { type: String, required: true },
     description: { type: BilingualSchema, required: true },
     summary: { type: OptionalBilingualSchema },
@@ -176,12 +194,23 @@ const ProjectSchema = new Schema<IProject>(
     processedDate: { type: Date, default: Date.now },
     aiConfidence: { type: String, enum: ['High', 'Medium', 'Low'], default: 'High' },
     aiClassificationModel: { type: String },
+    isSoftwareRelated: { type: Boolean, default: true },                          // UC-10
+    classificationReviewStatus: {                                                  // UC-10
+      type: String,
+      enum: ['PENDING_REVIEW', 'APPROVED', 'CORRECTED'],
+      default: 'PENDING_REVIEW',
+    },
+    classificationReviewedBy: { type: String },                                    // UC-10
+    classificationReviewedAt: { type: Date },                                      // UC-10
+    classificationReviewNote: { type: String },                                    // UC-10
   },
   { timestamps: true },
 );
 
 // Indexes for commonly queried fields
 ProjectSchema.index({ category: 1 });
+ProjectSchema.index({ isSoftwareRelated: 1 });          // UC-10
+ProjectSchema.index({ classificationReviewStatus: 1 }); // UC-10
 ProjectSchema.index({ deadline: 1 });
 ProjectSchema.index({ budget: 1 });
 ProjectSchema.index({ 'department.th': 1 });

@@ -9,6 +9,7 @@ import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { formatTHB } from '@/lib/utils';
 import { ProjectFormModal } from '@/components/admin/ProjectFormModal';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
+import { ClassificationReviewPanel } from '@/components/admin/ClassificationReviewPanel';
 
 interface AdminStats {
   totalProjects: number;
@@ -38,7 +39,7 @@ interface AdminStats {
 export default function AdminPage() {
   const { L, language } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'crawler' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'classification' | 'crawler' | 'audit'>('overview');
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [stats, setStats] = useState<AdminStats | null>(null);
 
@@ -349,6 +350,16 @@ export default function AdminPage() {
 
         <button
           type="button"
+          className={`admin-tab-btn ${activeTab === 'classification' ? 'active' : ''}`}
+          onClick={() => setActiveTab('classification')}
+          id="adminTabClassificationBtn"
+        >
+          {ICONS.sparkles}
+          <span>{L('adminTabClassification')}</span>
+        </button>
+
+        <button
+          type="button"
           className={`admin-tab-btn ${activeTab === 'audit' ? 'active' : ''}`}
           onClick={() => setActiveTab('audit')}
           id="adminTabAuditBtn"
@@ -468,7 +479,16 @@ export default function AdminPage() {
               </div>
 
               <div className="admin-category-bars">
-                {['Website', 'Mobile App', 'AI', 'Database'].map((cat) => {
+                {[
+                  { cat: 'Website', color: '#3b82f6' },
+                  { cat: 'Mobile App', color: '#10b981' },
+                  { cat: 'AI', color: '#a855f7' },
+                  { cat: 'Database', color: '#f59e0b' },
+                  { cat: 'ERP', color: '#06b6d4' },
+                  { cat: 'Cloud', color: '#8b5cf6' },
+                  { cat: 'Data Analytics', color: '#f97316' },
+                  { cat: 'Information System', color: '#64748b' },
+                ].map(({ cat, color }) => {
                   const count = projects.filter((p) => p.category === cat).length;
                   const pct = projects.length > 0 ? Math.round((count / projects.length) * 100) : 0;
                   return (
@@ -482,17 +502,7 @@ export default function AdminPage() {
                       <div className="admin-progress-bg">
                         <div
                           className="admin-progress-fill"
-                          style={{
-                            width: `${pct}%`,
-                            background:
-                              cat === 'Website'
-                                ? '#3b82f6'
-                                : cat === 'Mobile App'
-                                ? '#10b981'
-                                : cat === 'AI'
-                                ? '#a855f7'
-                                : '#f59e0b',
-                          }}
+                          style={{ width: `${pct}%`, background: color }}
                         />
                       </div>
                     </div>
@@ -532,6 +542,10 @@ export default function AdminPage() {
                 <option value="Mobile App">Mobile App</option>
                 <option value="AI">AI</option>
                 <option value="Database">Database</option>
+                <option value="ERP">ERP</option>
+                <option value="Cloud">Cloud</option>
+                <option value="Data Analytics">Data Analytics</option>
+                <option value="Information System">Information System</option>
               </select>
             </div>
           </div>
@@ -750,6 +764,11 @@ export default function AdminPage() {
             </div>
           </div>
         </section>
+      )}
+
+      {/* TAB 5: CLASSIFICATION REVIEW (UC-10) */}
+      {activeTab === 'classification' && (
+        <ClassificationReviewPanel onToast={showToast} />
       )}
 
       {/* MODALS */}

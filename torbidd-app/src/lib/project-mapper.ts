@@ -24,13 +24,26 @@ export function procurementToProject(
 
   let category: ProjectCategory = 'Website';
   const titleLower = titleText.toLowerCase();
-  if (titleLower.includes('โมบาย') || titleLower.includes('แอปพลิเคชัน') || titleLower.includes('app')) {
+  // UC-10: expanded category detection
+  if (titleLower.includes('โมบาย') || titleLower.includes('แอปพลิเคชัน') || titleLower.includes('app') || titleLower.includes('mobile')) {
     category = 'Mobile App';
-  } else if (titleLower.includes('ai') || titleLower.includes('ปัญญาประดิษฐ์') || titleLower.includes('วิเคราะห์')) {
+  } else if (titleLower.includes('ai') || titleLower.includes('ปัญญาประดิษฐ์') || titleLower.includes('gis') || titleLower.includes('แผนที่')) {
     category = 'AI';
-  } else if (titleLower.includes('ฐานข้อมูล') || titleLower.includes('database') || titleLower.includes('คลังข้อมูล')) {
+  } else if (titleLower.includes('erp') || titleLower.includes('ทรัพยากรบุคคล') || titleLower.includes('เงินเดือน') || titleLower.includes('payroll')) {
+    category = 'ERP';
+  } else if (titleLower.includes('cloud') || titleLower.includes('คลาวด์') || titleLower.includes('saas') || titleLower.includes('iaas')) {
+    category = 'Cloud';
+  } else if (titleLower.includes('วิเคราะห์ข้อมูล') || titleLower.includes('data analytics') || titleLower.includes('business intelligence') || titleLower.includes(' bi ')) {
+    category = 'Data Analytics';
+  } else if (titleLower.includes('ฐานข้อมูล') || titleLower.includes('database') || titleLower.includes('server') || titleLower.includes('storage')) {
     category = 'Database';
+  } else if (titleLower.includes('สารสนเทศ') || titleLower.includes('information system') || titleLower.includes('mis') || titleLower.includes('ทะเบียน')) {
+    category = 'Information System';
   }
+
+  // UC-10: determine software relatedness
+  const NON_SW_TERMS = ['ก่อสร้าง', 'construction', 'ถนน', 'road', 'ครุภัณฑ์', 'equipment', 'ยานพาหนะ', 'vehicle', 'เฟอร์นิเจอร์', 'furniture'];
+  const isSoftwareRelated = !NON_SW_TERMS.some((t) => titleLower.includes(t));
 
   const budgetVal = normalizeCurrency(
     p.budget ?? p.project_money ?? p.projectMoney ?? p.price ?? p.amount ?? p.sum_price_agree ?? p.contract_price,
@@ -58,6 +71,8 @@ export function procurementToProject(
     publishDate: publishDateStr,
     deadline: deadlineStr,
     category,
+    isSoftwareRelated: p.isSoftwareRelated ?? isSoftwareRelated,   // UC-10
+    classificationReviewStatus: p.classificationReviewStatus ?? 'PENDING_REVIEW', // UC-10
     procurementType: p.procurementType || 'e-Bidding',
     description: {
       th: `${titleText} (โครงการจัดซื้อจัดจ้างภาครัฐ ตรวจสอบจากระบบ e-GP กรมบัญชีกลาง รหัส: ${extId})`,

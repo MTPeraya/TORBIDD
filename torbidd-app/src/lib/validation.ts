@@ -4,9 +4,17 @@
 
 import { z } from 'zod';
 
-// ─── Project Filters (GET /api/projects) ────────────────────────────────────
-
-export const VALID_CATEGORIES = ['Website', 'Mobile App', 'AI', 'Database'] as const;
+// UC-10: Expanded software categories
+export const VALID_CATEGORIES = [
+  'Website',
+  'Mobile App',
+  'AI',
+  'Database',
+  'ERP',
+  'Cloud',
+  'Data Analytics',
+  'Information System',
+] as const;
 
 export const ProjectFiltersSchema = z.object({
   search: z.string().max(200).optional(),
@@ -15,6 +23,8 @@ export const ProjectFiltersSchema = z.object({
   agencies: z.union([z.string(), z.array(z.string())]).optional(),
   category: z.enum(VALID_CATEGORIES).optional(),
   categories: z.union([z.string(), z.array(z.string())]).optional(),
+  isSoftwareRelated: z.enum(['true', 'false']).optional(), // UC-10
+  classificationReviewStatus: z.enum(['PENDING_REVIEW', 'APPROVED', 'CORRECTED']).optional(), // UC-10
   budget: z.enum(['under5m', '5to10', '10to20', 'above20m']).optional(),
   minBudget: z.coerce.number().min(0).optional(),
   maxBudget: z.coerce.number().min(0).optional(),
@@ -46,6 +56,8 @@ export const ProcurementFiltersSchema = z.object({
   agencies: z.union([z.string(), z.array(z.string())]).optional(),
   category: z.enum(VALID_CATEGORIES).optional(),
   categories: z.union([z.string(), z.array(z.string())]).optional(),
+  isSoftwareRelated: z.enum(['true', 'false']).optional(),                    // UC-10
+  classificationReviewStatus: z.enum(['PENDING_REVIEW', 'APPROVED', 'CORRECTED']).optional(), // UC-10
   budget: z.enum(['under5m', '5to10', '10to20', 'above20m']).optional(),
   minBudget: z.coerce.number().min(0).optional(),
   maxBudget: z.coerce.number().min(0).optional(),
@@ -71,7 +83,7 @@ export const ProcurementFiltersSchema = z.object({
 // ─── Historical Filters (GET /api/historical) ───────────────────────────────
 
 export const HistoricalFiltersSchema = z.object({
-  category: z.enum(['Website', 'Mobile App', 'AI', 'Database']).optional(),
+  category: z.enum(['Website', 'Mobile App', 'AI', 'Database', 'ERP', 'Cloud', 'Data Analytics', 'Information System']).optional(),
   department: z.string().max(200).optional(),
   year: z.coerce.number().int().min(2000).max(2200).optional(),
   search: z.string().max(200).optional(),
@@ -194,7 +206,7 @@ export const ProjectCreateSchema = z.object({
   budget: z.coerce.number().min(0),
   publishDate: z.string().min(1),
   deadline: z.string().min(1),
-  category: z.enum(['Website', 'Mobile App', 'AI', 'Database']),
+  category: z.enum(['Website', 'Mobile App', 'AI', 'Database', 'ERP', 'Cloud', 'Data Analytics', 'Information System']),
   procurementType: z.string().min(1).max(200),
   description: BilingualStringSchema,
   scope: BilingualArraySchema,
@@ -204,6 +216,11 @@ export const ProjectCreateSchema = z.object({
   sourceUrl: z.string().optional(),
   documentUrl: z.string().optional(),
   aiConfidence: z.enum(['High', 'Medium', 'Low']).optional().default('High'),
+  isSoftwareRelated: z.boolean().optional().default(true),                    // UC-10
+  classificationReviewStatus: z                                               // UC-10
+    .enum(['PENDING_REVIEW', 'APPROVED', 'CORRECTED'])
+    .optional()
+    .default('PENDING_REVIEW'),
 });
 
 export const ProjectUpdateSchema = ProjectCreateSchema.partial();
