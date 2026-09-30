@@ -8,6 +8,23 @@ import { z } from 'zod';
 import { getAuthSessionFromRequest } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import Project from '@/models/Project';
+import { ProjectCategory, AiConfidence, ClassificationReviewStatus } from '@/types/project';
+
+interface QueueProjectItem {
+  _id: string;
+  externalId: number;
+  title: { th: string; en: string };
+  department: { th: string; en: string };
+  category: ProjectCategory;
+  isSoftwareRelated: boolean;
+  aiConfidence: AiConfidence;
+  classificationReviewStatus: ClassificationReviewStatus;
+  classificationReviewedBy?: string;
+  classificationReviewedAt?: Date;
+  classificationReviewNote?: string;
+  publishDate: string;
+  processedDate: string;
+}
 
 const QueueQuerySchema = z.object({
   status: z.enum(['PENDING_REVIEW', 'APPROVED', 'CORRECTED', 'all']).optional().default('PENDING_REVIEW'),
@@ -54,8 +71,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     let total = dbTotal;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let projects: any[] = dbProjects;
+    let projects: QueueProjectItem[] = dbProjects as unknown as QueueProjectItem[];
 
     // Summary counts for the overview panel
     let [pendingCount, approvedCount, correctedCount] = await Promise.all([
@@ -97,15 +113,15 @@ export async function GET(req: NextRequest) {
 
       projects = procDocs.map((p) => ({
         _id: String(p._id),
-        externalId: p.externalProjectId as unknown as number,
+        externalId: Number(String(p.externalProjectId || '').replace(/\D/g, '')) || 100000,
         title: { th: p.projectName, en: p.projectName },
         department: { th: p.agencyName, en: p.agencyName },
-        category: (p.software_category || 'Information System') as any,
+        category: (p.software_category || 'Information System') as ProjectCategory,
         isSoftwareRelated: p.is_software ?? true,
-        aiConfidence: (p.ai_confidence || 'High') as any,
+        aiConfidence: (p.ai_confidence || 'High') as AiConfidence,
         classificationReviewStatus: (p.admin_reviewed
           ? (p.is_software ? 'APPROVED' : 'CORRECTED')
-          : 'PENDING_REVIEW') as any,
+          : 'PENDING_REVIEW') as ClassificationReviewStatus,
         classificationReviewedBy: p.classified_by,
         classificationReviewedAt: p.classified_at,
         classificationReviewNote: p.classification_reason,

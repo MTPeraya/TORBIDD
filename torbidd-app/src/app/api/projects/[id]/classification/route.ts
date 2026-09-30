@@ -47,7 +47,7 @@ export async function PATCH(
     // Support both numeric externalId and MongoDB _id
     const filter = /^\d+$/.test(idStr) ? { externalId: Number(idStr) } : { _id: idStr };
 
-    let updated = await Project.findOneAndUpdate(
+    const updated = await Project.findOneAndUpdate(
       filter,
       {
         $set: {
