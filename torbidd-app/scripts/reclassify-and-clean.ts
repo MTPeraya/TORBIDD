@@ -37,8 +37,12 @@ async function main() {
       doc.projectName || '',
     );
 
-    // Only update if classification changed
-    if (result.isSoftwareRelated !== doc.is_software || result.category !== doc.software_category) {
+    // Update if classification, category, or reasoning changed
+    if (
+      result.isSoftwareRelated !== doc.is_software ||
+      result.category !== doc.software_category ||
+      result.reasoning !== doc.classification_reason
+    ) {
       if (!result.isSoftwareRelated) markedNonSoftware++;
       bulkOps.push({
         updateOne: {

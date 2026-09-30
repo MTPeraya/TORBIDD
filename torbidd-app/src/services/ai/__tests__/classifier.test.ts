@@ -161,6 +161,39 @@ describe('UC-10 Classifier', () => {
       expectValidResult(result);
     });
 
+    it('identifies van rental and vehicle charter as non-software even when software contest is mentioned', () => {
+      const result = classifyByKeywords(
+        'จ้างเหมารถตู้ไป-กลับ จากโรงเรียนสะเดาขรรค์ชัย ฯ ถึงมหาวิทยาวลัยลักษณ์ จังหวัดนครศรีธรรมราช (เพื่อนำเสนอผลงานการประกวดโครงงานพัฒนาซอฟต์แวร์คอมพิวเตอร์งานสัปดาห์วิทยาศาสตร์แห่งชาติ วันที่ 23 สิงหาคม 2569 โดยใช้รถจำนวน 1 คัน หมายเลขทะเบียน นค 4466 สงขลา โดยวิธีเฉพาะเจาะจง',
+        'จ้างเหมารถตู้สำหรับการเดินทาง',
+      );
+      expect(result.isSoftwareRelated).toBe(false);
+      expect(result.reasoning).toContain('matched non-software term');
+      expectValidResult(result);
+    });
+
+    it('identifies off-the-shelf AutoCAD license rental as non-software and not AI', () => {
+      const result = classifyByKeywords(
+        'เช่าโปรแกรม AutoCAD ซอฟต์แวร์ออกแบบ เป็นเวลา ๑ ปี โดยวิธีเฉพาะเจาะจง',
+        'เช่าใช้งานลิขสิทธิ์ AutoCAD รายปี',
+      );
+      expect(result.isSoftwareRelated).toBe(false);
+      expect(result.category).not.toBe('AI');
+      expect(result.reasoning).not.toContain('found for "AI"');
+      expectValidResult(result);
+    });
+
+    it('classifies general software without category keywords as Information System with clean reasoning', () => {
+      const result = classifyByKeywords(
+        'จ้างพัฒนาระบบซอฟต์แวร์เพื่อการบริหารจัดการข้อมูลกลาง',
+        'พัฒนาระบบซอฟต์แวร์',
+      );
+      expect(result.isSoftwareRelated).toBe(true);
+      expect(result.category).toBe('Information System');
+      expect(result.reasoning).not.toContain('AI');
+      expect(result.reasoning).toContain('General software procurement classified as Information System');
+      expectValidResult(result);
+    });
+
     // ── Confidence levels ─────────────────────────────────────────────────────
     it('returns Low confidence for ambiguous projects', () => {
       const result = classifyByKeywords('Project XYZ', 'General project description');
@@ -185,3 +218,4 @@ describe('UC-10 Classifier', () => {
     });
   });
 });
+

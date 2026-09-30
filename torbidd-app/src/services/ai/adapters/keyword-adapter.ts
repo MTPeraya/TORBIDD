@@ -100,7 +100,13 @@ const HARD_NON_SOFTWARE_PATTERNS = [
   'เช่าสถานที่', 'เช่าสถานที่ประชุม', 'เช่าสถานที่จัด', 'ค่าอาหาร', 'อาหารว่าง',
   'จัดเลี้ยง', 'เช่าเต็นท์', 'เช่าโต๊ะ', 'เช่าเก้าอี้', 'จัดนิทรรศการ',
   'จัดประชุม', 'จัดสัมมนา', 'ประชุมเชิงปฏิบัติการ', 'จัดฝึกอบรม', 'ค่าตอบแทนวิทยากร',
-  'ยานพาหนะ', 'เช่ารถ', 'จัดจ้างจัดประชุม',
+  'จัดจ้างจัดประชุม',
+
+  // Vehicle charter, transport, and passenger logistics
+  // (Transporting students/personnel to competitions or workshops is transport, not software development)
+  'จ้างเหมารถ', 'เหมารถ', 'รถตู้', 'เช่ารถตู้', 'จ้างเหมารถตู้', 'รถบัส', 'เช่ารถบัส',
+  'จ้างเหมารถบัส', 'รถรับจ้าง', 'รถสองแถว', 'ค่าพาหนะ', 'ค่าโดยสาร', 'บริการขนส่ง',
+  'จ้างเหมายานพาหนะ', 'ยานพาหนะ', 'เช่ารถ',
 
   // Off-the-shelf consumer/retail tool subscriptions & seat licenses
   // (Software engineering firms build systems, they don't supply retail single licenses)
@@ -108,6 +114,7 @@ const HARD_NON_SOFTWARE_PATTERNS = [
   'gptzero', 'google ai pro', 'microsoft office 365 family', 'microsoft 365 family',
   'office 365 family', 'office 365 personal', 'office 365 home',
   'ต่ออายุโดเมน', 'โดเมนเนม', 'domain name',
+  'autocad', 'ออโต้แคด',
 
   // Office hardware purchases (PCs, laptops, printers, scanners with bundled Windows/OS)
   'เครื่องคอมพิวเตอร์สำหรับสำนักงาน', 'คอมพิวเตอร์สำหรับสำนักงาน', 'เครื่องคอมพิวเตอร์โน้ตบุ๊ก',
@@ -207,12 +214,11 @@ export function classifyByKeywords(
     scores[rule.category] = rule.keywords.filter((kw) => text.includes(kw.toLowerCase())).length;
   }
 
-  const bestCategory = (Object.entries(scores).sort(([, a], [, b]) => b - a)[0] ?? [
-    'Information System',
-    0,
-  ]) as [ProjectCategory, number];
-
-  const [category, score] = bestCategory;
+  // Only select categories that actually have positive keyword matches (> 0)
+  const positiveMatches = Object.entries(scores).filter(([, s]) => s > 0);
+  const [category, score] = positiveMatches.length > 0
+    ? (positiveMatches.sort(([, a], [, b]) => b - a)[0] as [ProjectCategory, number])
+    : (['Information System' as ProjectCategory, 0]);
 
   // 4. If no software keyword matches at all AND no strong signal → mark as non-software.
   //    (Prevents defaulting everything with no signals to isSoftwareRelated: true)
@@ -229,11 +235,15 @@ export function classifyByKeywords(
 
   const confidence: 'High' | 'Medium' | 'Low' = score >= 3 ? 'High' : score >= 1 ? 'Medium' : 'Low';
 
+  const reasoning = score > 0
+    ? `Keyword-based classification: ${score} matching term(s) found for "${category}".${hasStrongSoftware ? ' Strong software signal detected.' : ''}`
+    : `General software procurement classified as Information System.${hasStrongSoftware ? ' Strong software signal detected.' : ''}`;
+
   return {
-    category: score > 0 ? category : 'Information System',
+    category,
     isSoftwareRelated: true,
     confidence,
-    reasoning: `Keyword-based classification: ${score} matching term(s) found for "${category}".${hasStrongSoftware ? ' Strong software signal detected.' : ''}`,
+    reasoning,
     provider: 'keyword',
     model: 'rule-based',
   };
