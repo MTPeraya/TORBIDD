@@ -31,6 +31,15 @@ export async function GET(req: NextRequest) {
     const nextScheduledSyncAt =
       dbMetadata?.nextScheduledSyncAt?.toISOString() || localStatus.nextSyncAt;
 
+    let externalSources = null;
+    try {
+      const { IngestionService } = await import('@/services/ingestion/ingestion.service');
+      const ingestionService = new IngestionService();
+      externalSources = await ingestionService.checkAllSourcesHealth();
+    } catch (sourceErr) {
+      console.warn('[SyncHealth] Could not check external sources:', sourceErr);
+    }
+
     return NextResponse.json({
       success: true,
       health,
@@ -42,6 +51,7 @@ export async function GET(req: NextRequest) {
       syncIntervalHours: localStatus.syncIntervalHours,
       recentLogs,
       status: localStatus,
+      externalSources,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

@@ -51,6 +51,15 @@ export function getCurrentThaiFiscalYear(date = new Date()): number {
   return date.getUTCFullYear() + (date.getUTCMonth() >= 9 ? 544 : 543);
 }
 
+export interface GovSpendingHealthStatus {
+  status: 'UP' | 'DOWN';
+  statusCode?: number;
+  latencyMs: number;
+  endpoint: string;
+  hasApiKey: boolean;
+  error?: string;
+}
+
 /**
  * GovSpendingClient - Communicates with opend.data.go.th to discover procurement projects.
  */
@@ -66,9 +75,51 @@ export class GovSpendingClient {
     const key = options.apiKey !== undefined ? options.apiKey : config.govspendingApiKey;
     this.apiKey = key?.trim() ?? '';
     this.baseUrl = options.baseUrl ?? config.govspendingBaseUrl;
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.fetchImpl =
+      options.fetchImpl ??
+      (typeof fetch !== 'undefined'
+        ? fetch
+        : ((globalThis as unknown as { fetch?: typeof fetch }).fetch as typeof fetch));
     this.requestTimeoutMs = options.requestTimeoutMs ?? config.requestTimeoutMs;
     this.retryDelayBaseMs = options.retryDelayBaseMs;
+  }
+
+  /**
+   * Health check verifying connectivity to data.go.th / opend.data.go.th.
+   */
+  public async checkHealth(): Promise<GovSpendingHealthStatus> {
+    const start = Date.now();
+    try {
+      const url = new URL(this.baseUrl);
+      if (this.apiKey) {
+        url.searchParams.set('api-key', this.apiKey);
+        url.searchParams.set('year', String(getCurrentThaiFiscalYear()));
+        url.searchParams.set('keyword', 'กทม');
+        url.searchParams.set('limit', '1');
+      }
+
+      const response = await this.fetchImpl(url.toString(), {
+        method: 'GET',
+        headers: { Accept: 'application/json, text/html' },
+        signal: AbortSignal.timeout(this.requestTimeoutMs),
+      });
+
+      return {
+        status: response.ok || response.status === 401 || response.status === 403 ? 'UP' : 'DOWN',
+        statusCode: response.status,
+        latencyMs: Date.now() - start,
+        endpoint: this.baseUrl,
+        hasApiKey: Boolean(this.apiKey),
+      };
+    } catch (err) {
+      return {
+        status: 'DOWN',
+        latencyMs: Date.now() - start,
+        endpoint: this.baseUrl,
+        hasApiKey: Boolean(this.apiKey),
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
   }
 
   /**

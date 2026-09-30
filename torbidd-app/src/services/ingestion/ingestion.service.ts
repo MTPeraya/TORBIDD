@@ -2,8 +2,9 @@
 // services/ingestion/ingestion.service.ts - End-to-End Ingestion Pipeline Service
 // =============================================================================
 
-import { GovSpendingClient } from './clients/govspending-client';
-import { EgpClient } from './clients/egp-client';
+import { GovSpendingClient, GovSpendingHealthStatus } from './clients/govspending-client';
+import { EgpClient, EgpHealthStatus } from './clients/egp-client';
+import { BmaClient, BmaHealthStatus } from './clients/bma-client';
 import { DocumentExtractor } from './document-extractor';
 import {
   upsertDiscoveredProjects,
@@ -16,6 +17,7 @@ import {
 import { extractTorFromFile, TorExtractResult } from '@/services/ai/tor-extractor';
 import {
   DeduplicationCheckResult,
+  DiscoveredProject,
   GovSpendingSearchParams,
   GovSpendingSearchResult,
   IngestionDocumentsResult,
@@ -25,18 +27,131 @@ import {
 export interface IngestionServiceOptions {
   govSpendingClient?: GovSpendingClient;
   egpClient?: EgpClient;
+  bmaClient?: BmaClient;
   documentExtractor?: DocumentExtractor;
+}
+
+export interface SourcesHealthReport {
+  timestamp: string;
+  sources: {
+    bma: BmaHealthStatus;
+    egp: EgpHealthStatus;
+    dataGoTh: GovSpendingHealthStatus;
+  };
+  allReachable: boolean;
 }
 
 export class IngestionService {
   private readonly govSpendingClient: GovSpendingClient;
   private readonly egpClient: EgpClient;
+  private readonly bmaClient: BmaClient;
   private readonly documentExtractor: DocumentExtractor;
 
   public constructor(options: IngestionServiceOptions = {}) {
     this.govSpendingClient = options.govSpendingClient ?? new GovSpendingClient();
     this.egpClient = options.egpClient ?? new EgpClient();
+    this.bmaClient = options.bmaClient ?? new BmaClient();
     this.documentExtractor = options.documentExtractor ?? new DocumentExtractor();
+  }
+
+  /**
+   * Diagnostic check verifying live connectivity to all 3 required government data sources:
+   * 1. Bangkok Metropolitan Administration (egp2.bangkok.go.th)
+   * 2. Electronic Government Procurement (www.gprocurement.go.th)
+   * 3. Open Government Data of Thailand (data.go.th / opend.data.go.th)
+   */
+  public async checkAllSourcesHealth(): Promise<SourcesHealthReport> {
+    const [bma, egp, dataGoTh] = await Promise.all([
+      this.bmaClient.checkHealth(),
+      this.egpClient.checkHealth(),
+      this.govSpendingClient.checkHealth(),
+    ]);
+
+    return {
+      timestamp: new Date().toISOString(),
+      sources: {
+        bma,
+        egp,
+        dataGoTh,
+      },
+      allReachable: bma.status === 'UP' && egp.status === 'UP' && dataGoTh.status === 'UP',
+    };
+  }
+
+  /**
+   * Unified multi-source discovery aggregating projects from:
+   * - Open Government Data (data.go.th / CKAN)
+   * - BMA e-Procurement (egp2.bangkok.go.th)
+   * - National e-GP Announcements (process3 / process5.gprocurement.go.th)
+   */
+  public async discoverFromAllSources(params: GovSpendingSearchParams = {}): Promise<{
+    totalProjects: number;
+    upsertedCount: number;
+    modifiedCount: number;
+    bySource: Record<string, number>;
+    projects: DiscoveredProject[];
+  }> {
+    const allProjects: DiscoveredProject[] = [];
+    const bySource: Record<string, number> = {
+      CKAN_GOVSPENDING: 0,
+      BMA_EGP: 0,
+      NATIONAL_EGP: 0,
+    };
+
+    // 1. Data.go.th (CKAN)
+    try {
+      const ckanRes = await this.govSpendingClient.searchProjects(params);
+      allProjects.push(...ckanRes.projects);
+      bySource.CKAN_GOVSPENDING = ckanRes.projects.length;
+    } catch (ckanErr) {
+      console.warn('[IngestionService] CKAN search skipped/failed:', ckanErr);
+    }
+
+    // 2. BMA e-Procurement (egp2.bangkok.go.th)
+    try {
+      const bmaRes = await this.bmaClient.searchProjects({
+        keyword: params.keyword,
+        fiscalYear: params.fiscalYear,
+        signal: params.signal,
+      });
+      allProjects.push(...bmaRes.projects);
+      bySource.BMA_EGP = bmaRes.projects.length;
+    } catch (bmaErr) {
+      console.warn('[IngestionService] BMA search skipped/failed:', bmaErr);
+    }
+
+    // 3. National e-GP (gprocurement.go.th)
+    try {
+      const egpRes = await this.egpClient.pollAnnouncements({
+        signal: params.signal,
+      });
+      allProjects.push(...egpRes.projects);
+      bySource.NATIONAL_EGP = egpRes.projects.length;
+    } catch (egpErr) {
+      console.warn('[IngestionService] e-GP RSS poll skipped/failed:', egpErr);
+    }
+
+    // Persist discovered projects idempotently
+    let upsertStats = { upsertedCount: 0, modifiedCount: 0 };
+    try {
+      if (allProjects.length > 0) {
+        const stats = await upsertDiscoveredProjects(allProjects);
+        upsertStats = {
+          upsertedCount: stats.upsertedCount,
+          modifiedCount: stats.modifiedCount,
+        };
+      }
+    } catch (dbErr) {
+      console.warn('[IngestionService] Database upsert skipped or offline:', dbErr);
+    }
+
+    return {
+      totalProjects: allProjects.length,
+      upsertedCount: upsertStats.upsertedCount,
+      modifiedCount: upsertStats.modifiedCount,
+      bySource,
+      projects: allProjects,
+    };
   }
 
   /**

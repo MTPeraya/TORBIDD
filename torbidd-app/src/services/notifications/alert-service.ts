@@ -43,7 +43,11 @@ export class AlertService {
       process.env.SLACK_WEBHOOK_URL;
     this.lineNotifyToken =
       options.lineNotifyToken || process.env.LINE_NOTIFY_TOKEN;
-    this.fetchImpl = options.fetchImpl || fetch;
+    this.fetchImpl =
+      options.fetchImpl ||
+      (typeof fetch !== 'undefined'
+        ? fetch
+        : ((globalThis as unknown as { fetch?: typeof fetch }).fetch as typeof fetch));
   }
 
   /**

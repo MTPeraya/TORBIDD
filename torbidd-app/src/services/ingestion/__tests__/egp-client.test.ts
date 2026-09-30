@@ -148,4 +148,44 @@ describe('EgpClient (National e-GP)', () => {
       }),
     ).rejects.toThrow(/not a valid ZIP archive/i);
   });
+
+  // ─── 8. e-GP Health Check & RSS Announcements ─────────────────────────────
+  it('8a. should report UP health status when portal is reachable', async () => {
+    const mockFetch = jest.fn().mockResolvedValue(new Response('OK', { status: 200 }));
+    const client = new EgpClient({ fetchImpl: mockFetch as unknown as typeof fetch });
+
+    const health = await client.checkHealth();
+    expect(health.status).toBe('UP');
+    expect(health.statusCode).toBe(200);
+  });
+
+  it('8b. should poll and parse e-GP RSS XML announcements correctly', async () => {
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?>
+      <rss version="2.0">
+        <channel>
+          <title>e-GP Announcements</title>
+          <item>
+            <title>จ้างพัฒนาระบบคลาวด์ภาครัฐ 67019998877</title>
+            <link>https://process5.gprocurement.go.th/project/67019998877</link>
+            <description>โครงการจัดซื้อจัดจ้าง วงเงิน 15,000,000 บาท</description>
+          </item>
+        </channel>
+      </rss>`;
+
+    const mockFetch = jest.fn().mockResolvedValue(
+      new Response(mockXml, {
+        status: 200,
+        headers: { 'Content-Type': 'application/rss+xml' },
+      }),
+    );
+
+    const client = new EgpClient({ fetchImpl: mockFetch as unknown as typeof fetch });
+    const result = await client.pollAnnouncements();
+
+    expect(result.projects).toHaveLength(1);
+    expect(result.projects[0].externalProjectId).toBe('67019998877');
+    expect(result.projects[0].source).toBe('NATIONAL_EGP');
+    expect(result.projects[0].budget).toBe(15000000);
+  });
 });
+

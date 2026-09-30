@@ -2,7 +2,7 @@
 // services/ingestion/clients/egp-client.ts - National e-GP Client
 // =============================================================================
 
-import { EgpArchiveMetadata } from '@/types/procurement';
+import { DiscoveredProject, EgpArchiveMetadata } from '@/types/procurement';
 import { getIngestionConfig } from '@/lib/config';
 
 const METADATA_PATH = '/egp-approval-service/apv-common/infoProcureDocAnnounZipTemp';
@@ -12,6 +12,8 @@ const MAX_ARCHIVE_BYTES = 100 * 1024 * 1024; // 100MB download limit
 
 export interface EgpClientOptions {
   baseUrl?: string;
+  portalUrl?: string;
+  rssBaseUrl?: string;
   fetchImpl?: typeof fetch;
   requestTimeoutMs?: number;
 }
@@ -22,19 +24,71 @@ export interface EgpDownloadResult {
   contentLength: number;
 }
 
+export interface EgpHealthStatus {
+  status: 'UP' | 'DOWN';
+  statusCode?: number;
+  latencyMs: number;
+  endpoint: string;
+  error?: string;
+}
+
 /**
- * EgpClient - Connects to process5.gprocurement.go.th to retrieve procurement ZIP packages.
+ * EgpClient - Connects to process5.gprocurement.go.th and www.gprocurement.go.th
+ * to retrieve procurement ZIP packages and poll national e-GP announcements.
  */
 export class EgpClient {
   private readonly baseUrl: string;
+  private readonly portalUrl: string;
+  private readonly rssBaseUrl: string;
   private readonly fetchImpl: typeof fetch;
   private readonly requestTimeoutMs: number;
 
   public constructor(options: EgpClientOptions = {}) {
     const config = getIngestionConfig();
     this.baseUrl = (options.baseUrl ?? config.egpBaseUrl).replace(/\/+$/, '');
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.portalUrl = (options.portalUrl ?? process.env.EGP_PORTAL_URL ?? 'https://www.gprocurement.go.th').replace(/\/+$/, '');
+    this.rssBaseUrl = (
+      options.rssBaseUrl ??
+      process.env.EGP_RSS_BASE_URL ??
+      'https://process3.gprocurement.go.th/EPROCRssFeedWeb/egpannouncerss.xml'
+    ).trim();
+    this.fetchImpl =
+      options.fetchImpl ??
+      (typeof fetch !== 'undefined'
+        ? fetch
+        : ((globalThis as unknown as { fetch?: typeof fetch }).fetch as typeof fetch));
     this.requestTimeoutMs = options.requestTimeoutMs ?? config.requestTimeoutMs;
+  }
+
+  /**
+   * Health check verifying connectivity to www.gprocurement.go.th.
+   */
+  public async checkHealth(): Promise<EgpHealthStatus> {
+    const start = Date.now();
+    try {
+      const response = await this.fetchImpl(this.portalUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'TORBIDD-Ingestion-Bot/1.0',
+          Accept: 'text/html,*/*',
+        },
+        signal: AbortSignal.timeout(this.requestTimeoutMs),
+      });
+
+      return {
+        status: response.ok || response.status === 301 || response.status === 302 ? 'UP' : 'DOWN',
+        statusCode: response.status,
+        latencyMs: Date.now() - start,
+        endpoint: this.portalUrl,
+      };
+    } catch (err) {
+      return {
+        status: 'DOWN',
+        latencyMs: Date.now() - start,
+        endpoint: this.portalUrl,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
   }
 
   /**
@@ -170,4 +224,102 @@ export class EgpClient {
     const metadata = await this.getArchiveMetadata(projectId);
     return this.downloadArchive(metadata);
   }
+
+  /**
+   * Polls procurement announcements from e-GP RSS feed.
+   * Parses items, extracts 11-digit project IDs, and maps them to DiscoveredProject records.
+   */
+  public async pollAnnouncements(options: {
+    deptId?: string;
+    anounceType?: string;
+    limit?: number;
+    signal?: AbortSignal;
+  } = {}): Promise<{ total: number; projects: DiscoveredProject[] }> {
+    const url = new URL(this.rssBaseUrl);
+    if (options.deptId) {
+      url.searchParams.set('deptId', options.deptId);
+    }
+    if (options.anounceType) {
+      url.searchParams.set('anounceType', options.anounceType);
+    }
+
+    const timeoutSignal = AbortSignal.timeout(this.requestTimeoutMs);
+    const combinedSignal = options.signal
+      ? AbortSignal.any([options.signal, timeoutSignal])
+      : timeoutSignal;
+
+    try {
+      const response = await this.fetchImpl(url.toString(), {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'TORBIDD-Ingestion-Bot/1.0',
+          Accept: 'application/rss+xml, application/xml, text/xml, */*',
+        },
+        signal: combinedSignal,
+      });
+
+      if (!response.ok) {
+        console.warn(`[EgpClient] RSS feed returned HTTP ${response.status}`);
+        return { total: 0, projects: [] };
+      }
+
+      const text = await response.text();
+      const projects = this.parseRssXml(text, options.limit ?? 50);
+
+      return {
+        total: projects.length,
+        projects,
+      };
+    } catch (err) {
+      console.warn(
+        '[EgpClient] RSS poll failed — falling back gracefully:',
+        err instanceof Error ? err.message : String(err),
+      );
+      return { total: 0, projects: [] };
+    }
+  }
+
+  /**
+   * Parses e-GP RSS XML feed items into DiscoveredProject records.
+   */
+  private parseRssXml(xml: string, limit: number): DiscoveredProject[] {
+    const projects: DiscoveredProject[] = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+    const currentYear = new Date().getFullYear() + 543;
+
+    let match: RegExpExecArray | null;
+    while ((match = itemRegex.exec(xml)) !== null && projects.length < limit) {
+      const itemContent = match[1];
+
+      const titleMatch = /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i.exec(itemContent);
+      const linkMatch = /<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i.exec(itemContent);
+      const descMatch = /<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i.exec(itemContent);
+
+      const title = (titleMatch?.[1] ?? '').trim();
+      const link = (linkMatch?.[1] ?? '').trim();
+      const desc = (descMatch?.[1] ?? '').trim();
+
+      // Extract 11-digit project ID from link or description
+      const idMatch = /(\d{11})/.exec(link) || /(\d{11})/.exec(desc) || /(\d{11})/.exec(title);
+      const externalProjectId = idMatch ? idMatch[1] : `EGP-${Date.now()}-${projects.length}`;
+
+      // Extract budget if present
+      const budgetMatch = /(?:งบประมาณ|วงเงิน)\s*[:=]?\s*([\d,]+)/i.exec(desc);
+      const budget = budgetMatch ? Number(budgetMatch[1].replace(/,/g, '')) : 0;
+
+      projects.push({
+        externalProjectId,
+        projectName: title || 'e-GP Announcement',
+        agencyName: 'กรมบัญชีกลาง',
+        fiscalYear: currentYear,
+        source: 'NATIONAL_EGP',
+        sourceUrl: link || `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${externalProjectId}`,
+        budget: Number.isFinite(budget) ? budget : 0,
+        procurementType: 'ประกาศจัดซื้อจัดจ้าง e-GP',
+      });
+    }
+
+    return projects;
+  }
 }
+
