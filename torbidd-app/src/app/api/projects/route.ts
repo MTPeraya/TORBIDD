@@ -6,12 +6,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProjects, createProject } from '@/services/database/projects';
 import { getProcurementProjects } from '@/services/database/procurement';
 import { ProjectFiltersSchema, ProjectCreateSchema } from '@/lib/validation';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { executeProcurementSearch } from '@/services/procurement-search';
 import { ProcurementSortOption } from '@/types/procurement';
 import { Project } from '@/types/project';
 import { procurementToProject } from '@/lib/project-mapper';
 import { getSyncStatus } from '@/services/ingestion/sync-state';
+import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
         bmaDbProjects = ((await getProjects(parsed.data)) as unknown as Project[]) || [];
       } catch {}
 
-      const bmaList = bmaDbProjects.length > 0 ? bmaDbProjects : INITIAL_PROJECTS;
+      const bmaList = bmaDbProjects;
       const searchResult = executeProcurementSearch(bmaList, {
         search: parsed.data.search,
         categories: parsed.data.categories
@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
         sortBy: parsed.data.sortBy as ProcurementSortOption,
         page: parsed.data.page,
         limit: parsed.data.limit,
+        isSoftwareRelated: parsed.data.isSoftwareRelated,
       });
 
       return NextResponse.json({
@@ -88,39 +89,50 @@ export async function GET(req: NextRequest) {
     try {
       const { projects: discProjects } = await getProcurementProjects({
         search: parsed.data.search,
+        limit: 1000,
       });
       if (discProjects && discProjects.length > 0) {
         discoveredProjectsMapped = discProjects.map(procurementToProject);
       }
     } catch {}
 
-    // 4. Fetch BMA database projects or fallback to INITIAL_PROJECTS
+    // 4. Fetch custom database projects
     let bmaProjects: Project[] = [];
     try {
       bmaProjects = ((await getProjects(parsed.data)) as unknown as Project[]) || [];
     } catch {}
 
-    if (bmaProjects.length === 0) {
-      bmaProjects = INITIAL_PROJECTS;
-    }
-
-    // 5. Combine discovered live projects with BMA projects and run full search/filter/sort
+    // 5. Combine real database projects and run full search/filter/sort
     const combined = [...discoveredProjectsMapped, ...bmaProjects];
+
+    const resolvedCategories = parsed.data.categories
+      ? (typeof parsed.data.categories === 'string'
+          ? parsed.data.categories.split(',')
+          : parsed.data.categories)
+      : (parsed.data.category ? [parsed.data.category] : undefined);
+
+    const resolvedAgencies = parsed.data.agencies
+      ? (typeof parsed.data.agencies === 'string'
+          ? parsed.data.agencies.split(',')
+          : parsed.data.agencies)
+      : (parsed.data.agency ? [parsed.data.agency] : (parsed.data.department ? [parsed.data.department] : undefined));
+
+    const effectiveLimit = params.all === 'true' || params.limit === 'all'
+      ? (combined.length || 1000)
+      : parsed.data.limit;
+
     const searchResult = executeProcurementSearch(combined, {
       search: parsed.data.search,
-      categories: parsed.data.categories
-        ? (Array.isArray(parsed.data.categories) ? parsed.data.categories : [parsed.data.categories])
-        : (parsed.data.category ? [parsed.data.category] : undefined),
-      agencies: parsed.data.agencies
-        ? (Array.isArray(parsed.data.agencies) ? parsed.data.agencies : [parsed.data.agencies])
-        : (parsed.data.agency ? [parsed.data.agency] : (parsed.data.department ? [parsed.data.department] : undefined)),
+      categories: resolvedCategories,
+      agencies: resolvedAgencies,
       minBudget: parsed.data.minBudget,
       maxBudget: parsed.data.maxBudget,
       budgetPreset: parsed.data.budget,
       deadline: parsed.data.deadline,
       sortBy: parsed.data.sortBy as ProcurementSortOption,
       page: parsed.data.page,
-      limit: parsed.data.limit,
+      limit: effectiveLimit,
+      isSoftwareRelated: parsed.data.isSoftwareRelated,
     });
 
     return NextResponse.json({
@@ -131,8 +143,8 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[GET /api/projects]', err);
     return NextResponse.json({
-      data: INITIAL_PROJECTS,
-      total: INITIAL_PROJECTS.length,
+      data: [],
+      total: 0,
       syncStatus: getSyncStatus(),
     });
   }
@@ -140,6 +152,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const body = await req.json();
     const parsed = ProjectCreateSchema.safeParse(body);
 

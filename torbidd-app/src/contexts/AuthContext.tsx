@@ -16,11 +16,13 @@ export interface AuthUser {
   picture?: string;
   role: string;
   org: string;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
   login: (returnUrl?: string, useMock?: boolean) => void;
   logout: () => Promise<void>;
@@ -31,6 +33,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
+  isAdmin: false,
   isLoading: true,
   login: () => {},
   logout: async () => {},
@@ -146,11 +149,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const roleLower = (user?.role || '').toLowerCase().trim();
+  const isAdmin = Boolean(
+    user && (
+      user.isAdmin === true ||
+      roleLower === 'admin' ||
+      roleLower === 'administrator'
+    )
+  );
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
+        isAdmin,
         isLoading,
         login,
         logout,

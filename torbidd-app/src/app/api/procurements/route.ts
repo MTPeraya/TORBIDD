@@ -7,7 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ProcurementFiltersSchema } from '@/lib/validation';
 import { executeProcurementSearch } from '@/services/procurement-search';
 import { getProjects } from '@/services/database/projects';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
+import { getProcurementProjects } from '@/services/database/procurement';
+import { procurementToProject } from '@/lib/project-mapper';
 import { ProcurementSortOption } from '@/types/procurement';
 import { Project } from '@/types/project';
 
@@ -71,49 +72,27 @@ export async function GET(req: NextRequest) {
 
     const filterData = parsed.data;
 
-    // Check DB first if available
+    // Fetch real projects from database
+    let discoveredMapped: Project[] = [];
     try {
-      const dbProjects = await getProjects({
+      const { projects: discProjects } = await getProcurementProjects({
         search: filterData.search,
-        categories: categories.length > 0 ? categories : undefined,
-        agencies: agencies.length > 0 ? agencies : (filterData.department ? [filterData.department] : undefined),
-        budget: filterData.budget,
-        minBudget: filterData.minBudget,
-        maxBudget: filterData.maxBudget,
-        deadline: filterData.deadline,
-        sortBy: filterData.sortBy as ProcurementSortOption,
+        limit: 1000,
       });
-
-      if (dbProjects && dbProjects.length > 0) {
-        // Apply pagination
-        const searchResult = executeProcurementSearch(dbProjects as unknown as Project[], {
-          search: filterData.search,
-          categories: categories.length > 0 ? categories : undefined,
-          agencies: agencies.length > 0 ? agencies : (filterData.department ? [filterData.department] : undefined),
-          minBudget: filterData.minBudget,
-          maxBudget: filterData.maxBudget,
-          budgetPreset: filterData.budget,
-          deadline: filterData.deadline,
-          sortBy: filterData.sortBy as ProcurementSortOption,
-          page: filterData.page,
-          limit: filterData.limit,
-        });
-
-        return NextResponse.json({
-          data: searchResult.items,
-          total: searchResult.total,
-          page: searchResult.page,
-          limit: searchResult.limit,
-          totalPages: searchResult.totalPages,
-          filters: filterData,
-        });
+      if (discProjects && discProjects.length > 0) {
+        discoveredMapped = discProjects.map(procurementToProject);
       }
-    } catch {
-      // Database not connected; continue to static dataset fallback
-    }
+    } catch {}
 
-    // Fallback: run full combined filtering, sorting, and pagination on static initial dataset
-    const searchResult = executeProcurementSearch(INITIAL_PROJECTS, {
+    let dbProjects: Project[] = [];
+    try {
+      dbProjects = ((await getProjects({
+        search: filterData.search,
+      })) as unknown as Project[]) || [];
+    } catch {}
+
+    const combined = [...discoveredMapped, ...dbProjects];
+    const searchResult = executeProcurementSearch(combined, {
       search: filterData.search,
       categories: categories.length > 0 ? categories : (filterData.category ? [filterData.category] : undefined),
       agencies: agencies.length > 0 ? agencies : (filterData.department ? [filterData.department] : undefined),
@@ -136,9 +115,12 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error('[GET /api/procurements]', err);
-    return NextResponse.json(
-      { error: 'Internal server error processing procurement query' },
-      { status: 500 },
-    );
+    return NextResponse.json({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 12,
+      totalPages: 0,
+    });
   }
 }

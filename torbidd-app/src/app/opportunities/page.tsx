@@ -14,9 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { StatCard } from '@/components/ui/StatCard';
 import { formatBudget, isNew } from '@/lib/utils';
-import { INITIAL_PROJECTS, INITIAL_DEPARTMENTS } from '@/lib/initialData';
 import { executeProcurementSearch } from '@/services/procurement-search';
-import { LiveSyncBar } from '@/components/ui/LiveSyncBar';
 
 // Discovery Components
 import { ProcurementSearchBar } from '@/components/procurement-search/ProcurementSearchBar';
@@ -49,8 +47,7 @@ function OpportunitiesContent() {
   const initialPage = searchParams.get('page') ? Number(searchParams.get('page')) : 1;
 
   // State Management
-  const [allProjects, setAllProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'live' | 'bma'>('all');
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategories, setSelectedCategories] = useState<SoftwareCategory[]>(initialCategories);
   const [selectedAgencies, setSelectedAgencies] = useState<string[]>(initialAgencies);
@@ -103,8 +100,6 @@ function OpportunitiesContent() {
     if (maxBudget !== null) queryParams.set('maxBudget', String(maxBudget));
     if (budgetPreset) queryParams.set('budget', budgetPreset);
     if (selectedDeadline) queryParams.set('deadline', selectedDeadline);
-    if (sourceFilter === 'live') queryParams.set('source', 'CKAN_GOVSPENDING');
-    else if (sourceFilter === 'bma') queryParams.set('source', 'BMA');
     queryParams.set('sortBy', sortBy);
     queryParams.set('page', String(page));
     queryParams.set('limit', '12');
@@ -165,7 +160,6 @@ function OpportunitiesContent() {
     maxBudget,
     budgetPreset,
     selectedDeadline,
-    sourceFilter,
     sortBy,
     page,
     allProjects,
@@ -182,27 +176,22 @@ function OpportunitiesContent() {
 
   // Initial load to fetch all projects for stats and agency/category counts
   useEffect(() => {
-    fetch('/api/projects')
+    fetch('/api/projects?limit=1000&all=true')
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.data && Array.isArray(json.data)) {
           setAllProjects(json.data);
         }
       })
       .catch(() => {});
   }, []);
 
-  // Compute category counts for badge counters
+  // Compute category counts for badge counters across all categories
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      Website: 0,
-      'Mobile App': 0,
-      AI: 0,
-      Database: 0,
-    };
+    const counts: Record<string, number> = {};
     allProjects.forEach((p) => {
-      if (p.category && p.category in counts) {
-        counts[p.category]++;
+      if (p.category) {
+        counts[p.category] = (counts[p.category] || 0) + 1;
       }
     });
     return counts;
@@ -211,7 +200,6 @@ function OpportunitiesContent() {
   // Available agencies for autocomplete
   const availableAgencies = useMemo(() => {
     const map = new Map<string, { th: string; en: string }>();
-    INITIAL_DEPARTMENTS.forEach((d) => map.set(d.th, d));
     allProjects.forEach((p) => {
       if (p.department?.th && !map.has(p.department.th)) {
         map.set(p.department.th, p.department);
@@ -320,18 +308,6 @@ function OpportunitiesContent() {
         <h1 className="page-title">{L('dashboardTitle')}</h1>
         <p className="page-subtitle">{L('dashboardSub')}</p>
       </div>
-
-      {/* Live Data Ingestion Sync Bar */}
-      <LiveSyncBar
-        onSyncComplete={() => {
-          void fetchOpportunities();
-        }}
-        activeFilter={sourceFilter}
-        onFilterChange={(filter) => {
-          setSourceFilter(filter);
-          setPage(1);
-        }}
-      />
 
       {/* Stats Cards Row */}
       <div className="stats-row">

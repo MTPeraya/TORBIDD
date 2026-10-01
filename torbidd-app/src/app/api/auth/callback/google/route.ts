@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE, signSession, AuthSessionUser } from '@/lib/auth';
+import { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE, signSession, verifyOAuthState, AuthSessionUser } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
 
@@ -29,25 +29,38 @@ export async function GET(req: NextRequest) {
   const isMock = searchParams.get('mock') === 'true';
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+  const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
 
-  // Validate state cookie to prevent CSRF attacks
+  // Validate state to prevent CSRF attacks
+  // Priority 1: State cookie check
+  // Priority 2: Cryptographically verified HMAC state token (fallback if browser stripped cookie over HTTP/localhost)
   const stateCookieRaw = req.cookies.get(OAUTH_STATE_COOKIE)?.value;
   let returnUrl = '/';
+  let stateIsValid = false;
 
-  if (!stateCookieRaw) {
-    return NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
+  if (stateCookieRaw) {
+    try {
+      const parsedState = JSON.parse(stateCookieRaw);
+      if (parsedState.state === state) {
+        stateIsValid = true;
+        if (parsedState.returnUrl && parsedState.returnUrl.startsWith('/')) {
+          returnUrl = parsedState.returnUrl;
+        }
+      }
+    } catch {}
   }
 
-  try {
-    const parsedState = JSON.parse(stateCookieRaw);
-    if (parsedState.state !== state) {
-      return NextResponse.redirect(`${appUrl}/login?error=state_mismatch`);
+  if (!stateIsValid && state) {
+    const verifiedState = verifyOAuthState(state);
+    if (verifiedState) {
+      stateIsValid = true;
+      returnUrl = verifiedState.returnUrl;
     }
-    if (parsedState.returnUrl && parsedState.returnUrl.startsWith('/')) {
-      returnUrl = parsedState.returnUrl;
-    }
-  } catch {
-    return NextResponse.redirect(`${appUrl}/login?error=state_parse_failed`);
+  }
+
+  if (!stateIsValid) {
+    console.warn('[Google Auth Callback] State validation failed. Cookie present:', Boolean(stateCookieRaw));
+    return NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
   }
 
   const googleError = searchParams.get('error');
@@ -143,32 +156,43 @@ export async function GET(req: NextRequest) {
 
       // 3. Connect to MongoDB and upsert User
       let userId = profile.sub;
-      let userRole = 'BMA Officer';
+      const adminEmails = (process.env.ADMIN_EMAILS || '')
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+      const isConfiguredAdmin = adminEmails.includes(profile.email.toLowerCase().trim());
+
+      let userRole = isConfiguredAdmin ? 'admin' : 'BMA Officer';
       let userOrg = 'กรุงเทพมหานคร';
 
       if (process.env.MONGODB_URI) {
         try {
           await connectToDatabase();
+          const updateFields: Record<string, unknown> = {
+            email: profile.email,
+            name: profile.name || '',
+            picture: profile.picture || '',
+            lastLoginAt: new Date(),
+          };
+          if (isConfiguredAdmin) {
+            updateFields.role = 'admin';
+          }
+
           const dbUser = await User.findOneAndUpdate(
             { googleId: profile.sub },
             {
-              $set: {
-                email: profile.email,
-                name: profile.name || '',
-                picture: profile.picture || '',
-                lastLoginAt: new Date(),
-              },
+              $set: updateFields,
               $setOnInsert: {
-                role: 'BMA Officer',
+                role: isConfiguredAdmin ? 'admin' : 'BMA Officer',
                 org: 'กรุงเทพมหานคร',
               },
             },
-            { new: true, upsert: true },
+            { returnDocument: 'after', upsert: true },
           );
 
           if (dbUser?._id) {
             userId = dbUser._id.toString();
-            userRole = dbUser.role || 'BMA Officer';
+            userRole = isConfiguredAdmin ? 'admin' : (dbUser.role || 'BMA Officer');
             userOrg = dbUser.org || 'กรุงเทพมหานคร';
           }
         } catch (dbErr) {
@@ -198,7 +222,7 @@ export async function GET(req: NextRequest) {
   // Set auth session cookie (7 days)
   response.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',

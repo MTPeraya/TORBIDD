@@ -2,7 +2,14 @@
 // lib/__tests__/auth.test.ts - Unit Tests for Authentication & Session Helpers
 // =============================================================================
 
-import { signSession, verifySession, getAuthSessionFromRequest, AUTH_COOKIE_NAME, AuthSessionUser } from '../auth';
+import {
+  signSession,
+  verifySession,
+  getAuthSessionFromRequest,
+  isAdminUser,
+  AUTH_COOKIE_NAME,
+  AuthSessionUser,
+} from '../auth';
 
 describe('Authentication & Session Helper (lib/auth.ts)', () => {
   const sampleUser: AuthSessionUser = {
@@ -90,5 +97,37 @@ describe('Authentication & Session Helper (lib/auth.ts)', () => {
     };
     const user = getAuthSessionFromRequest(req);
     expect(user).toBeNull();
+  });
+
+  describe('isAdminUser helper', () => {
+    it('returns false for null or undefined user', () => {
+      expect(isAdminUser(null)).toBe(false);
+      expect(isAdminUser(undefined)).toBe(false);
+    });
+
+    it('returns false for regular user roles', () => {
+      expect(isAdminUser(sampleUser)).toBe(false);
+      expect(isAdminUser({ ...sampleUser, role: 'BMA Officer' })).toBe(false);
+      expect(isAdminUser({ ...sampleUser, role: 'User' })).toBe(false);
+      expect(isAdminUser({ ...sampleUser, role: 'Vendor' })).toBe(false);
+    });
+
+    it('returns true for admin role in any casing', () => {
+      expect(isAdminUser({ ...sampleUser, role: 'admin' })).toBe(true);
+      expect(isAdminUser({ ...sampleUser, role: 'ADMIN' })).toBe(true);
+      expect(isAdminUser({ ...sampleUser, role: 'Admin' })).toBe(true);
+      expect(isAdminUser({ ...sampleUser, role: 'administrator' })).toBe(true);
+    });
+
+    it('returns true when user email is in ADMIN_EMAILS', () => {
+      const origEnv = process.env.ADMIN_EMAILS;
+      try {
+        process.env.ADMIN_EMAILS = 'superadmin@bangkok.go.th, other@domain.com';
+        expect(isAdminUser({ ...sampleUser, email: 'superadmin@bangkok.go.th', role: 'Staff' })).toBe(true);
+        expect(isAdminUser({ ...sampleUser, email: 'regular@bangkok.go.th', role: 'Staff' })).toBe(false);
+      } finally {
+        process.env.ADMIN_EMAILS = origEnv;
+      }
+    });
   });
 });

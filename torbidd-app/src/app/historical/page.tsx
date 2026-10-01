@@ -13,14 +13,14 @@ import { AgencyComparisonView } from '@/components/historical/AgencyComparisonVi
 import { aggregateAgencyMetrics } from '@/lib/historicalAnalytics';
 import { formatBudget, formatBudgetFull, getCategoryAvg, getOutlierStatus } from '@/lib/utils';
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
-import { INITIAL_HISTORICAL, INITIAL_PROJECTS } from '@/lib/initialData';
+import { INITIAL_HISTORICAL } from '@/lib/initialData';
 
 export default function HistoricalPage() {
   const router = useRouter();
   const { language, L, getLocalized } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [historicalData, setHistoricalData] = useState<HistoricalProject[]>(INITIAL_HISTORICAL);
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [apiAgencyMetrics, setApiAgencyMetrics] = useState<AgencyComparisonMetrics[] | null>(null);
 
   // Active Tab

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ICONS } from '@/components/ui/Icons';
 
 interface SidebarProps {
@@ -15,12 +16,13 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
   const pathname = usePathname();
   const { L } = useLanguage();
+  const { isAuthenticated, isAdmin } = useAuth();
 
   const isHome = pathname === '/';
   const isDashboard = pathname === '/opportunities' || pathname.startsWith('/opportunities/');
   const isHistorical = pathname === '/historical';
   const isSaved = pathname === '/saved';
-  const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
@@ -88,31 +90,35 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
           {bookmarkCount > 0 && <span className="sidebar-badge">{bookmarkCount}</span>}
         </Link>
 
-        <div className="sidebar-section-label" style={{ marginTop: 12 }}>
-          <span className="sidebar-link-label">{L('sectionTools')}</span>
-        </div>
+        {isAuthenticated && isAdmin && (
+          <>
+            <div className="sidebar-section-label" style={{ marginTop: 12 }}>
+              <span className="sidebar-link-label">{L('sectionTools')}</span>
+            </div>
 
-        <Link
-          href="/admin"
-          className={`sidebar-link ${isAdmin ? 'active' : ''}`}
-          data-tooltip={L('navAdmin')}
-          id="sidebarAdminLink"
-        >
-          {ICONS.shield}
-          <span className="sidebar-link-label">{L('navAdmin')}</span>
-          <span
-            className="sidebar-badge"
-            style={{
-              background: 'rgba(59, 130, 246, 0.15)',
-              color: '#3b82f6',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              fontSize: '0.65rem',
-              fontWeight: 700,
-            }}
-          >
-            ADMIN
-          </span>
-        </Link>
+            <Link
+              href="/admin"
+              className={`sidebar-link ${isAdminRoute ? 'active' : ''}`}
+              data-tooltip={L('navAdmin')}
+              id="sidebarAdminLink"
+            >
+              {ICONS.shield}
+              <span className="sidebar-link-label">{L('navAdmin')}</span>
+              <span
+                className="sidebar-badge"
+                style={{
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  color: '#3b82f6',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                }}
+              >
+                ADMIN
+              </span>
+            </Link>
+          </>
+        )}
       </nav>
 
       <div className="sidebar-footer">

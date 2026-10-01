@@ -27,6 +27,13 @@ export interface IProcurementProject extends Document {
   extractionStatus?: 'PENDING' | 'EXTRACTED' | 'FAILED';
   contentHash?: string;
   revision: number;
+  is_software?: boolean;
+  software_category?: string;
+  ai_confidence?: 'High' | 'Medium' | 'Low';
+  classification_reason?: string;
+  classified_by?: 'ai' | 'admin' | 'rule';
+  classified_at?: Date;
+  admin_reviewed?: boolean;
   discoveredAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -130,6 +137,40 @@ const ProcurementProjectSchema = new Schema<IProcurementProject>(
       default: Date.now,
       index: true,
     },
+    // UC-10: Software Project Classification fields
+    is_software: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    software_category: {
+      type: String,
+      default: 'Software / IT',
+      index: true,
+    },
+    ai_confidence: {
+      type: String,
+      enum: ['High', 'Medium', 'Low'],
+      default: 'High',
+    },
+    classification_reason: {
+      type: String,
+      default: '',
+    },
+    classified_by: {
+      type: String,
+      enum: ['ai', 'admin', 'rule'],
+      default: 'rule',
+    },
+    classified_at: {
+      type: Date,
+      default: Date.now,
+    },
+    admin_reviewed: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   { timestamps: true },
 );
@@ -137,6 +178,8 @@ const ProcurementProjectSchema = new Schema<IProcurementProject>(
 // Compound and text indexes for search, deduplication & sorting
 ProcurementProjectSchema.index({ fiscalYear: -1, discoveredAt: -1 });
 ProcurementProjectSchema.index({ externalProjectId: 1, contentHash: 1 });
+ProcurementProjectSchema.index({ is_software: 1, software_category: 1 });
+ProcurementProjectSchema.index({ admin_reviewed: 1 });
 
 const ProcurementProject: Model<IProcurementProject> =
   (mongoose.models.ProcurementProject as Model<IProcurementProject>) ??

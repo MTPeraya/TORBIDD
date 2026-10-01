@@ -2,38 +2,30 @@
 // app/api/admin/stats/route.ts - GET /api/admin/stats
 // =============================================================================
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAdminProjectStats } from '@/services/database/projects';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
+import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     let stats;
     try {
       stats = await getAdminProjectStats();
     } catch {
-      // Offline fallback using INITIAL_PROJECTS
-      const now = new Date();
-      const totalBudget = INITIAL_PROJECTS.reduce((acc, p) => acc + (p.budget || 0), 0);
-      const activeProjects = INITIAL_PROJECTS.filter((p) => new Date(p.deadline) >= now).length;
-      const categoryCounts: Record<string, number> = {};
-      const confidenceCounts: Record<string, number> = { High: 0, Medium: 0, Low: 0 };
-
-      for (const p of INITIAL_PROJECTS) {
-        categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
-        const conf = p.aiConfidence || 'High';
-        confidenceCounts[conf] = (confidenceCounts[conf] || 0) + 1;
-      }
-
       stats = {
-        totalProjects: INITIAL_PROJECTS.length,
-        totalBudget,
-        activeProjects,
-        aiEnrichedCount: INITIAL_PROJECTS.length,
-        categoryCounts,
-        confidenceCounts,
+        totalProjects: 0,
+        totalBudget: 0,
+        activeProjects: 0,
+        aiEnrichedCount: 0,
+        categoryCounts: {},
+        confidenceCounts: { High: 0, Medium: 0, Low: 0 },
       };
     }
 

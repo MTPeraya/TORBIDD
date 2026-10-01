@@ -6,11 +6,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSyncStatus, triggerImmediateSync } from '@/services/ingestion/sync-state';
 import { getSystemSyncMetadata, getRecentSyncLogs } from '@/services/database/sync-logs';
+import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const localStatus = getSyncStatus();
     const dbMetadata = await getSystemSyncMetadata();
     const recentLogs = await getRecentSyncLogs(10);
@@ -25,6 +31,15 @@ export async function GET() {
     const nextScheduledSyncAt =
       dbMetadata?.nextScheduledSyncAt?.toISOString() || localStatus.nextSyncAt;
 
+    let externalSources = null;
+    try {
+      const { IngestionService } = await import('@/services/ingestion/ingestion.service');
+      const ingestionService = new IngestionService();
+      externalSources = await ingestionService.checkAllSourcesHealth();
+    } catch (sourceErr) {
+      console.warn('[SyncHealth] Could not check external sources:', sourceErr);
+    }
+
     return NextResponse.json({
       success: true,
       health,
@@ -36,6 +51,7 @@ export async function GET() {
       syncIntervalHours: localStatus.syncIntervalHours,
       recentLogs,
       status: localStatus,
+      externalSources,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -48,6 +64,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = getAuthSessionFromRequest(req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     let body: { keyword?: string; fiscalYear?: number; limit?: number } = {};
     try {
       body = await req.json();

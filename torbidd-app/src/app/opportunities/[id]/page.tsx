@@ -21,7 +21,6 @@ import {
   getCategoryClass,
 } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/labels';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { enrichProjectDetail } from '@/lib/projectDetailHelper';
 
 export default function ProjectDetailPage({
@@ -56,20 +55,13 @@ export default function ProjectDetailPage({
 
   // Load project data and saved checklist state
   useEffect(() => {
-    const numId = parseInt(id, 10);
-
-    // Set optimistic offline data synchronously
-    const found = INITIAL_PROJECTS.find((p) => p.externalId === numId);
-    if (found && !project) {
-      Promise.resolve().then(() => setProject(enrichProjectDetail(found)));
-    }
-
     // Fetch fresh from API
     fetch(`/api/projects/${id}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
-        if (json?.data) {
-          setProject(enrichProjectDetail(json.data));
+        const projData = json?.data ?? json;
+        if (projData && (projData.id || projData.externalId || projData.externalProjectId)) {
+          setProject(enrichProjectDetail(projData));
         }
       })
       .catch(() => { });
@@ -82,7 +74,6 @@ export default function ProjectDetailPage({
         Promise.resolve().then(() => setCheckedIndices(parsed));
       }
     } catch { }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Persist checklist state when changed
@@ -253,7 +244,6 @@ export default function ProjectDetailPage({
           {/* Hero Card */}
           <div className="detail-card detail-hero">
             <div className="detail-hero-tags">
-              <span className="tag software">{L('softwareProject')}</span>
               <span className={`tag category ${catClass}`}>{catLabel}</span>
               <span className={statusTagClass}>{statusText}</span>
               <span

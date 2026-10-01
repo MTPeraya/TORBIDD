@@ -6042,6 +6042,140 @@ body.dark-mode .admin-icon-action-btn {
   background: rgba(239, 68, 68, 0.08);
 }
 
+.admin-icon-action-btn.classify-non-sw:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Bulk Action Bar & Selection (UC-4) */
+.admin-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--primary-500, #3b82f6);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 20px -2px rgba(59, 130, 246, 0.18);
+  flex-wrap: wrap;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+body.dark-mode .admin-bulk-bar {
+  background: #1e293b;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
+.admin-bulk-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-bulk-count-badge {
+  background: #3b82f6;
+  color: #ffffff;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Pagination Controls */
+.admin-pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding: 8px 4px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-pagination-summary {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.admin-pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-page-number-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--gray-300, #e2e8f0);
+  background: var(--surface-card, #ffffff);
+  color: var(--gray-800, #1e293b);
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+body.dark-mode .admin-page-number-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.admin-page-number-btn:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.admin-page-number-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.admin-page-number-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Software Status Badges (UC-4) */
+.admin-sw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-sw-badge.software {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.admin-sw-badge.non-software {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
 /* Terminal Console (Tab 3) */
 .admin-terminal-window {
   background: #0f172a;

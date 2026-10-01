@@ -3,7 +3,15 @@
 // (Supports Issue #147: Software Category Filter)
 // =============================================================================
 
-export type SoftwareCategory = 'Website' | 'Mobile App' | 'AI' | 'Database';
+export type SoftwareCategory =
+  | 'Website'
+  | 'Mobile App'
+  | 'AI'
+  | 'Database'
+  | 'ERP'
+  | 'Cloud'
+  | 'Data Analytics'
+  | 'Information System';
 
 export interface CategoryMetadata {
   id: SoftwareCategory;
@@ -55,6 +63,42 @@ export const SOFTWARE_CATEGORIES: CategoryMetadata[] = [
     },
     iconName: 'database',
   },
+  {
+    id: 'ERP',
+    name: { th: 'ระบบทรัพยากรองค์กร (ERP / MIS)', en: 'Enterprise Resource Planning (ERP)' },
+    description: {
+      th: 'ระบบบริหารทรัพยากรองค์กร การเงิน บัญชี และระบบบริหารจัดการภายใน',
+      en: 'ERP systems, financial management, accounting, and internal administration',
+    },
+    iconName: 'layers',
+  },
+  {
+    id: 'Cloud',
+    name: { th: 'คลาวด์และโครงสร้างพื้นฐาน', en: 'Cloud & Infrastructure' },
+    description: {
+      th: 'บริการคลาวด์ โครงสร้างพื้นฐานเซิร์ฟเวอร์ และระบบเครือข่ายความมั่นคงปลอดภัย',
+      en: 'Cloud services, server infrastructure, and secure network hosting',
+    },
+    iconName: 'cloud',
+  },
+  {
+    id: 'Data Analytics',
+    name: { th: 'วิเคราะห์ข้อมูลและ BI', en: 'Data Analytics & BI' },
+    description: {
+      th: 'การวิเคราะห์ข้อมูล บิ๊กดาต้า แดชบอร์ดผู้บริหาร และ Business Intelligence',
+      en: 'Data analytics, big data platforms, executive dashboards, and business intelligence',
+    },
+    iconName: 'bar-chart',
+  },
+  {
+    id: 'Information System',
+    name: { th: 'ระบบสารสนเทศ (e-Service)', en: 'Information System (e-Service)' },
+    description: {
+      th: 'การพัฒนาระบบสารสนเทศ งานบริการประชาชนอิเล็กทรอนิกส์ และระบบงานเฉพาะด้าน',
+      en: 'Information management systems, public e-services, and custom workflows',
+    },
+    iconName: 'server',
+  },
 ];
 
 export const VALID_SOFTWARE_CATEGORIES: SoftwareCategory[] = [
@@ -62,6 +106,10 @@ export const VALID_SOFTWARE_CATEGORIES: SoftwareCategory[] = [
   'Mobile App',
   'AI',
   'Database',
+  'ERP',
+  'Cloud',
+  'Data Analytics',
+  'Information System',
 ];
 
 export function isSoftwareCategory(val: unknown): val is SoftwareCategory {

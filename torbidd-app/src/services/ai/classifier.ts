@@ -1,70 +1,51 @@
 // =============================================================================
-// services/ai/classifier.ts - Project Classification Service
-// Uses Vertex AI Gemini Flash to classify procurement project text.
+// services/ai/classifier.ts - Project Classification Service (UC-10)
+// Classifies procurement projects into software categories and determines
+// whether they are software-related or non-software-related.
 // SERVER ONLY — do not import in client components.
+//
+// Supports multi-backend adapters:
+// - Google AI Studio (Gemini REST API)
+// - Google Cloud Vertex AI
+// - OpenRouter (Multi-model LLM API)
+// - Rule-based keyword fallback
 // =============================================================================
 
-import { getVertexAI, VERTEX_MODEL_FLASH } from './vertex-ai';
+import {
+  ClassificationResult,
+  SOFTWARE_CATEGORIES,
+  classifyByKeywords,
+  getAiClassifierAdapter,
+  GetAdapterOptions,
+} from './adapters';
 
-export interface ClassificationResult {
-  category: 'Website' | 'Mobile App' | 'AI' | 'Database';
-  confidence: 'High' | 'Medium' | 'Low';
-  reasoning: string;
+export { SOFTWARE_CATEGORIES, classifyByKeywords };
+export type { ClassificationResult };
+
+/**
+ * Classifies a procurement project using the configured AI provider.
+ * Falls back to keyword-based classification if AI is disabled, unconfigured, or fails.
+ */
+export async function classifyProject(
+  title: string,
+  description: string,
+  options?: GetAdapterOptions,
+): Promise<ClassificationResult> {
+  const adapter = getAiClassifierAdapter(options);
+  return adapter.classify(title, description);
 }
 
-const MOCK_RESULT: ClassificationResult = {
-  category: 'Website',
-  confidence: 'High',
-  reasoning: 'Mock response — configure GOOGLE_CLOUD_PROJECT for live AI classification.',
-};
-
-const CLASSIFICATION_PROMPT = (title: string, description: string) => `
-You are a procurement classification expert for Bangkok Metropolitan Administration (BMA) software projects.
-
-Classify the following project into exactly one of these four categories:
-- Website: Web portals, e-government sites, web applications
-- Mobile App: iOS/Android applications, mobile platforms
-- AI: Artificial intelligence, machine learning, GIS mapping, computer vision
-- Database: Database systems, information systems, data management, EMR
-
-Project Title: ${title}
-Project Description: ${description}
-
-Respond with ONLY valid JSON in this exact format (no markdown, no explanation):
-{
-  "category": "Website|Mobile App|AI|Database",
-  "confidence": "High|Medium|Low",
-  "reasoning": "One sentence explanation"
-}
-`;
-
-export async function classifyProject(title: string, description: string): Promise<ClassificationResult> {
-  // Return mock if Vertex AI not configured
-  if (!process.env.GOOGLE_CLOUD_PROJECT) {
-    return MOCK_RESULT;
+/**
+ * Bulk classify an array of projects (title + description pairs).
+ * Returns results in the same order as the input array.
+ */
+export async function classifyProjectsBulk(
+  projects: Array<{ title: string; description: string }>,
+  options?: GetAdapterOptions,
+): Promise<ClassificationResult[]> {
+  const adapter = getAiClassifierAdapter(options);
+  if (adapter.classifyBulk) {
+    return adapter.classifyBulk(projects);
   }
-
-  try {
-    const vertexAI = getVertexAI();
-    const model = vertexAI.getGenerativeModel({ model: VERTEX_MODEL_FLASH });
-
-    const result = await model.generateContent(CLASSIFICATION_PROMPT(title, description));
-    const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-
-    // Strip any markdown fences if present
-    const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleaned) as ClassificationResult;
-
-    // Validate the response
-    const validCategories = ['Website', 'Mobile App', 'AI', 'Database'];
-    const validConfidence = ['High', 'Medium', 'Low'];
-    if (!validCategories.includes(parsed.category) || !validConfidence.includes(parsed.confidence)) {
-      throw new Error('Invalid AI response shape');
-    }
-
-    return parsed;
-  } catch (err) {
-    console.error('[AI Classifier] Error:', err);
-    return { ...MOCK_RESULT, confidence: 'Low', reasoning: 'Classification failed — using fallback.' };
-  }
+  return Promise.all(projects.map(({ title, description }) => adapter.classify(title, description)));
 }

@@ -8,7 +8,8 @@ import { getAuthSessionFromRequest } from '@/lib/auth';
 import { getSessionId } from '@/lib/session';
 import { notifyMatchingUsers } from '@/services/procurement-matching';
 import { notifySavedProcurementUpdate } from '@/services/procurement-diff';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
+import { getProcurementProjects } from '@/services/database/procurement';
+import { procurementToProject } from '@/lib/project-mapper';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, count: created.length, notifications: created });
     }
 
-    // Default demo: generates representative notifications for user experience
-    const sampleProjects = INITIAL_PROJECTS.slice(0, 3);
+    // Default trigger: evaluates live projects from the database
+    let sampleProjects: ReturnType<typeof procurementToProject>[] = [];
+    try {
+      const { projects } = await getProcurementProjects({ limit: 3 });
+      sampleProjects = projects.map(procurementToProject);
+    } catch {}
+
     const generated = [];
 
     for (const project of sampleProjects) {
