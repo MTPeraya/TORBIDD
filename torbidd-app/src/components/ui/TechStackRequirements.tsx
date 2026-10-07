@@ -3,11 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { ICONS } from '@/components/ui/Icons';
 import { useLanguage } from '@/contexts/LanguageContext';
-import {
-  TechCategory,
-  categorizeTechnicalRequirement,
-} from '@/services/transformation/taxonomy/tech-taxonomy';
-
 export interface TechStackRequirementsProps {
   projectId: string | number;
   rawTechnologies?: string[];
@@ -23,7 +18,7 @@ export function TechStackRequirements({
 }: TechStackRequirementsProps) {
   const { language } = useLanguage();
 
-  // 1. Parse & categorize technical requirements
+  // 1. Parse technical requirements
   let reqThList: string[] = [];
   let reqEnList: string[] = [];
 
@@ -42,10 +37,8 @@ export function TechStackRequirements({
   const parsedRequirements = Array.from({ length: maxLen }).map((_, idx) => {
     const th = reqThList[idx] || '';
     const en = reqEnList[idx] || th;
-    const category = categorizeTechnicalRequirement(th, en);
     return {
       id: `tech-req-${idx}`,
-      category,
       text: { th, en },
     };
   });
@@ -99,36 +92,6 @@ export function TechStackRequirements({
   const totalReqCount = parsedRequirements.length;
   const checkedCount = parsedRequirements.filter((r) => checkedReqIds.includes(r.id)).length;
   const progressPct = totalReqCount > 0 ? Math.round((checkedCount / totalReqCount) * 100) : 0;
-
-  // Category styles
-  const getCategoryTheme = (cat: TechCategory) => {
-    switch (cat) {
-      case 'Frontend':
-        return {
-          badgeBg: '#f3e8ff',
-          badgeColor: '#7e22ce',
-          badgeBorder: '#d8b4fe',
-        };
-      case 'Backend':
-        return {
-          badgeBg: '#ecfdf5',
-          badgeColor: '#047857',
-          badgeBorder: '#a7f3d0',
-        };
-      case 'Infra':
-        return {
-          badgeBg: '#eff6ff',
-          badgeColor: '#1d4ed8',
-          badgeBorder: '#bfdbfe',
-        };
-      case 'Security':
-        return {
-          badgeBg: '#fff1f2',
-          badgeColor: '#be123c',
-          badgeBorder: '#fecdd3',
-        };
-    }
-  };
 
   return (
     <div className="detail-card" style={{ marginBottom: 20 }}>
@@ -282,7 +245,6 @@ export function TechStackRequirements({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {parsedRequirements.map((reqItem) => {
               const isChecked = checkedReqIds.includes(reqItem.id);
-              const theme = getCategoryTheme(reqItem.category);
               const text = language === 'th' ? reqItem.text.th : reqItem.text.en;
 
               return (
@@ -314,33 +276,16 @@ export function TechStackRequirements({
                       height: 16,
                     }}
                   />
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: '1px 6px',
-                          borderRadius: 4,
-                          background: theme.badgeBg,
-                          color: theme.badgeColor,
-                          border: `1px solid ${theme.badgeBorder}`,
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {reqItem.category}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13.5,
-                        lineHeight: 1.5,
-                        color: isChecked ? '#166534' : 'var(--gray-800)',
-                        textDecoration: isChecked ? 'line-through' : 'none',
-                      }}
-                    >
-                      {text}
-                    </div>
+                  <div
+                    style={{
+                      flex: 1,
+                      fontSize: 13.5,
+                      lineHeight: 1.5,
+                      color: isChecked ? '#166534' : 'var(--gray-800)',
+                      textDecoration: isChecked ? 'line-through' : 'none',
+                    }}
+                  >
+                    {text}
                   </div>
                 </div>
               );

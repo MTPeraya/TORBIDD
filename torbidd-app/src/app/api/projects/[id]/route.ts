@@ -55,31 +55,50 @@ export async function GET(
             const torDoc = documents.find(
               (d) => d.documentType === 'ATTACH_TOR' || d.fileName.toLowerCase().includes('tor'),
             );
+            const announDoc = documents.find(
+              (d) =>
+                d.documentType === 'ANNOUNCEMENT' ||
+                d.fileName.toLowerCase().startsWith('annoudoc') ||
+                d.fileName.toLowerCase().includes('bidding notice') ||
+                d.fileName.toLowerCase().includes('notice'),
+            );
             
-            let filePath = torDoc?.storageReference;
+            let torFilePath = torDoc?.storageReference;
+            let announFilePath = announDoc?.storageReference;
             const { getIngestionConfig } = await import('@/lib/config');
             const pathModule = await import('node:path');
             const fsModule = await import('node:fs');
             
-            if (!filePath || !fsModule.existsSync(filePath)) {
-              const storageBase = getIngestionConfig().resolvedStoragePath;
-              const candidateDir = pathModule.join(storageBase, extId);
-              if (fsModule.existsSync(candidateDir)) {
-                const files = fsModule.readdirSync(candidateDir);
+            const storageBase = getIngestionConfig().resolvedStoragePath;
+            const candidateDir = pathModule.join(storageBase, extId);
+            if (fsModule.existsSync(candidateDir)) {
+              const files = fsModule.readdirSync(candidateDir);
+              if (!torFilePath || !fsModule.existsSync(torFilePath)) {
                 const torFile = files.find((f) => f.toLowerCase().includes('tor') || f.toLowerCase().endsWith('.pdf'));
-                if (torFile) {
-                  filePath = pathModule.join(candidateDir, torFile);
-                }
+                if (torFile) torFilePath = pathModule.join(candidateDir, torFile);
+              }
+              if (!announFilePath || !fsModule.existsSync(announFilePath)) {
+                const aFile = files.find((f) => f.toLowerCase().startsWith('annoudoc') || f.toLowerCase().includes('notice'));
+                if (aFile) announFilePath = pathModule.join(candidateDir, aFile);
               }
             }
 
+            let announResult = null;
+            if (announFilePath && fsModule.existsSync(announFilePath)) {
+              const { extractAnnouncementFromFile } = await import('@/services/ai/tor-extractor');
+              announResult = await extractAnnouncementFromFile(announFilePath, {
+                projectId: extId,
+                fileName: pathModule.basename(announFilePath),
+              });
+            }
+
             const projectContext = {
-              projectName: procProj.projectName,
-              agencyName: procProj.agencyName,
-              budget: procProj.budget,
-              fiscalYear: procProj.fiscalYear,
-              procurementType: procProj.procurementType,
-              deadline: procProj.deadline ? new Date(procProj.deadline).toISOString().split('T')[0] : undefined,
+              projectName: announResult?.projectName || procProj.projectName,
+              agencyName: announResult?.agencyName || procProj.agencyName,
+              budget: announResult?.budget || procProj.budget,
+              fiscalYear: announResult?.fiscalYear || procProj.fiscalYear,
+              procurementType: announResult?.procurementMethod || procProj.procurementType,
+              deadline: announResult?.deadline || (procProj.deadline ? new Date(procProj.deadline).toISOString().split('T')[0] : undefined),
               contractFinishDate: procProj.contractFinishDate ? new Date(procProj.contractFinishDate).toISOString().split('T')[0] : undefined,
               contractDate: procProj.contractDate ? new Date(procProj.contractDate).toISOString().split('T')[0] : undefined,
             };
@@ -88,10 +107,10 @@ export async function GET(
             const { updateProcurementProjectExtraction } = await import('@/services/database/procurement');
 
             let extractResult;
-            if (filePath && fsModule.existsSync(filePath)) {
-              extractResult = await extractTorFromFile(filePath, {
+            if (torFilePath && fsModule.existsSync(torFilePath)) {
+              extractResult = await extractTorFromFile(torFilePath, {
                 projectId: extId,
-                fileName: pathModule.basename(filePath),
+                fileName: pathModule.basename(torFilePath),
                 projectContext,
               });
             } else {
@@ -103,7 +122,18 @@ export async function GET(
             }
 
             if (extractResult) {
-              const updated = await updateProcurementProjectExtraction(extId, extractResult);
+              const finalResult = {
+                ...extractResult,
+                agencyName: announResult?.agencyName || projectContext.agencyName,
+                fiscalYear: announResult?.fiscalYear || projectContext.fiscalYear,
+                budget: announResult?.budget || extractResult.budget || projectContext.budget,
+                medianPrice: announResult?.medianPrice || extractResult.medianPrice,
+                publishDate: announResult?.publishDate || extractResult.publishDate,
+                deadline: announResult?.deadline || extractResult.deadline,
+                timeline: announResult?.timeline || extractResult.timeline,
+              };
+
+              const updated = await updateProcurementProjectExtraction(extId, finalResult);
               if (updated) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 procurementData.project = (typeof (updated as any).toObject === 'function' ? (updated as any).toObject() : updated);

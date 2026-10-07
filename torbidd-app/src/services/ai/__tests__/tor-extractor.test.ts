@@ -37,6 +37,25 @@ describe('TOR Information Extraction Suite', () => {
       expect(result.summary.th).toContain('วัตถุประสงค์');
       expect(result.summary.en).toContain('Procurement');
     });
+
+    it('accurately identifies Medical PACS maintenance contracts without web defaults', () => {
+      const result = extractTorHeuristic(undefined, {
+        fileName: 'Attach_TOR_PACS.pdf',
+        projectContext: {
+          projectName: 'ประกวดราคาจ้างบำรุงรักษาระบบจัดเก็บและรับส่งข้อมูลทางการแพทย์ (PACS) แบบไม่รวมอะไหล่ ด้วยวิธีประกวดราคาอิเล็กทรอนิกส์ (e-bidding)',
+          agencyName: 'โรงพยาบาลศูนย์',
+          budget: 5000000,
+          fiscalYear: 2569,
+        },
+      });
+
+      expect(result.requiredTechnologies).toContain('DICOM 3.0 & HL7 Standards');
+      expect(result.requiredTechnologies).not.toContain('React');
+      expect(result.requiredTechnologies).not.toContain('Next.js');
+      expect(result.technicalRequirements.th.some((r) => r.includes('PACS') || r.includes('DICOM'))).toBe(true);
+      expect(result.summary.th).toContain('Medical PACS/RIS');
+      expect(result.summary.th).toContain('บำรุงรักษา');
+    });
   });
 
   // ─── Issue #88: Important Procurement Details from TOR PDFs ────────────────

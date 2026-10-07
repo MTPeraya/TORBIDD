@@ -9,6 +9,7 @@
     "lint": "eslint",
     "seed": "npx tsx scripts/seed.ts",
     "sync:all": "npx tsx scripts/sync-all.ts",
+    "update:all": "npx tsx scripts/update-all-projects.ts",
     "db:check": "npx tsx scripts/db-check.ts",
     "db:migrate": "npx tsx scripts/db-migrate.ts",
     "docker:build": "docker build -t torbidd-app .",

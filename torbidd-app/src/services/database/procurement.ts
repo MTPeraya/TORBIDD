@@ -445,7 +445,18 @@ export async function updateProcurementProjectExtraction(
   extraction: {
     summary?: { th: string; en: string };
     budget?: number | null;
+    medianPrice?: number | null;
+    fiscalYear?: number | null;
+    agencyName?: string | null;
+    publishDate?: string | Date | null;
     deadline?: string | null;
+    timeline?: Array<{
+      id: string;
+      event: { th: string; en: string };
+      date: string;
+      description: { th: string; en: string };
+      status: 'completed' | 'active' | 'upcoming';
+    }>;
     requiredTechnologies?: string[];
     technicalRequirements?: { th: string[]; en: string[] };
     extractedQualifications?: Array<{
@@ -467,6 +478,18 @@ export async function updateProcurementProjectExtraction(
   if (extraction.technicalRequirements) updateData.technicalRequirements = extraction.technicalRequirements;
   if (extraction.extractedQualifications) updateData.extractedQualifications = extraction.extractedQualifications;
   if (extraction.budget && extraction.budget > 0) updateData.budget = extraction.budget;
+  if (extraction.medianPrice && extraction.medianPrice > 0) updateData.medianPrice = extraction.medianPrice;
+  if (extraction.fiscalYear && extraction.fiscalYear > 2500) updateData.fiscalYear = extraction.fiscalYear;
+  if (extraction.agencyName && extraction.agencyName.trim() && extraction.agencyName !== 'กรมบัญชีกลาง') {
+    updateData.agencyName = extraction.agencyName.trim();
+  }
+  if (extraction.publishDate) {
+    const pub = new Date(extraction.publishDate);
+    if (!isNaN(pub.getTime())) updateData.publishDate = pub;
+  }
+  if (extraction.timeline && Array.isArray(extraction.timeline) && extraction.timeline.length > 0) {
+    updateData.timeline = extraction.timeline;
+  }
   if (extraction.deadline) {
     const d = new Date(extraction.deadline);
     if (!isNaN(d.getTime())) {
