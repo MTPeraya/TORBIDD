@@ -15,6 +15,7 @@ import {
   updateProcurementProjectExtraction,
 } from '@/services/database/procurement';
 import { getIngestionConfig } from '@/lib/config';
+import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,14 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> },
 ) {
   try {
+    const authUser = getAuthSessionFromRequest(_req);
+    if (!authUser || !isAdminUser(authUser)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only administrators are authorized to run or re-run the AI process' },
+        { status: 403 },
+      );
+    }
+
     const { projectId } = await params;
     const parsed = ProjectIdParamSchema.safeParse({ projectId });
 

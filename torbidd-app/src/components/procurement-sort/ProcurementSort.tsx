@@ -34,8 +34,10 @@ export function ProcurementSort({
         onChange={(e) => onChange(e.target.value as ProcurementSortOption)}
         aria-label={L('sortBy')}
       >
+        <option value="deadline_asc">⏳ {L('sortDeadlineSoon')}</option>
         <option value="publishDate_desc">{L('sortNewest')}</option>
         <option value="publishDate_asc">{L('sortOldest')}</option>
+        <option value="deadline_desc">🗓️ {L('sortDeadlineLate')}</option>
         <option value="budget_desc">{L('sortBudgetHigh')}</option>
         <option value="budget_asc">{L('sortBudgetLow')}</option>
       </select>

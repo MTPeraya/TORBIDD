@@ -169,7 +169,15 @@ export interface ProjectFilters {
   minBudget?: number;
   maxBudget?: number;
   deadline?: 'within7' | 'within30' | 'moreThan30';
-  sortBy?: 'publishDate_desc' | 'publishDate_asc' | 'budget_desc' | 'budget_asc' | 'newest' | 'oldest';
+  sortBy?:
+    | 'publishDate_desc'
+    | 'publishDate_asc'
+    | 'budget_desc'
+    | 'budget_asc'
+    | 'deadline_asc'
+    | 'deadline_desc'
+    | 'newest'
+    | 'oldest';
   page?: number;
   limit?: number;
 }

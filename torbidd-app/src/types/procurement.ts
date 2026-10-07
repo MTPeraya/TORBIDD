@@ -14,7 +14,9 @@ export type ProcurementSortOption =
   | 'publishDate_desc'
   | 'publishDate_asc'
   | 'budget_desc'
-  | 'budget_asc';
+  | 'budget_asc'
+  | 'deadline_asc'
+  | 'deadline_desc';
 
 export interface ProcurementFilters {
   search?: string;

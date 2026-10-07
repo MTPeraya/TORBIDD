@@ -8,6 +8,8 @@ import {
   filterByAgency,
   filterByBudget,
   filterBySearch,
+  filterByDeadline,
+  isContractAwarded,
   applyProcurementFilters,
 } from '../procurement-filter';
 import {
@@ -277,6 +279,20 @@ describe('Procurement Filtering & Search Services', () => {
       expect(budgetAsc[0].externalId).toBe(105);
       expect(budgetAsc[budgetAsc.length - 1].externalId).toBe(101);
     });
+
+    it('sorts by deadline ascending (closing soonest first) and descending', () => {
+      const deadlineAsc = sortProcurements(MOCK_PROJECTS, 'deadline_asc');
+      // Earliest deadline in MOCK_PROJECTS is 101: 2026-08-30
+      expect(deadlineAsc[0].externalId).toBe(101);
+      expect(deadlineAsc[0].deadline).toBe('2026-08-30');
+      // Latest deadline is 104: 2026-09-20
+      expect(deadlineAsc[deadlineAsc.length - 1].externalId).toBe(104);
+      expect(deadlineAsc[deadlineAsc.length - 1].deadline).toBe('2026-09-20');
+
+      const deadlineDesc = sortProcurements(MOCK_PROJECTS, 'deadline_desc');
+      expect(deadlineDesc[0].externalId).toBe(104);
+      expect(deadlineDesc[deadlineDesc.length - 1].externalId).toBe(101);
+    });
   });
 
   // ─── Issue #155: Support Combined Search & Filters ─────────────────────────
@@ -347,4 +363,50 @@ describe('Procurement Filtering & Search Services', () => {
       expect(p1Ids.some((id) => p2Ids.includes(id))).toBe(false);
     });
   });
+
+  // ─── Awarded Contract Filtering & Status ────────────────────────────────────
+  describe('Awarded Contract Handling (isContractAwarded & Filter Exclusion)', () => {
+    it('accurately identifies awarded contracts based on winnerName or status', () => {
+      const awardedByWinner = { ...MOCK_PROJECTS[0], winnerName: 'บริษัท ทีเอ็กซ์ จำกัด' };
+      const awardedByStatus = { ...MOCK_PROJECTS[0], status: 'จัดทำสัญญาแล้ว' };
+      const awardedByContractPrice = {
+        ...MOCK_PROJECTS[0],
+        contractPrice: 45000000,
+        contractDate: '2026-08-15',
+      };
+      const activeProject = { ...MOCK_PROJECTS[0], winnerName: undefined, status: 'ประกาศเชิญชวน' };
+
+      expect(isContractAwarded(awardedByWinner)).toBe(true);
+      expect(isContractAwarded(awardedByStatus)).toBe(true);
+      expect(isContractAwarded(awardedByContractPrice)).toBe(true);
+      expect(isContractAwarded(activeProject)).toBe(false);
+    });
+
+    it('excludes awarded contracts when filterByDeadline is applied', () => {
+      const projectsWithAwarded: Project[] = [
+        { ...MOCK_PROJECTS[0], deadline: '2026-08-30' },
+        { ...MOCK_PROJECTS[1], deadline: '2026-09-10', winnerName: 'บริษัท กสทช จำกัด' },
+      ];
+
+      // Assuming mock deadline is handled relative to daysUntil
+      const results = filterByDeadline(projectsWithAwarded, 'within30');
+      // The awarded project should never be included
+      expect(results.some((p) => p.winnerName === 'บริษัท กสทช จำกัด')).toBe(false);
+    });
+
+    it('excludes awarded contracts when any filter is applied via applyProcurementFilters', () => {
+      const projectsWithAwarded: Project[] = [
+        { ...MOCK_PROJECTS[0], externalId: 201, category: 'Website' },
+        { ...MOCK_PROJECTS[1], externalId: 202, category: 'Website', winnerName: 'ผู้ชนะรางวัล' },
+      ];
+
+      const result = applyProcurementFilters(projectsWithAwarded, {
+        categories: ['Website'],
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].externalId).toBe(201);
+    });
+  });
 });
+

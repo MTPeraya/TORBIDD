@@ -35,7 +35,16 @@ export const ProjectFiltersSchema = z.object({
   maxBudget: z.coerce.number().min(0).optional(),
   deadline: z.enum(['within7', 'within30', 'moreThan30']).optional(),
   sortBy: z
-    .enum(['publishDate_desc', 'publishDate_asc', 'budget_desc', 'budget_asc', 'newest', 'oldest'])
+    .enum([
+      'publishDate_desc',
+      'publishDate_asc',
+      'budget_desc',
+      'budget_asc',
+      'deadline_asc',
+      'deadline_desc',
+      'newest',
+      'oldest',
+    ])
     .optional(),
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(2000).optional(),
@@ -73,7 +82,16 @@ export const ProcurementFiltersSchema = z.object({
   maxBudget: z.coerce.number().min(0).optional(),
   deadline: z.enum(['within7', 'within30', 'moreThan30']).optional(),
   sortBy: z
-    .enum(['publishDate_desc', 'publishDate_asc', 'budget_desc', 'budget_asc', 'newest', 'oldest'])
+    .enum([
+      'publishDate_desc',
+      'publishDate_asc',
+      'budget_desc',
+      'budget_asc',
+      'deadline_asc',
+      'deadline_desc',
+      'newest',
+      'oldest',
+    ])
     .optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(2000).default(12),

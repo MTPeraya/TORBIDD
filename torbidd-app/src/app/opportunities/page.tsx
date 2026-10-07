@@ -13,8 +13,9 @@ import { ProcurementSortOption, ProcurementFilters } from '@/types/procurement';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { StatCard } from '@/components/ui/StatCard';
-import { formatBudget, isNew } from '@/lib/utils';
+import { formatBudget, isNew, daysUntil } from '@/lib/utils';
 import { executeProcurementSearch } from '@/services/procurement-search';
+import { isContractAwarded } from '@/services/procurement-filter';
 
 // Discovery Components
 import { ProcurementSearchBar } from '@/components/procurement-search/ProcurementSearchBar';
@@ -217,6 +218,38 @@ function OpportunitiesContent() {
     return allProjects.reduce((sum, p) => sum + (p.budget || 0), 0);
   }, [allProjects]);
 
+  // Priority Deadline Counts (Excluding already awarded contracts)
+  const deadlineCounts = useMemo(() => {
+    let within7 = 0;
+    let within30 = 0;
+    let moreThan30 = 0;
+    allProjects.forEach((p) => {
+      if (isContractAwarded(p)) return;
+      if (!p.deadline) return;
+      const d = daysUntil(p.deadline);
+      if (d >= 0 && d <= 7) within7++;
+      if (d >= 0 && d <= 30) within30++;
+      if (d > 30) moreThan30++;
+    });
+    return {
+      within7,
+      within30,
+      moreThan30,
+      total: allProjects.filter((p) => !isContractAwarded(p)).length,
+    };
+  }, [allProjects]);
+
+  // Toggle quick deadline filter
+  const handleToggleDeadlineWithin7 = () => {
+    if (selectedDeadline === 'within7') {
+      setSelectedDeadline('');
+    } else {
+      setSelectedDeadline('within7');
+      setSortBy('deadline_asc');
+    }
+    setPage(1);
+  };
+
   // Clear Individual Filters (Issue #155)
   const handleRemoveSearch = () => {
     setSearchQuery('');
@@ -309,7 +342,7 @@ function OpportunitiesContent() {
         <p className="page-subtitle">{L('dashboardSub')}</p>
       </div>
 
-      {/* Stats Cards Row */}
+      {/* Stats Cards Row (with high-priority Closing Soon Card) */}
       <div className="stats-row">
         <StatCard
           label={L('totalOpps')}
@@ -318,6 +351,22 @@ function OpportunitiesContent() {
           changeType="positive"
           icon={ICONS.target}
           iconColor="blue"
+        />
+
+        <StatCard
+          label={L('closingSoonCard')}
+          value={deadlineCounts.within7}
+          change={
+            selectedDeadline === 'within7'
+              ? (language === 'th' ? '✓ กำลังกรองอยู่' : '✓ Active Filter')
+              : (language === 'th' ? 'คลิกเพื่อกรองด่วน ⚡' : 'Click to filter ⚡')
+          }
+          changeType={deadlineCounts.within7 > 0 ? 'warning' : 'neutral'}
+          icon={ICONS.clock}
+          iconColor="red"
+          onClick={handleToggleDeadlineWithin7}
+          isActive={selectedDeadline === 'within7'}
+          title={language === 'th' ? 'คลิกเพื่อกรองโครงการที่ใกล้ปิดรับข้อเสนอภายใน 7 วัน' : 'Click to filter projects closing within 7 days'}
         />
 
         <StatCard
@@ -365,8 +414,60 @@ function OpportunitiesContent() {
               )}
             </button>
 
-            {/* Publication Date & Budget Sorting Dropdown (Issue #154) */}
+            {/* Publication Date, Deadline, and Budget Sorting Dropdown */}
             <ProcurementSort value={sortBy} onChange={handleSortChange} />
+          </div>
+        </div>
+
+        {/* Quick Priority Deadline Bar (Front-and-Center on Dashboard) */}
+        <div className="quick-deadline-bar" role="toolbar" aria-label={L('deadline')}>
+          <div className="quick-deadline-label">
+            <span>⏳ {L('deadline')}:</span>
+          </div>
+          <div className="quick-deadline-pills">
+            <button
+              type="button"
+              className={`quick-deadline-pill ${selectedDeadline === '' ? 'active' : ''}`}
+              onClick={() => handleDeadlineChange('')}
+              id="quick-deadline-all"
+            >
+              <span>{L('quickDeadlineAll')}</span>
+              <span className="pill-badge">{allProjects.length}</span>
+            </button>
+            <button
+              type="button"
+              className={`quick-deadline-pill urgent ${selectedDeadline === 'within7' ? 'active' : ''}`}
+              onClick={() => {
+                if (selectedDeadline === 'within7') {
+                  handleDeadlineChange('');
+                } else {
+                  handleDeadlineChange('within7');
+                  setSortBy('deadline_asc');
+                }
+              }}
+              id="quick-deadline-7"
+            >
+              <span>{L('quickDeadline7')}</span>
+              <span className="pill-badge urgent-badge">{deadlineCounts.within7}</span>
+            </button>
+            <button
+              type="button"
+              className={`quick-deadline-pill ${selectedDeadline === 'within30' ? 'active' : ''}`}
+              onClick={() => handleDeadlineChange(selectedDeadline === 'within30' ? '' : 'within30')}
+              id="quick-deadline-30"
+            >
+              <span>{L('quickDeadline30')}</span>
+              <span className="pill-badge">{deadlineCounts.within30}</span>
+            </button>
+            <button
+              type="button"
+              className={`quick-deadline-pill ${selectedDeadline === 'moreThan30' ? 'active' : ''}`}
+              onClick={() => handleDeadlineChange(selectedDeadline === 'moreThan30' ? '' : 'moreThan30')}
+              id="quick-deadline-over30"
+            >
+              <span>{L('quickDeadlineOver30')}</span>
+              <span className="pill-badge">{deadlineCounts.moreThan30}</span>
+            </button>
           </div>
         </div>
 
@@ -408,6 +509,7 @@ function OpportunitiesContent() {
             onCloseMobile={() => setIsMobileFilterOpen(false)}
             categoryCounts={categoryCounts}
             availableAgencies={availableAgencies}
+            deadlineCounts={deadlineCounts}
           />
 
           {/* Results Area with Loading Skeleton, Empty State, and Pagination (Issue #156) */}

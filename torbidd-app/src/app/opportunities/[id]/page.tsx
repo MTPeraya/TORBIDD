@@ -4,6 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Project } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useBookmarks } from '@/hooks/useBookmarks';
 import { ICONS } from '@/components/ui/Icons';
 import { EligibilityChecklist } from '@/components/ui/EligibilityChecklist';
@@ -32,6 +33,7 @@ export default function ProjectDetailPage({
   const router = useRouter();
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
+  const { isAdmin } = useAuth();
 
   const [project, setProject] = useState<Project | null>(null);
   const [checkedIndices, setCheckedIndices] = useState<number[]>([]);
@@ -174,6 +176,10 @@ export default function ProjectDetailPage({
   };
 
   const handleReprocessTor = async () => {
+    if (!isAdmin) {
+      alert(language === 'th' ? 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถสั่งประมวลผล AI ซ้ำได้' : 'Only administrators can rerun the AI process');
+      return;
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const extId = (project as any).externalProjectId || project.externalId;
     setIsExtracting(true);
@@ -280,15 +286,31 @@ export default function ProjectDetailPage({
                   fontSize: 11,
                   padding: '3px 8px',
                   borderRadius: 6,
-                  background: '#e0f2fe',
-                  color: '#0369a1',
+                  background:
+                    (project.aiConfidence || 'Medium') === 'High'
+                      ? '#ecfdf5'
+                      : (project.aiConfidence || 'Medium') === 'Medium'
+                      ? '#fffbeb'
+                      : '#fef2f2',
+                  color:
+                    (project.aiConfidence || 'Medium') === 'High'
+                      ? '#065f46'
+                      : (project.aiConfidence || 'Medium') === 'Medium'
+                      ? '#92400e'
+                      : '#991b1b',
+                  border:
+                    (project.aiConfidence || 'Medium') === 'High'
+                      ? '1px solid rgba(16, 185, 129, 0.3)'
+                      : (project.aiConfidence || 'Medium') === 'Medium'
+                      ? '1px solid rgba(245, 158, 11, 0.3)'
+                      : '1px solid rgba(239, 68, 68, 0.3)',
                   fontWeight: 600,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 4,
                 }}
               >
-                🤖 AI Extraction: {project.extractionStatus === 'EXTRACTED' ? 'Complete' : 'Verified'}
+                🤖 {language === 'th' ? 'จำแนก AI' : 'AI Analysis'} · {language === 'th' ? 'ความเชื่อมั่น' : 'Confidence'}: {project.aiConfidence || 'Medium'}
               </span>
             </div>
 
@@ -467,7 +489,7 @@ export default function ProjectDetailPage({
 
             {/* Action Bar */}
             <div className="detail-hero-actions">
-              {/* Button 1: Official e-GP Announcement Portal */}
+              {/* Button: Official e-GP Announcement Portal */}
               <a
                 href={
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -475,27 +497,13 @@ export default function ProjectDetailPage({
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-secondary"
+                className="btn btn-primary"
                 id="btn-open-egp-portal"
                 style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 title={language === 'th' ? 'เปิดค้นหาประกาศบนเว็บ e-GP ทางการ' : 'Open Announcement Search on Official e-GP Web Portal'}
               >
                 {ICONS.externalLink}
                 <span>{language === 'th' ? 'เปิดประกาศบน e-GP ↗' : 'View on e-GP ↗'}</span>
-              </a>
-
-              {/* Button 2: Real TOR Document PDF */}
-              <a
-                href={`/api/documents/${(project as any)?.externalProjectId || project?.externalId || id}/ATTACH_TOR.pdf`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-                id="btn-open-tor-doc"
-                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                title={language === 'th' ? 'เปิดอ่านเอกสาร TOR (ไฟล์ PDF)' : 'Open TOR Document (PDF)'}
-              >
-                {ICONS.bookOpen}
-                <span>{language === 'th' ? 'ดูเอกสาร TOR (PDF) 📄' : 'TOR Document (PDF) 📄'}</span>
               </a>
 
               <button
@@ -781,23 +789,25 @@ export default function ProjectDetailPage({
                         ? (language === 'th' ? 'สกัดข้อกำหนดและสาระสำคัญเรียบร้อยแล้ว' : 'Requirements extracted automatically')
                         : (language === 'th' ? 'ระบบกำลังวิเคราะห์ข้อกำหนดจากประกาศ' : 'Analyzing document specifications')}
                     </span>
-                    <button
-                      onClick={handleReprocessTor}
-                      disabled={isExtracting}
-                      title={language === 'th' ? 'คลิกเพื่อประมวลผลซ้ำหากต้องการอัปเดต' : 'Click to re-process if needed'}
-                      style={{
-                        padding: '3px 8px',
-                        fontSize: 10.5,
-                        fontWeight: 600,
-                        borderRadius: 4,
-                        background: '#f1f5f9',
-                        color: '#475569',
-                        border: '1px solid #cbd5e1',
-                        cursor: isExtracting ? 'wait' : 'pointer',
-                      }}
-                    >
-                      {isExtracting ? '⏳...' : (language === 'th' ? 'วิเคราะห์ซ้ำ' : 'Re-run')}
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={handleReprocessTor}
+                        disabled={isExtracting}
+                        title={language === 'th' ? 'คลิกเพื่อประมวลผลซ้ำ (สิทธิ์ผู้ดูแลระบบ)' : 'Click to re-process (Admin only)'}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          borderRadius: 4,
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          border: '1px solid #cbd5e1',
+                          cursor: isExtracting ? 'wait' : 'pointer',
+                        }}
+                      >
+                        {isExtracting ? '⏳...' : (language === 'th' ? 'วิเคราะห์ซ้ำ (Admin)' : 'Re-run (Admin)')}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -841,8 +851,23 @@ export default function ProjectDetailPage({
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
-                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Accuracy Status</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--success)' }}>✓ Government Verified</span>
+                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                    {language === 'th' ? 'สถานะการตรวจทาน' : 'Verification Status'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color:
+                        project.classificationReviewStatus === 'APPROVED' || project.classificationReviewStatus === 'CORRECTED'
+                          ? 'var(--success)'
+                          : 'var(--primary-700)',
+                    }}
+                  >
+                    {project.classificationReviewStatus === 'APPROVED' || project.classificationReviewStatus === 'CORRECTED'
+                      ? (language === 'th' ? '✓ ตรวจทานโดยผู้ดูแล' : '✓ Admin Reviewed')
+                      : (language === 'th' ? '⚡ ดึงข้อมูลจาก e-GP (รอตรวจทาน)' : '⚡ AI Extracted (e-GP Source)')}
+                  </span>
                 </div>
 
                 {/* Real e-GP Downloadable Attachments List */}
@@ -896,9 +921,30 @@ export default function ProjectDetailPage({
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>AI Confidence</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--primary-700)' }}>
-                    {project.aiConfidence || 'High'}
+                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                    {language === 'th' ? 'ระดับความเชื่อมั่น AI' : 'AI Confidence'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      background:
+                        (project.aiConfidence || 'Medium') === 'High'
+                          ? 'rgba(16, 185, 129, 0.1)'
+                          : (project.aiConfidence || 'Medium') === 'Medium'
+                          ? 'rgba(245, 158, 11, 0.1)'
+                          : 'rgba(239, 68, 68, 0.1)',
+                      color:
+                        (project.aiConfidence || 'Medium') === 'High'
+                          ? '#059669'
+                          : (project.aiConfidence || 'Medium') === 'Medium'
+                          ? '#d97706'
+                          : '#dc2626',
+                    }}
+                  >
+                    {project.aiConfidence || 'Medium'}
                   </span>
                 </div>
               </div>

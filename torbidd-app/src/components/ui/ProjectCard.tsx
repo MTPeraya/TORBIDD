@@ -149,7 +149,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </button>
         </div>
 
-        <div className="ai-tag-label">{L('aiClassification')}</div>
+        <div className="ai-tag-label">
+          {language === 'th'
+            ? `การจำแนก AI · ความเชื่อมั่น: ${(project.aiConfidence || 'Medium') === 'High' ? 'สูง' : (project.aiConfidence || 'Medium') === 'Medium' ? 'ปานกลาง' : 'ต่ำ'}`
+            : `AI classification · Confidence: ${project.aiConfidence || 'Medium'}`}
+        </div>
         <h3 className="project-card-title" style={{ marginTop: 6 }}>
           {getLocalized(project.title) as string}
         </h3>
