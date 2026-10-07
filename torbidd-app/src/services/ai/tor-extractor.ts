@@ -36,26 +36,26 @@ export interface ExtractionOptions {
     budget?: number;
     fiscalYear?: number;
     procurementType?: string;
+    deadline?: string;
+    contractFinishDate?: string;
+    contractDate?: string;
   };
 }
 
 const EXTRACTION_PROMPT = `
-You are an expert AI specialized in Thai government procurement documents (TOR - Terms of Reference / ขอบเขตของงาน).
+You are an expert AI specialized in Thai government procurement documents (TOR - Terms of Reference / ขอบเขตของงานและข้อกำหนดทางเทคนิค).
 
-Analyze the provided TOR PDF document thoroughly and extract the following structured procurement data:
-1. title: Project title in both Thai (th) and English (en).
-2. budget: Total budget / ราคากลาง as a number in Thai Baht (THB, no currency symbols).
-3. deadline: Submission deadline date in YYYY-MM-DD format (convert Thai BE years to CE e.g. 2568 -> 2025).
-4. department: Procuring agency / department name in Thai.
-5. procurementType: Method of procurement (e.g. e-Bidding, ประกวดราคาอิเล็กทรอนิกส์, คัดเลือก).
-6. summary: An executive summary of 3-4 sentences in both Thai (th) and English (en) describing:
-   - Project objective and background
-   - Core deliverables and technological scope
-   - Key operational timelines
-7. scope: Array of 4-8 main work scope items (in English if possible, otherwise Thai).
-8. requiredTechnologies: Array of 4-10 software & technology stack tags mentioned or implied (e.g., "React", "Node.js", "PostgreSQL", "Docker", "Cloud / Data Center", "REST API", "Cybersecurity / PDPA").
-9. technicalRequirements: Object with "th" and "en" arrays of 3-6 specific technical specifications (e.g., SLA >= 99.9%, HA Architecture, Microservices, PDPA Compliance, ISO 27001, OpenAPI Specification).
-10. qualifications: Array of general bidder eligibility requirements in text.
+Analyze the provided TOR document thoroughly and extract the following structured procurement data:
+1. title: Official project title in Thai (th) and English (en).
+2. budget: Total budget / ราคากลาง as a number in Thai Baht (THB, no currency symbols or commas).
+3. deadline: Submission deadline date in YYYY-MM-DD format (convert Thai BE years to CE e.g. 2568 -> 2025). If no explicit deadline is stated, use null.
+4. department: Procuring agency or municipal department name in Thai.
+5. procurementType: Method of procurement (e.g. e-Bidding, ประกวดราคาอิเล็กทรอนิกส์, คัดเลือก, เฉพาะเจาะจง).
+6. summary: An executive summary of 3-4 sentences in Thai (th) and English (en) highlighting the project objective, key deliverables, and duration.
+7. scope: Array of 4-8 main work scope items.
+8. requiredTechnologies: Array of 3-8 software/platform/architecture technologies referenced in the document.
+9. technicalRequirements: Object with "th" and "en" arrays of 4-8 concrete, itemized technical requirements (e.g. SLA uptime, concurrency, security & PDPA compliance, API standards, database/cloud architecture, backup RPO/RTO, warranty). These items will populate the Technical Requirements Checklist.
+10. qualifications: Array of general bidder eligibility requirements in Thai.
 11. extractedQualifications: Array of 3-6 structured criteria objects:
     {
       "id": "qual-1",
@@ -177,7 +177,13 @@ export function extractTorHeuristic(
   const projectName = ctx.projectName || 'โครงการจัดซื้อจัดจ้างระบบเทคโนโลยีสารสนเทศ';
   const agencyName = ctx.agencyName || 'หน่วยงานภาครัฐ';
   const budget = ctx.budget || 5000000;
-  const deadlineStr = new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0];
+  // Use real deadline from context if known; fallback to fiscal year end or standard window for TOR documents
+  let deadlineStr = ctx.deadline || ctx.contractFinishDate || null;
+  if (!deadlineStr && (contentBufferOrText || fileName)) {
+    const baseDate = ctx.fiscalYear ? new Date(`${ctx.fiscalYear - 543}-09-30`) : new Date();
+    const target = !isNaN(baseDate.getTime()) && baseDate.getTime() > Date.now() ? baseDate : new Date(Date.now() + 30 * 86400000);
+    deadlineStr = target.toISOString().split('T')[0];
+  }
 
   const lowerName = `${fileName} ${projectName}`.toLowerCase();
 
@@ -353,10 +359,84 @@ export function extractTorHeuristic(
  * or gracefully falls back to the domain-aware heuristic extractor.
  */
 export async function extractTorFromBuffer(
-  buffer: Buffer,
+  buffer?: Buffer,
   options: ExtractionOptions = {},
 ): Promise<TorExtractResult> {
-  if (process.env.GOOGLE_CLOUD_PROJECT) {
+  const apiKey = (
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_AI_STUDIO_API_KEY ||
+    ''
+  ).trim();
+
+  // 1. Google AI Studio (Active Provider)
+  if (apiKey) {
+    try {
+      let rawModel = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+      if (rawModel === 'gemini-2.0-flash' || rawModel === 'gemini-1.5-flash' || rawModel === 'gemini-1.5-pro') {
+        rawModel = 'gemini-2.5-flash';
+      }
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(rawModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+      const parts: Array<Record<string, unknown>> = [];
+      if (buffer && buffer.length > 0) {
+        const base64Data = buffer.toString('base64');
+        parts.push({ inlineData: { mimeType: 'application/pdf', data: base64Data } });
+      }
+
+      const ctx = options.projectContext;
+      const contextPrompt = ctx
+        ? `\nProject Context:\n- Title: ${ctx.projectName || 'N/A'}\n- Agency: ${ctx.agencyName || 'N/A'}\n- Budget: ${ctx.budget || 'N/A'} THB\n- Fiscal Year: ${ctx.fiscalYear || 'N/A'}\n- Procurement Type: ${ctx.procurementType || 'N/A'}\n- Known Deadline: ${ctx.deadline || ctx.contractFinishDate || 'N/A'}`
+        : '';
+
+      parts.push({ text: EXTRACTION_PROMPT + contextPrompt });
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            temperature: 0.1,
+          },
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned) as TorExtractResult;
+        if (parsed && (parsed.title || parsed.summary || parsed.requiredTechnologies || parsed.extractedQualifications)) {
+          const enrichedQuals = parsed.extractedQualifications
+            ? validateAndEnrichQualifications(parsed.extractedQualifications, parsed.budget || 0).items
+            : [];
+          return {
+            ...parsed,
+            deadline: parsed.deadline || ctx?.deadline || ctx?.contractFinishDate || null,
+            budget: parsed.budget || ctx?.budget || null,
+            extractedQualifications: enrichedQuals,
+            confidence: 'High',
+            rawText: `Processed by Google AI Studio (${rawModel})`,
+          };
+        }
+      } else {
+        const errText = await res.text();
+        console.warn(`[TOR Extractor] Google AI Studio responded with HTTP ${res.status}:`, errText);
+      }
+    } catch (err) {
+      console.warn('[TOR Extractor] Google AI Studio extraction encountered an error:', err);
+    }
+  }
+
+  // 2. Vertex AI fallback if configured
+  if (
+    process.env.GOOGLE_CLOUD_PROJECT &&
+    !process.env.GOOGLE_CLOUD_PROJECT.includes('your-gcp-project-id') &&
+    buffer &&
+    buffer.length > 0
+  ) {
     try {
       const vertexAI = getVertexAI();
       const model = vertexAI.getGenerativeModel({ model: VERTEX_MODEL_PRO });

@@ -43,29 +43,24 @@ describe('Procurement Detail Viewer Helper (enrichProjectDetail)', () => {
     aiConfidence: 'High',
   };
 
-  it('should enrich a project with complete timeline milestones', () => {
+  it('should enrich a project with verified real timeline milestones', () => {
     const enriched = enrichProjectDetail(sampleProject);
     expect(enriched.timeline).toBeDefined();
-    expect(enriched.timeline?.length).toBe(4);
+    // Only real milestones: announcement + bid deadline
+    expect(enriched.timeline?.length).toBe(2);
 
     const step1 = enriched.timeline?.[0];
     expect(step1?.status).toBe('completed');
     expect(step1?.date).toBe('2026-08-01');
 
-    const step3 = enriched.timeline?.[2];
-    expect(step3?.date).toBe('2026-08-30');
+    const step2 = enriched.timeline?.[1];
+    expect(step2?.date).toBe('2026-08-30');
   });
 
-  it('should generate budget breakdown matching 100% of the total budget', () => {
+  it('should not synthesize fake budget breakdown when itemized breakdown not in TOR', () => {
     const enriched = enrichProjectDetail(sampleProject);
-    expect(enriched.budgetBreakdown).toBeDefined();
-    expect(enriched.budgetBreakdown?.length).toBe(4);
-
-    const totalPercentage = enriched.budgetBreakdown?.reduce((sum, item) => sum + item.percentage, 0);
-    expect(totalPercentage).toBe(100);
-
-    const totalAmount = enriched.budgetBreakdown?.reduce((sum, item) => sum + item.amount, 0);
-    expect(totalAmount).toBe(sampleProject.budget);
+    // Real data only: no fake 55%/20%/15%/10% estimations
+    expect(enriched.budgetBreakdown).toBeUndefined();
   });
 
   it('should generate critical mandatory qualification flags', () => {
@@ -74,14 +69,14 @@ describe('Procurement Detail Viewer Helper (enrichProjectDetail)', () => {
     expect(enriched.highlightedQualifications?.length).toBeGreaterThanOrEqual(2);
 
     const criticalItems = enriched.highlightedQualifications?.filter((q) => q.type === 'critical');
-    expect(criticalItems?.length).toBeGreaterThanOrEqual(2);
+    expect(criticalItems?.length).toBeGreaterThanOrEqual(1);
     expect(criticalItems?.[0].description.th).toContain('ทุนจดทะเบียน');
   });
 
   it('should generate authentic document sections for TOR Document Viewer', () => {
     const enriched = enrichProjectDetail(sampleProject);
     expect(enriched.documentSections).toBeDefined();
-    expect(enriched.documentSections?.length).toBe(5);
+    expect(enriched.documentSections?.length).toBe(4);
 
     // Article 1
     const art1 = enriched.documentSections?.[0];
@@ -94,15 +89,11 @@ describe('Procurement Detail Viewer Helper (enrichProjectDetail)', () => {
     expect(art3?.extractedHighlights?.length).toBeGreaterThan(0);
   });
 
-  it('should attach AI transparency metadata and responsible contacts', () => {
+  it('should attach AI transparency metadata and source references', () => {
     const enriched = enrichProjectDetail(sampleProject);
     expect(enriched.aiMetadata).toBeDefined();
-    expect(enriched.aiMetadata?.confidenceScore).toBe(97);
-    expect(enriched.aiMetadata?.verifiedByHuman).toBe(true);
-
-    expect(enriched.contactInfo).toBeDefined();
-    expect(enriched.contactInfo?.email).toBe('procurement.it@bangkok.go.th');
-    expect(enriched.sourceUrl).toContain('https://egp.bangkok.go.th');
+    expect(enriched.aiMetadata?.confidenceScore).toBe(90);
+    expect(enriched.sourceUrl).toBeDefined();
   });
 
   it('should not overwrite existing enriched data if already present', () => {

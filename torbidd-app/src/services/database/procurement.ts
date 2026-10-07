@@ -162,6 +162,37 @@ export async function upsertDiscoveredProjects(
       updatedAt: new Date(),
     };
 
+    if (p.publishDate) {
+      updateSet.publishDate = p.publishDate instanceof Date ? p.publishDate : new Date(p.publishDate);
+    }
+    if (p.deadline) {
+      updateSet.deadline = p.deadline instanceof Date ? p.deadline : new Date(p.deadline);
+    }
+    if (p.status) {
+      updateSet.status = p.status;
+    }
+    if (p.torStatus) {
+      updateSet.torStatus = p.torStatus;
+    }
+    if (p.contractDate) {
+      updateSet.contractDate = p.contractDate instanceof Date ? p.contractDate : new Date(p.contractDate);
+    }
+    if (p.contractFinishDate) {
+      updateSet.contractFinishDate = p.contractFinishDate instanceof Date ? p.contractFinishDate : new Date(p.contractFinishDate);
+    }
+    if (p.winnerName) {
+      updateSet.winnerName = p.winnerName;
+    }
+    if (p.medianPrice !== undefined) {
+      updateSet.medianPrice = p.medianPrice;
+    }
+    if (p.timeline && p.timeline.length > 0) {
+      updateSet.timeline = p.timeline;
+    }
+    if (p.rawPayload) {
+      updateSet.rawPayload = p.rawPayload;
+    }
+
     updateSet.is_software = p.is_software ?? true;
     updateSet.software_category = p.software_category ?? 'Software / IT';
     updateSet.ai_confidence = p.ai_confidence ?? 'High';
@@ -436,6 +467,13 @@ export async function updateProcurementProjectExtraction(
   if (extraction.technicalRequirements) updateData.technicalRequirements = extraction.technicalRequirements;
   if (extraction.extractedQualifications) updateData.extractedQualifications = extraction.extractedQualifications;
   if (extraction.budget && extraction.budget > 0) updateData.budget = extraction.budget;
+  if (extraction.deadline) {
+    const d = new Date(extraction.deadline);
+    if (!isNaN(d.getTime())) {
+      updateData.deadline = d;
+    }
+  }
+  updateData.torStatus = 'AVAILABLE';
 
   try {
     await connectToDatabase();

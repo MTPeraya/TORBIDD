@@ -79,37 +79,70 @@ export async function POST(
       }
     }
 
+    // If not found locally, attempt to ingest/download from e-GP
     if (!filePath || !fs.existsSync(filePath)) {
-      return NextResponse.json(
-        {
-          error: 'TOR Document Not Found',
-          message: `No downloaded TOR document found for project ${cleanId}. Run document ingestion first.`,
-        },
-        { status: 404 },
-      );
+      try {
+        const { IngestionService } = await import('@/services/ingestion/ingestion.service');
+        const ingestionService = new IngestionService();
+        await ingestionService.ingestProjectDocuments(cleanId);
+
+        const storageBase = getIngestionConfig().resolvedStoragePath;
+        const candidateDir = path.join(storageBase, cleanId);
+        if (fs.existsSync(candidateDir)) {
+          const files = fs.readdirSync(candidateDir);
+          const torFile = files.find((f) => f.toLowerCase().includes('tor') || f.toLowerCase().endsWith('.pdf'));
+          if (torFile) {
+            filePath = path.join(candidateDir, torFile);
+          }
+        }
+      } catch (ingestErr) {
+        console.warn(`[Process-TOR] Auto document ingestion attempt for ${cleanId}:`, ingestErr);
+      }
     }
 
-    // Run automated extraction (Vertex AI multimodal with heuristic fallback)
-    const result = await extractTorFromFile(filePath, {
-      projectId: cleanId,
-      fileName: path.basename(filePath),
-      projectContext: {
-        projectName: project?.projectName,
-        agencyName: project?.agencyName,
-        budget: project?.budget,
-        fiscalYear: project?.fiscalYear,
-        procurementType: project?.procurementType,
-      },
-    });
+    const projectContext = {
+      projectName: project?.projectName,
+      agencyName: project?.agencyName,
+      budget: project?.budget,
+      fiscalYear: project?.fiscalYear,
+      procurementType: project?.procurementType,
+      deadline: project?.deadline ? new Date(project.deadline).toISOString().split('T')[0] : undefined,
+      contractFinishDate: (project as unknown as Record<string, unknown>)?.contractFinishDate
+        ? new Date((project as unknown as Record<string, unknown>).contractFinishDate as string).toISOString().split('T')[0]
+        : undefined,
+      contractDate: (project as unknown as Record<string, unknown>)?.contractDate
+        ? new Date((project as unknown as Record<string, unknown>).contractDate as string).toISOString().split('T')[0]
+        : undefined,
+    };
+
+    let result;
+    if (filePath && fs.existsSync(filePath)) {
+      // Run automated extraction on downloaded PDF file
+      result = await extractTorFromFile(filePath, {
+        projectId: cleanId,
+        fileName: path.basename(filePath),
+        projectContext,
+      });
+    } else {
+      // Fall back gracefully: extract and synthesize from project context and announcement data
+      const { extractTorFromBuffer } = await import('@/services/ai/tor-extractor');
+      result = await extractTorFromBuffer(undefined, {
+        projectId: cleanId,
+        fileName: `e-GP_Announcement_${cleanId}`,
+        projectContext,
+      });
+    }
 
     // Update database
     const updatedProject = await updateProcurementProjectExtraction(cleanId, result);
 
     return NextResponse.json({
       success: true,
-      message: 'TOR document successfully processed automatically',
+      message: filePath
+        ? 'TOR document successfully processed automatically'
+        : 'Project procurement details and requirements successfully extracted by AI',
       projectId: cleanId,
-      sourceDocument: path.basename(filePath),
+      sourceDocument: filePath ? path.basename(filePath) : `e-GP_Announcement_${cleanId}`,
       confidence: result.confidence,
       extraction: result,
       updatedProject,

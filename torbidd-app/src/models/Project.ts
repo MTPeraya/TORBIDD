@@ -9,6 +9,7 @@ export interface IProject extends Document {
   title: { th: string; en: string };
   department: { th: string; en: string };
   budget: number;
+  fiscalYear?: number;
   publishDate: Date;
   deadline: Date;
   // UC-10: expanded software categories
@@ -164,6 +165,7 @@ const ProjectSchema = new Schema<IProject>(
     title: { type: BilingualSchema, required: true },
     department: { type: BilingualSchema, required: true },
     budget: { type: Number, required: true, min: 0 },
+    fiscalYear: { type: Number, min: 2500, max: 2600 },
     publishDate: { type: Date, required: true },
     deadline: { type: Date, required: true },
     category: {

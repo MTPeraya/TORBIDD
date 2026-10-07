@@ -256,6 +256,7 @@ export async function updateProject(
   }
 
   if (data.budget !== undefined) procUpdate.budget = Number(data.budget);
+  if (data.fiscalYear !== undefined) procUpdate.fiscalYear = Number(data.fiscalYear);
   if (data.category) procUpdate.software_category = String(data.category);
   if (data.procurementType) procUpdate.procurementType = String(data.procurementType);
   if (data.aiConfidence) procUpdate.ai_confidence = data.aiConfidence;
@@ -363,9 +364,17 @@ export async function getAdminProjectStats(): Promise<{
   // Count software projects from procurement ingestion
   for (const pp of procurementProjects) {
     const isSw = (pp as unknown as Record<string, unknown>).is_software ?? true;
-    const cat = ((pp as unknown as Record<string, unknown>).software_category as string) || (isSw ? 'Software / IT' : 'Other');
+    const cat = ((pp as unknown as Record<string, unknown>).software_category as string) || (isSw ? 'Information System' : 'Other');
     stats.categoryCounts[cat] = (stats.categoryCounts[cat] || 0) + 1;
-    stats.confidenceCounts.High++;
+
+    const conf = (pp as unknown as Record<string, unknown>).ai_confidence as string;
+    if (conf === 'Medium') {
+      stats.confidenceCounts.Medium++;
+    } else if (conf === 'Low') {
+      stats.confidenceCounts.Low++;
+    } else {
+      stats.confidenceCounts.High++;
+    }
   }
 
   return stats;

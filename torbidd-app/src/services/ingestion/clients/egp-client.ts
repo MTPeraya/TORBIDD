@@ -4,6 +4,7 @@
 
 import { DiscoveredProject, EgpArchiveMetadata } from '@/types/procurement';
 import { getIngestionConfig } from '@/lib/config';
+import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
 
 const METADATA_PATH = '/egp-approval-service/apv-common/infoProcureDocAnnounZipTemp';
 const DOWNLOAD_PATH = '/egp-upload-service/v1/downloadFileTest';
@@ -312,14 +313,26 @@ export class EgpClient {
       const titleMatch = /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i.exec(itemContent);
       const linkMatch = /<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i.exec(itemContent);
       const descMatch = /<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i.exec(itemContent);
+      const pubDateMatch = /<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i.exec(itemContent);
 
       const title = (titleMatch?.[1] ?? '').trim();
       const link = (linkMatch?.[1] ?? '').trim();
       const desc = (descMatch?.[1] ?? '').trim();
+      const pubDateRaw = (pubDateMatch?.[1] ?? '').trim();
+      const publishDate = pubDateRaw ? parseToIsoDate(pubDateRaw) || undefined : undefined;
 
       // Extract 11-digit project ID from link or description
       const idMatch = /(\d{11})/.exec(link) || /(\d{11})/.exec(desc) || /(\d{11})/.exec(title);
       const externalProjectId = idMatch ? idMatch[1] : `EGP-${Date.now()}-${projects.length}`;
+
+      // Derive fiscal year from project ID prefix if 11 digits (e.g., 68xxxxxxxxx -> 2568, 69xxxxxxxxx -> 2569)
+      let projectFiscalYear = currentYear;
+      if (idMatch && idMatch[1]) {
+        const prefix2 = parseInt(idMatch[1].substring(0, 2), 10);
+        if (prefix2 >= 60 && prefix2 <= 75) {
+          projectFiscalYear = 2500 + prefix2;
+        }
+      }
 
       // Extract budget if present
       const budgetMatch = /(?:งบประมาณ|วงเงิน)\s*[:=]?\s*([\d,]+)/i.exec(desc);
@@ -329,11 +342,13 @@ export class EgpClient {
         externalProjectId,
         projectName: title || 'e-GP Announcement',
         agencyName: 'กรมบัญชีกลาง',
-        fiscalYear: currentYear,
+        fiscalYear: projectFiscalYear,
         source: 'NATIONAL_EGP',
         sourceUrl: link || `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${externalProjectId}`,
         budget: Number.isFinite(budget) ? budget : 0,
         procurementType: 'ประกาศจัดซื้อจัดจ้าง e-GP',
+        publishDate,
+        status: 'ประกาศเชิญชวน',
       });
     }
 

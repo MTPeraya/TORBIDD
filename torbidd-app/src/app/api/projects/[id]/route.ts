@@ -33,6 +33,87 @@ export async function GET(
     try {
       const procurementData = await getProjectWithDocuments(cleanId);
       if (procurementData) {
+        // Automatic AI Extraction: If not yet extracted, trigger extraction automatically in background / server
+        const procProj = procurementData.project as unknown as {
+          extractionStatus?: string;
+          summary?: { th?: string };
+          externalProjectId?: string;
+          projectName?: string;
+          agencyName?: string;
+          budget?: number;
+          fiscalYear?: number;
+          procurementType?: string;
+          deadline?: Date;
+          contractDate?: Date;
+          contractFinishDate?: Date;
+        };
+
+        if (procProj.extractionStatus !== 'EXTRACTED' || !procProj.summary?.th) {
+          try {
+            const extId = procProj.externalProjectId || cleanId;
+            const documents = procurementData.documents || [];
+            const torDoc = documents.find(
+              (d) => d.documentType === 'ATTACH_TOR' || d.fileName.toLowerCase().includes('tor'),
+            );
+            
+            let filePath = torDoc?.storageReference;
+            const { getIngestionConfig } = await import('@/lib/config');
+            const pathModule = await import('node:path');
+            const fsModule = await import('node:fs');
+            
+            if (!filePath || !fsModule.existsSync(filePath)) {
+              const storageBase = getIngestionConfig().resolvedStoragePath;
+              const candidateDir = pathModule.join(storageBase, extId);
+              if (fsModule.existsSync(candidateDir)) {
+                const files = fsModule.readdirSync(candidateDir);
+                const torFile = files.find((f) => f.toLowerCase().includes('tor') || f.toLowerCase().endsWith('.pdf'));
+                if (torFile) {
+                  filePath = pathModule.join(candidateDir, torFile);
+                }
+              }
+            }
+
+            const projectContext = {
+              projectName: procProj.projectName,
+              agencyName: procProj.agencyName,
+              budget: procProj.budget,
+              fiscalYear: procProj.fiscalYear,
+              procurementType: procProj.procurementType,
+              deadline: procProj.deadline ? new Date(procProj.deadline).toISOString().split('T')[0] : undefined,
+              contractFinishDate: procProj.contractFinishDate ? new Date(procProj.contractFinishDate).toISOString().split('T')[0] : undefined,
+              contractDate: procProj.contractDate ? new Date(procProj.contractDate).toISOString().split('T')[0] : undefined,
+            };
+
+            const { extractTorFromFile, extractTorFromBuffer } = await import('@/services/ai/tor-extractor');
+            const { updateProcurementProjectExtraction } = await import('@/services/database/procurement');
+
+            let extractResult;
+            if (filePath && fsModule.existsSync(filePath)) {
+              extractResult = await extractTorFromFile(filePath, {
+                projectId: extId,
+                fileName: pathModule.basename(filePath),
+                projectContext,
+              });
+            } else {
+              extractResult = await extractTorFromBuffer(undefined, {
+                projectId: extId,
+                fileName: `e-GP_Announcement_${extId}`,
+                projectContext,
+              });
+            }
+
+            if (extractResult) {
+              const updated = await updateProcurementProjectExtraction(extId, extractResult);
+              if (updated) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                procurementData.project = (typeof (updated as any).toObject === 'function' ? (updated as any).toObject() : updated);
+              }
+            }
+          } catch (autoExtractErr) {
+            console.warn(`[Auto-Extraction] Background extraction skipped for ${cleanId}:`, autoExtractErr);
+          }
+        }
+
         const { procurementToProject } = await import('@/lib/project-mapper');
         const mapped = procurementToProject(procurementData.project);
         const enriched = enrichProjectDetail(mapped);

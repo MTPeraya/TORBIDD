@@ -5,6 +5,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { DiscoveredProject, GovSpendingSearchParams, GovSpendingSearchResult } from '@/types/procurement';
+import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
 
 import { getIngestionConfig } from '@/lib/config';
 
@@ -12,20 +13,44 @@ const PROJECT_ID_PATTERN = /^\d{11}$/;
 const MAX_REQUEST_ATTEMPTS = 3;
 
 /**
+ * Raw contract award schema from GovSpending / CKAN API
+ */
+const rawContractItemSchema = z
+  .object({
+    winner_tin: z.string().optional(),
+    winner_name: z.string().optional(),
+    contract_no: z.string().optional(),
+    contract_date: z.string().optional(),
+    contract_finish_date: z.string().optional(),
+    price_agree: z.coerce.number().optional(),
+    status: z.string().optional(),
+  })
+  .passthrough();
+
+/**
  * Raw project item schema returned from GovSpending / CKAN API
  */
-const rawProjectSchema = z.object({
-  project_id: z.string().trim().regex(PROJECT_ID_PATTERN, 'Invalid project ID format (expected 11 digits)'),
-  project_name: z.string().min(1, 'Project name is required'),
-  dept_name: z.string().optional(),
-  dept_sub_name: z.string().optional(),
-  agency_name: z.string().optional(),
-  year: z.coerce.number().int(),
-  budget: z.coerce.number().optional(),
-  project_money: z.coerce.number().optional(),
-  sum_price_agree: z.coerce.number().optional(),
-  transaction_sub_type_name: z.string().optional(),
-});
+const rawProjectSchema = z
+  .object({
+    project_id: z.string().trim().regex(PROJECT_ID_PATTERN, 'Invalid project ID format (expected 11 digits)'),
+    project_name: z.string().min(1, 'Project name is required'),
+    dept_name: z.string().optional(),
+    dept_sub_name: z.string().optional(),
+    agency_name: z.string().optional(),
+    year: z.coerce.number().int(),
+    budget: z.coerce.number().optional(),
+    project_money: z.coerce.number().optional(),
+    price_build: z.coerce.number().optional(),
+    sum_price_agree: z.coerce.number().optional(),
+    transaction_sub_type_name: z.string().optional(),
+    announce_date: z.string().optional(),
+    transaction_date: z.string().optional(),
+    project_status: z.string().optional(),
+    purchase_method_name: z.string().optional(),
+    project_type_name: z.string().optional(),
+    contract: z.array(rawContractItemSchema).optional(),
+  })
+  .passthrough();
 
 /**
  * Top-level response schema from GovSpending API
@@ -271,6 +296,85 @@ export class GovSpendingClient {
             ? item.project_money
             : item.sum_price_agree || 0;
 
+      // Extract real announce date (actual publishing date)
+      const rawAnnounce = item.announce_date && item.announce_date !== '-' ? item.announce_date.trim() : undefined;
+      const publishDateIso = rawAnnounce ? parseToIsoDate(rawAnnounce) : undefined;
+
+      // Extract real transaction date / contract date
+      const rawTx = item.transaction_date && item.transaction_date !== '-' ? item.transaction_date.trim() : undefined;
+      const txDateIso = rawTx ? parseToIsoDate(rawTx) : undefined;
+
+      // Extract contract details if available
+      const contracts = Array.isArray(item.contract) ? item.contract : [];
+      const primaryContract = contracts.length > 0 ? contracts[0] : undefined;
+      const contractDateIso = primaryContract?.contract_date ? parseToIsoDate(primaryContract.contract_date) : txDateIso;
+      const contractFinishDateIso = primaryContract?.contract_finish_date ? parseToIsoDate(primaryContract.contract_finish_date) : undefined;
+      const winnerName = primaryContract?.winner_name;
+
+      // Build verified timeline only from real source dates
+      const timeline: Array<{
+        id: string;
+        event: { th: string; en: string };
+        date: string;
+        description: { th: string; en: string };
+        status: 'completed' | 'active' | 'upcoming';
+      }> = [];
+
+      if (publishDateIso) {
+        timeline.push({
+          id: 'announcement',
+          event: {
+            th: 'ประกาศจัดซื้อจัดจ้างอย่างเป็นทางการ',
+            en: 'Official Procurement Announcement Published',
+          },
+          date: publishDateIso,
+          description: {
+            th: 'เผยแพร่ประกาศผ่านระบบจัดซื้อจัดจ้างภาครัฐ (e-GP)',
+            en: 'Published via official e-GP procurement system',
+          },
+          status: 'completed',
+        });
+      }
+
+      if (contractDateIso) {
+        timeline.push({
+          id: 'contract-award',
+          event: {
+            th: 'ลงนามสัญญา / ประกาศผลผู้ชนะ',
+            en: 'Contract Award & Signing',
+          },
+          date: contractDateIso,
+          description: {
+            th: winnerName ? `ผู้ชนะการเสนอราคา: ${winnerName}` : 'ลงนามสัญญาเรียบร้อยแล้ว',
+            en: winnerName ? `Contract Awardee: ${winnerName}` : 'Contract awarded and executed',
+          },
+          status: 'completed',
+        });
+      }
+
+      if (contractFinishDateIso) {
+        const daysToFinish = (new Date(contractFinishDateIso).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+        timeline.push({
+          id: 'contract-finish',
+          event: {
+            th: 'กำหนดสิ้นสุดสัญญา / ส่งมอบงานงวดสุดท้าย',
+            en: 'Contract Completion & Final Delivery',
+          },
+          date: contractFinishDateIso,
+          description: {
+            th: 'กำหนดสิ้นสุดสัญญาตามข้อตกลงจัดซื้อจัดจ้าง',
+            en: 'Scheduled contract completion date',
+          },
+          status: daysToFinish < 0 ? 'completed' : 'upcoming',
+        });
+      }
+
+      const procurementType =
+        item.purchase_method_name ||
+        item.transaction_sub_type_name ||
+        item.project_type_name ||
+        '';
+
       return {
         externalProjectId: item.project_id,
         projectName: item.project_name,
@@ -280,7 +384,15 @@ export class GovSpendingClient {
         sourceUrl: detailUrl,
         budget,
         contractPrice: item.sum_price_agree && item.sum_price_agree > 0 ? item.sum_price_agree : undefined,
-        procurementType: item.transaction_sub_type_name || '',
+        medianPrice: item.price_build && item.price_build > 0 ? item.price_build : undefined,
+        procurementType,
+        publishDate: (publishDateIso ?? contractDateIso) || undefined,
+        status: item.project_status || (item.sum_price_agree ? 'จัดทำสัญญาแล้ว' : 'ประกาศเชิญชวน'),
+        contractDate: contractDateIso || undefined,
+        contractFinishDate: contractFinishDateIso || undefined,
+        winnerName,
+        timeline: timeline.length > 0 ? timeline : undefined,
+        rawPayload: item as unknown as Record<string, unknown>,
       };
     });
 

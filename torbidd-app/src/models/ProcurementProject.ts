@@ -14,6 +14,9 @@ export interface IProcurementProject extends Document {
   budget?: number;
   contractPrice?: number;
   procurementType?: string;
+  publishDate?: Date;        // Actual announcement date from source
+  deadline?: Date;           // Actual bid closing date from source/TOR
+  torStatus?: 'AVAILABLE' | 'NO_TOR' | 'PENDING'; // Whether TOR doc exists
   summary?: { th: string; en: string };
   requiredTechnologies?: string[];
   technicalRequirements?: { th: string[]; en: string[] };
@@ -34,6 +37,19 @@ export interface IProcurementProject extends Document {
   classified_by?: 'ai' | 'admin' | 'rule';
   classified_at?: Date;
   admin_reviewed?: boolean;
+  status?: string;
+  contractDate?: Date;
+  contractFinishDate?: Date;
+  winnerName?: string;
+  medianPrice?: number;
+  timeline?: Array<{
+    id: string;
+    event: { th: string; en: string };
+    date: string;
+    description: { th: string; en: string };
+    status: 'completed' | 'active' | 'upcoming';
+  }>;
+  rawPayload?: Record<string, unknown>;
   discoveredAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -88,6 +104,49 @@ const ProcurementProjectSchema = new Schema<IProcurementProject>(
       type: String,
       default: '',
       trim: true,
+    },
+    publishDate: {
+      type: Date,
+      index: true,
+    },
+    deadline: {
+      type: Date,
+      index: true,
+    },
+    torStatus: {
+      type: String,
+      enum: ['AVAILABLE', 'NO_TOR', 'PENDING'],
+      default: 'PENDING',
+      index: true,
+    },
+    status: {
+      type: String,
+      default: 'ประกาศเชิญชวน',
+      trim: true,
+      index: true,
+    },
+    contractDate: {
+      type: Date,
+      index: true,
+    },
+    contractFinishDate: {
+      type: Date,
+      index: true,
+    },
+    winnerName: {
+      type: String,
+      trim: true,
+    },
+    medianPrice: {
+      type: Number,
+      min: 0,
+    },
+    timeline: {
+      type: [Schema.Types.Mixed],
+      default: [],
+    },
+    rawPayload: {
+      type: Schema.Types.Mixed,
     },
     summary: {
       th: { type: String, default: '' },
@@ -179,7 +238,6 @@ const ProcurementProjectSchema = new Schema<IProcurementProject>(
 ProcurementProjectSchema.index({ fiscalYear: -1, discoveredAt: -1 });
 ProcurementProjectSchema.index({ externalProjectId: 1, contentHash: 1 });
 ProcurementProjectSchema.index({ is_software: 1, software_category: 1 });
-ProcurementProjectSchema.index({ admin_reviewed: 1 });
 
 const ProcurementProject: Model<IProcurementProject> =
   (mongoose.models.ProcurementProject as Model<IProcurementProject>) ??

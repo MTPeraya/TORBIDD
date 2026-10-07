@@ -199,21 +199,32 @@ export const ProjectIdParamSchema = z.object({
 
 // ─── Project Create & Update (Admin CRUD) ───────────────────────────────────
 
-export const BilingualStringSchema = z.object({
-  th: z.string().min(1).max(1000),
-  en: z.string().min(1).max(1000),
-});
+export const BilingualStringSchema = z
+  .object({
+    th: z.string().min(1).max(1000),
+    en: z.string().max(1000).optional(),
+  })
+  .transform((val) => ({
+    th: val.th,
+    en: val.en && val.en.trim().length > 0 ? val.en.trim() : val.th,
+  }));
 
-export const BilingualArraySchema = z.object({
-  th: z.array(z.string()).min(1),
-  en: z.array(z.string()).min(1),
-});
+export const BilingualArraySchema = z
+  .object({
+    th: z.array(z.string()).min(1),
+    en: z.array(z.string()).optional(),
+  })
+  .transform((val) => ({
+    th: val.th,
+    en: val.en && val.en.length > 0 ? val.en : val.th,
+  }));
 
 export const ProjectCreateSchema = z.object({
   externalId: z.coerce.number().int().positive().optional(),
   title: BilingualStringSchema,
   department: BilingualStringSchema,
   budget: z.coerce.number().min(0),
+  fiscalYear: z.coerce.number().int().min(2500).max(2600).optional(),
   publishDate: z.string().min(1),
   deadline: z.string().min(1),
   category: z.enum(['Website', 'Mobile App', 'AI', 'Database', 'ERP', 'Cloud', 'Data Analytics', 'Information System']),
