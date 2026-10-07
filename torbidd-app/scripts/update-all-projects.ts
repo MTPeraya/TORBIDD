@@ -129,7 +129,11 @@ async function main() {
 
     // ─── 1. Fiscal Year ──────────────────────────────────────────
     let fiscalYear = doc.fiscalYear;
-    if (extId.length === 11) {
+    // Check if title explicitly specifies the fiscal year (e.g. "ประจำปีงบประมาณ พ.ศ. 2568" or "ปีงบประมาณ 2570")
+    const titleYearMatch = (doc.projectName || '').match(/(?:ประจำปีงบประมาณ|ปีงบประมาณ)\s*(?:พ\.ศ\.)?\s*(25\d{2})/);
+    if (titleYearMatch) {
+      fiscalYear = parseInt(titleYearMatch[1], 10);
+    } else if (extId.length === 11) {
       const prefix = parseInt(extId.substring(0, 2), 10);
       if (prefix >= 50 && prefix <= 99) {
         fiscalYear = 2500 + prefix;
