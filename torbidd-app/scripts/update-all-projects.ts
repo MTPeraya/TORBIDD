@@ -22,6 +22,29 @@ import { parseToIsoDate } from '../src/services/transformation/normalizers/date-
 import { extractTorHeuristic } from '../src/services/ai/tor-extractor';
 import { TimelineEvent } from '../src/types/project';
 
+interface RawProjectPayload {
+  year?: string | number;
+  dept_name?: string;
+  dept_sub_name?: string;
+  project_money?: string | number;
+  price_build?: string | number;
+  sum_price_agree?: string | number;
+  announce_date?: string;
+  transaction_date?: string;
+  contract?: Array<{
+    price_agree?: string | number;
+    contract_date?: string;
+    contract_finish_date?: string;
+    winner_name?: string;
+    [key: string]: unknown;
+  }>;
+  purchase_method_name?: string;
+  transaction_sub_type_name?: string;
+  project_type_name?: string;
+  project_status?: string;
+  [key: string]: unknown;
+}
+
 async function main() {
   console.log('🔄 Connecting to MongoDB Atlas...');
   await connectToDatabase();
@@ -34,7 +57,7 @@ async function main() {
   console.log(`Processing ${docs.length} records for comprehensive backfill...`);
 
   let updatedCount = 0;
-  const bulkOps: any[] = [];
+  const bulkOps: Parameters<typeof ProcurementProject.bulkWrite>[0] = [];
   const now = Date.now();
 
   for (const doc of docs) {
@@ -138,14 +161,14 @@ async function main() {
       if (prefix >= 50 && prefix <= 99) {
         fiscalYear = 2500 + prefix;
       }
-    } else if ((doc.rawPayload as any)?.year) {
-      const yr = Number((doc.rawPayload as any).year);
+    } else if (doc.rawPayload && typeof doc.rawPayload === 'object' && 'year' in doc.rawPayload) {
+      const yr = Number((doc.rawPayload as RawProjectPayload).year);
       if (yr >= 2500 && yr <= 2600) {
         fiscalYear = yr;
       }
     }
 
-    const raw = (doc.rawPayload || {}) as any;
+    const raw = (doc.rawPayload || {}) as RawProjectPayload;
 
     // ─── 2. Agency Name ──────────────────────────────────────────
     let agencyName = doc.agencyName;
@@ -200,7 +223,8 @@ async function main() {
       raw.purchase_method_name ||
       raw.transaction_sub_type_name ||
       raw.project_type_name ||
-      doc.procurementType;
+      doc.procurementType ||
+      '';
 
     const status =
       raw.project_status ||
@@ -325,7 +349,7 @@ async function main() {
     });
 
     // ─── 9. Build Update Payload ─────────────────────────────────
-    const updateSet: Record<string, any> = {
+    const updateSet: Record<string, unknown> = {
       fiscalYear,
       agencyName,
       budget,

@@ -84,8 +84,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const bookmarked = isBookmarked(project.externalId);
 
   // ─── Status Tag (based on official status & actual deadline) ────────────────
-  const rawStatus = (project as any).status || '';
-  const winnerName = (project as any).winnerName;
+  const rawStatus = project.status || '';
+  const winnerName = project.winnerName;
   let statusTagClass = 'tag';
   let statusText = '';
 

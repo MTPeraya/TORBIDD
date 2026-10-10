@@ -77,9 +77,6 @@ export function ProjectFormModal({
 
   if (!isOpen) return null;
 
-  const handleDeptSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setDeptTh(e.target.value);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

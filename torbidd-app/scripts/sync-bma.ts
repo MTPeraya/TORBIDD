@@ -14,7 +14,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 import connectToDatabase from '../src/lib/mongodb';
 import { BmaClient, BMA_ANNOUNCE_TYPES } from '../src/services/ingestion/clients/bma-client';
 import { upsertDiscoveredProjects } from '../src/services/database/procurement';
-import { classifyProject, classifyByKeywords } from '../src/services/ai/classifier';
+import { classifyByKeywords } from '../src/services/ai/classifier';
 import ProcurementProject from '../src/models/ProcurementProject';
 import { DiscoveredProject } from '../src/types/procurement';
 

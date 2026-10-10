@@ -139,8 +139,7 @@ export default function ProjectDetailPage({
   let statusText = language === 'th' ? '● เปิดรับข้อเสนอ' : '● Open';
   if (!hasDeadline) {
     if (project.contractFinishDate) {
-      const finishDate = new Date(project.contractFinishDate);
-      const isOngoing = finishDate.getTime() > Date.now();
+      const isOngoing = daysUntil(project.contractFinishDate) >= 0;
       statusTagClass = isOngoing ? 'tag open-dot' : 'tag closed-dot';
       statusText = isOngoing
         ? (language === 'th' ? '● สัญญากำลังดำเนินงาน' : '● Contract Active')
@@ -662,7 +661,7 @@ export default function ProjectDetailPage({
           <ProcurementTimeline
             timeline={project.timeline}
             sourceUrl={project.sourceUrl}
-            externalProjectId={String(project.externalId || (project as any).externalProjectId || '')}
+            externalProjectId={String(project.externalId || (project as { externalProjectId?: string | number }).externalProjectId || '')}
           />
 
           {/* Issue #90: Qualifications & Go/No-Go Checklist */}

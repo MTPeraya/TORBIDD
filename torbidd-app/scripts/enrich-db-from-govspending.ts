@@ -16,6 +16,27 @@ import connectToDatabase from '../src/lib/mongodb';
 import ProcurementProject from '../src/models/ProcurementProject';
 import { parseToIsoDate } from '../src/services/transformation/normalizers/date-normalizer';
 
+interface GovSpendingContract {
+  contract_date?: string;
+  contract_finish_date?: string;
+  winner_name?: string;
+  [key: string]: unknown;
+}
+
+interface GovSpendingRecord {
+  project_id?: string;
+  announce_date?: string;
+  transaction_date?: string;
+  contract?: GovSpendingContract[];
+  project_status?: string;
+  sum_price_agree?: number;
+  purchase_method_name?: string;
+  transaction_sub_type_name?: string;
+  project_type_name?: string;
+  price_build?: number;
+  [key: string]: unknown;
+}
+
 async function main() {
   console.log('🔄 Connecting to MongoDB Atlas...');
   await connectToDatabase();
@@ -31,7 +52,7 @@ async function main() {
 
   // Fetch all software projects for year 2569 from GovSpending (which has 757 records)
   console.log('📡 Fetching accurate data from opend.data.go.th for year 2569...');
-  const govRecords: any[] = [];
+  const govRecords: GovSpendingRecord[] = [];
 
   for (const offset of [0, 500]) {
     const url = `https://opend.data.go.th/govspending/service/egp-contract?api-key=${apiKey}&year=2569&keyword=ซอฟต์แวร์&offset=${offset}&limit=500`;
@@ -41,7 +62,7 @@ async function main() {
       console.warn(`  Failed at offset ${offset}: HTTP ${res.status}`);
       continue;
     }
-    const json = (await res.json()) as any;
+    const json = (await res.json()) as { data?: GovSpendingRecord[] };
     if (json.data && Array.isArray(json.data)) {
       govRecords.push(...json.data);
       console.log(`  Retrieved ${json.data.length} records.`);
@@ -51,7 +72,7 @@ async function main() {
   console.log(`Total GovSpending records retrieved: ${govRecords.length}`);
 
   // Create a lookup map by project_id
-  const govMap = new Map<string, any>();
+  const govMap = new Map<string, GovSpendingRecord>();
   for (const item of govRecords) {
     if (item.project_id) {
       govMap.set(item.project_id.trim(), item);
@@ -63,7 +84,7 @@ async function main() {
   console.log(`Processing ${existingDocs.length} database records for enrichment...`);
 
   let updatedCount = 0;
-  const bulkOps: any[] = [];
+  const bulkOps: Parameters<typeof ProcurementProject.bulkWrite>[0] = [];
 
   for (const doc of existingDocs) {
     const extId = doc.externalProjectId?.trim();
@@ -80,7 +101,7 @@ async function main() {
       }
     }
 
-    const updateFields: Record<string, any> = {
+    const updateFields: Record<string, unknown> = {
       fiscalYear,
     };
 
@@ -123,7 +144,13 @@ async function main() {
       const medianPrice = govItem.price_build && govItem.price_build > 0 ? govItem.price_build : undefined;
 
       // Build real verified timeline milestones
-      const timeline: any[] = [];
+      const timeline: Array<{
+        id: string;
+        event: { th: string; en: string };
+        date: string;
+        description: { th: string; en: string };
+        status: string;
+      }> = [];
 
       if (publishDateIso) {
         timeline.push({
