@@ -114,7 +114,17 @@ export class IngestionService {
         fiscalYear: params.fiscalYear,
         signal: params.signal,
       });
-      allProjects.push(...bmaRes.projects);
+      // Safely enrich discovered BMA projects if client supports enrichment
+      if (typeof this.bmaClient.enrichProject === 'function') {
+        const toEnrich = bmaRes.projects.slice(0, 30);
+        const remaining = bmaRes.projects.slice(30);
+        const enrichedBma = await Promise.all(
+          toEnrich.map((p) => this.bmaClient.enrichProject(p, params.signal)),
+        );
+        allProjects.push(...enrichedBma, ...remaining);
+      } else {
+        allProjects.push(...bmaRes.projects);
+      }
       bySource.BMA_EGP = bmaRes.projects.length;
     } catch (bmaErr) {
       console.warn('[IngestionService] BMA search skipped/failed:', bmaErr);

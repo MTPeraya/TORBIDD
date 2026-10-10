@@ -2,7 +2,7 @@
 // lib/project-mapper.ts - Maps ProcurementProject/DiscoveredProject to Project
 // =============================================================================
 
-import { Project, ProjectCategory, AiConfidence } from '@/types/project';
+import { Project, ProjectCategory, AiConfidence, TorStatus } from '@/types/project';
 import { DiscoveredProject } from '@/types/procurement';
 import { IProcurementProject } from '@/models/ProcurementProject';
 import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
@@ -17,11 +17,77 @@ export function procurementToProject(
   const extId = sanitizeText(p.externalProjectId || p.externalId, '67119538991');
   const titleText = sanitizeText(p.projectName || p.title?.th || p.title, 'โครงการจัดซื้อจัดจ้างภาครัฐ');
   const deptText = sanitizeAgencyName(p.agencyName || p.department?.th || p.department);
-  const rawDate = p.discoveredAt || p.createdAt || p.publishDate || p.announceDate || new Date();
-  const publishDateStr = parseToIsoDate(rawDate) || new Date().toISOString();
-  const deadlineStr =
-    parseToIsoDate(p.deadline) || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(); // 14 days from now
 
+  // ─── Actual Announcement Date (publishDate) ────────────────────────────────
+  // Priority: actual announcement/publish date fields FIRST.
+  // discoveredAt / createdAt are SYNC dates, not announcement dates — never use
+  // them as publishDate. Only fall back if truly no date is available.
+  const rawAnnounceDate =
+    p.publish_date ??
+    p.publishDate ??
+    p.announce_date ??
+    p.announceDate ??
+    p.date ??
+    p.contract_date ??
+    p.startDate ??
+    p.start_date ??
+    null;
+
+  const publishDateStr = parseToIsoDate(rawAnnounceDate) || null;
+
+  // ─── Sync / Processed Date ─────────────────────────────────────────────────
+  // This is when WE synced the record from the source — NOT the announcement date.
+  const rawSyncDate =
+    p.discoveredAt ?? p.updatedAt ?? p.createdAt ?? p.processedDate ?? new Date();
+  const processedDateStr = parseToIsoDate(rawSyncDate) || new Date().toISOString();
+
+  // ─── Deadline ──────────────────────────────────────────────────────────────
+  // Use real deadline from TOR/source. Do NOT default to "14 days from now" —
+  // that misleads users about whether a job is still open.
+  const rawDeadline =
+    p.deadline ??
+    p.submission_deadline ??
+    p.submissionDeadline ??
+    p.close_date ??
+    p.closeDate ??
+    p.end_date ??
+    p.endDate ??
+    null;
+  const deadlineStr = parseToIsoDate(rawDeadline) || null;
+
+  // ─── Fiscal Year ───────────────────────────────────────────────────────────
+  // Priority: 1) Explicitly saved fiscalYear (e.g. from admin edit or official data)
+  //           2) Derived from actual announcement/contract date (Oct 1 -> Sep 30)
+  //           3) 11-digit e-GP ID prefix (e.g. 68xxxxxxxxx -> 2568)
+  let fiscalYear: number | undefined;
+
+  const rawFy = p.fiscalYear || p.fiscal_year || p.year;
+  if (typeof rawFy === 'number' && rawFy >= 2500 && rawFy <= 2600) {
+    fiscalYear = rawFy;
+  } else if (typeof rawFy === 'string' && !isNaN(Number(rawFy)) && Number(rawFy) >= 2500 && Number(rawFy) <= 2600) {
+    fiscalYear = Number(rawFy);
+  }
+
+  if (!fiscalYear) {
+    const targetDateForFy = publishDateStr || parseToIsoDate(p.contractDate || p.contract_date || p.transaction_date);
+    if (targetDateForFy) {
+      const d = new Date(targetDateForFy);
+      if (!isNaN(d.getTime())) {
+        const month = d.getUTCMonth(); // 0-indexed: 9 = Oct
+        const ceYear = d.getUTCFullYear();
+        fiscalYear = ceYear + (month >= 9 ? 544 : 543);
+      }
+    }
+  }
+
+  if (!fiscalYear && extId && /^\d{11}$/.test(extId)) {
+    const prefix = parseInt(extId.substring(0, 2), 10);
+    if (prefix >= 60 && prefix <= 75) {
+      fiscalYear = 2500 + prefix;
+    }
+  }
+
+  // ─── Category ──────────────────────────────────────────────────────────────
   let category: ProjectCategory = 'Website';
   const rawCat = p.software_category || p.softwareCategory || p.category;
   const validCategories: ProjectCategory[] = [
@@ -58,15 +124,27 @@ export function procurementToProject(
     }
   }
 
+  // ─── Software Relatedness ──────────────────────────────────────────────────
   // UC-10: determine software relatedness
+  // Software license/subscription procurement IS software-related.
   const NON_SW_TERMS = ['ก่อสร้าง', 'construction', 'ถนน', 'road', 'ครุภัณฑ์', 'equipment', 'ยานพาหนะ', 'vehicle', 'เฟอร์นิเจอร์', 'furniture'];
+  // License/subscription terms that ARE software-related
+  const SW_LICENSE_TERMS = [
+    'ลิขสิทธิ์', 'license', 'licence', 'subscription', 'สิทธิ์การใช้', 'สิทธิ์ใช้งาน',
+    'โปรแกรมลิขสิทธิ์', 'software license', 'software subscription', 'บอกรับสมาชิก',
+    'เช่าระบบ', 'เช่าซอฟต์แวร์', 'บำรุงรักษาซอฟต์แวร์', 'maintenance software',
+    'annual license', 'software maintenance',
+  ];
+  const isSoftwareLicense = SW_LICENSE_TERMS.some((t) => titleLower.includes(t));
+
   const isSoftwareRelated =
     p.is_software !== undefined && p.is_software !== null
       ? Boolean(p.is_software)
       : p.isSoftwareRelated !== undefined && p.isSoftwareRelated !== null
         ? Boolean(p.isSoftwareRelated)
-        : !NON_SW_TERMS.some((t) => titleLower.includes(t));
+        : isSoftwareLicense || !NON_SW_TERMS.some((t) => titleLower.includes(t));
 
+  // ─── Budget ────────────────────────────────────────────────────────────────
   const budgetVal = normalizeCurrency(
     p.budget ?? p.project_money ?? p.projectMoney ?? p.price ?? p.amount ?? p.sum_price_agree ?? p.contract_price,
   );
@@ -76,6 +154,25 @@ export function procurementToProject(
     rawContractPrice !== undefined && rawContractPrice !== null
       ? normalizeCurrency(rawContractPrice)
       : undefined;
+
+  // ─── TOR Status ────────────────────────────────────────────────────────────
+  // Reflect whether a TOR document actually exists for this project.
+  let torStatus: TorStatus;
+  if (p.extractionStatus === 'EXTRACTED' && (p.summary?.th || p.extractedQualifications?.length)) {
+    torStatus = 'AVAILABLE';
+  } else if (p.extractionStatus === 'PENDING' || p.extractionStatus === 'FAILED') {
+    torStatus = 'PENDING';
+  } else if (p.documents && Array.isArray(p.documents) && p.documents.some((d: { documentType: string }) => d.documentType === 'ATTACH_TOR')) {
+    torStatus = 'AVAILABLE';
+  } else {
+    // If no extraction data and no TOR document attached, mark as no TOR available
+    torStatus = (p.summary?.th || p.extractedQualifications?.length) ? 'AVAILABLE' : 'NO_TOR';
+  }
+
+  // ─── Final publishDate for display ────────────────────────────────────────
+  // If we couldn't get a real announcement date, use processedDate but we'll
+  // clearly label it as "Sync Date" in the UI rather than "Published Date".
+  const finalPublishDate = publishDateStr || processedDateStr;
 
   return {
     _id: p._id?.toString() || extId,
@@ -90,8 +187,9 @@ export function procurementToProject(
     },
     budget: budgetVal,
     contractPrice: contractPriceVal && contractPriceVal > 0 ? contractPriceVal : undefined,
-    publishDate: publishDateStr,
-    deadline: deadlineStr,
+    publishDate: finalPublishDate,
+    deadline: deadlineStr || '', // Empty string = unknown deadline; UI will show "N/A"
+    fiscalYear,
     category,
     isSoftwareRelated,
     classificationReviewStatus: (p.admin_reviewed || p.adminReviewed)
@@ -105,18 +203,7 @@ export function procurementToProject(
         : { th: titleText, en: titleText },
     summary: p.summary?.th
       ? p.summary
-      : {
-          th: `สรุปสาระสำคัญ: โครงการ${titleText} โดย${deptText} วงเงินงบประมาณ ${budgetVal.toLocaleString('th-TH')} บาท${
-            contractPriceVal && contractPriceVal !== budgetVal
-              ? ` (ราคามูลค่าที่จัดหาได้ ${contractPriceVal.toLocaleString('th-TH')} บาท)`
-              : ''
-          } จัดหาด้วยวิธี ${p.procurementType || 'e-Bidding'}`,
-          en: `Executive Summary: Procurement for ${titleText} by ${deptText} with an allocated budget of ${budgetVal.toLocaleString('en-US')} THB${
-            contractPriceVal && contractPriceVal !== budgetVal
-              ? ` (awarded contract value ${contractPriceVal.toLocaleString('en-US')} THB)`
-              : ''
-          } via ${p.procurementType || 'e-Bidding'} method`,
-        },
+      : undefined, // No fake summary — if no TOR extracted, show nothing
     scope: p.scope && Array.isArray(p.scope?.th) && p.scope.th.length > 0 ? p.scope : undefined,
     qualifications: p.qualifications && Array.isArray(p.qualifications?.th) && p.qualifications.th.length > 0 ? p.qualifications : undefined,
     // Only show technologies if actually extracted from TOR documents (no hardcoded fallbacks)
@@ -127,22 +214,30 @@ export function procurementToProject(
     extractedQualifications: p.extractedQualifications?.length ? p.extractedQualifications : [],
 
     historicalAvg: budgetVal,
-    sourceDocument: `Attach_TOR_${extId}.pdf`,
-    processedDate: new Date().toISOString(),
-    aiConfidence: (p.ai_confidence || p.aiConfidence || 'High') as AiConfidence,
+    sourceDocument: p.sourceDocument || `Attach_TOR_${extId}.pdf`,
+    torStatus,
+    processedDate: processedDateStr, // Real sync/processed date
+    aiConfidence: (p.ai_confidence || p.aiConfidence || 'Medium') as AiConfidence, // Default Medium not High
     aiClassificationModel: p.classified_by || p.aiClassificationModel,
-    extractionStatus: p.extractionStatus || (p.summary ? 'EXTRACTED' : 'PENDING'),
-    createdAt: publishDateStr,
-    updatedAt: new Date().toISOString(),
+    extractionStatus: p.extractionStatus || 'PENDING',
+    createdAt: processedDateStr,
+    updatedAt: processedDateStr,
+    timeline: p.timeline && Array.isArray(p.timeline) && p.timeline.length > 0 ? p.timeline : undefined,
+    contractDate: p.contractDate || p.contract_date || p.transaction_date,
+    contractFinishDate: p.contractFinishDate || p.contract_finish_date,
+    winnerName: p.winnerName || p.winner_name,
+    medianPrice: p.medianPrice || p.price_build,
+    status: p.status || (p.contractPrice || contractPriceVal ? 'จัดทำสัญญาแล้ว' : 'ประกาศเชิญชวน'),
     // Preserve raw fields for compatibility
     externalProjectId: extId,
     projectName: titleText,
     agencyName: deptText,
-    fiscalYear: p.fiscalYear || 2568,
     source: p.source || 'CKAN_GOVSPENDING',
     sourceUrl:
       p.sourceUrl ||
       `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${extId}`,
+    // Pass through actual publish date detection flag so UI can distinguish
+    _hasActualPublishDate: !!publishDateStr,
   } as Project & {
     externalProjectId: string;
     projectName: string;
@@ -150,5 +245,6 @@ export function procurementToProject(
     fiscalYear: number;
     source: string;
     sourceUrl: string;
+    _hasActualPublishDate: boolean;
   };
 }

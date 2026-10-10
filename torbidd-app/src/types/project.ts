@@ -108,6 +108,8 @@ export interface ContactInfo {
   officer?: BilingualText;
 }
 
+export type TorStatus = 'AVAILABLE' | 'NO_TOR' | 'PENDING';
+
 export interface Project {
   _id?: string;
   externalId: number;
@@ -115,8 +117,9 @@ export interface Project {
   department: Department;
   budget: number; // in THB
   contractPrice?: number; // in THB (ราคามูลค่าที่จัดหาได้ / ราคาตกลงซื้อจ้าง)
-  publishDate: string; // ISO date string
+  publishDate: string; // ISO date string — actual announcement date from source
   deadline: string; // ISO date string
+  fiscalYear?: number; // Thai fiscal year (พ.ศ.), e.g. 2568
   category: ProjectCategory;
   isSoftwareRelated?: boolean;         // UC-10: software vs non-software flag (default: true)
   classificationReviewStatus?: ClassificationReviewStatus; // UC-10: admin review
@@ -132,7 +135,8 @@ export interface Project {
   sourceDocument: string;
   sourceUrl?: string;
   documentUrl?: string;
-  processedDate: string;
+  torStatus?: TorStatus; // Whether TOR document is available
+  processedDate: string; // ISO date string — when data was synced/processed
   aiConfidence: AiConfidence;
   aiClassificationModel?: string;
   extractionStatus?: 'PENDING' | 'EXTRACTED' | 'FAILED';
@@ -144,6 +148,12 @@ export interface Project {
   contactInfo?: ContactInfo;
   createdAt?: string;
   updatedAt?: string;
+  contractDate?: string;
+  contractFinishDate?: string;
+  winnerName?: string;
+  medianPrice?: number;
+  status?: string;
+  _hasActualPublishDate?: boolean;
 }
 
 export interface ProjectFilters {
@@ -159,7 +169,15 @@ export interface ProjectFilters {
   minBudget?: number;
   maxBudget?: number;
   deadline?: 'within7' | 'within30' | 'moreThan30';
-  sortBy?: 'publishDate_desc' | 'publishDate_asc' | 'budget_desc' | 'budget_asc' | 'newest' | 'oldest';
+  sortBy?:
+    | 'publishDate_desc'
+    | 'publishDate_asc'
+    | 'budget_desc'
+    | 'budget_asc'
+    | 'deadline_asc'
+    | 'deadline_desc'
+    | 'newest'
+    | 'oldest';
   page?: number;
   limit?: number;
 }

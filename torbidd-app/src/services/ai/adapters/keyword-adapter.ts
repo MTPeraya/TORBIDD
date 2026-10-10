@@ -110,9 +110,11 @@ const HARD_NON_SOFTWARE_PATTERNS = [
 
   // Off-the-shelf consumer/retail tool subscriptions & seat licenses
   // (Software engineering firms build systems, they don't supply retail single licenses)
-  'chatgpt', 'claude', 'canva', 'turnitin', 'zoom', 'midjourney',
-  'gptzero', 'google ai pro', 'microsoft office 365 family', 'microsoft 365 family',
-  'office 365 family', 'office 365 personal', 'office 365 home',
+  // NOTE: Enterprise software license procurement (e.g. 'จัดซื้อลิขสิทธิ์ซอฟต์แวร์ Microsoft 365 Enterprise')
+  // IS software-related and should NOT be blocked here.
+  // Only block obviously consumer/personal-tier subscriptions:
+  'chatgpt', 'claude ai subscription', 'canva', 'turnitin', 'midjourney',
+  'gptzero', 'microsoft 365 family', 'office 365 family', 'office 365 personal', 'office 365 home',
   'ต่ออายุโดเมน', 'โดเมนเนม', 'domain name',
   'autocad', 'ออโต้แคด',
 
@@ -164,6 +166,10 @@ const STRONG_SOFTWARE_KEYWORDS = [
   'บริการซอฟต์แวร์', 'บำรุงรักษาซอฟต์แวร์', 'maintenance software',
   'it service', 'บริการไอที', 'cloud service', 'บริการคลาวด์',
   'เช่าซอฟต์แวร์', 'เช่าระบบ', 'บำรุงรักษาระบบ',
+  // Software license & subscription procurement (enterprise/government)
+  'ลิขสิทธิ์', 'license', 'licence', 'จัดซื้อลิขสิทธิ์', 'สิทธิ์การใช้งาน',
+  'โปรแกรมลิขสิทธิ์', 'software license', 'software subscription',
+  'annual license', 'software maintenance', 'บอกรับสมาชิก', 'subscription service',
   // Single words that unambiguously imply software in procurement context
   ' app', 'app ', ' system', 'system ', ' platform', 'platform ',
 ];

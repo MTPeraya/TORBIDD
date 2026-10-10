@@ -162,6 +162,37 @@ export async function upsertDiscoveredProjects(
       updatedAt: new Date(),
     };
 
+    if (p.publishDate) {
+      updateSet.publishDate = p.publishDate instanceof Date ? p.publishDate : new Date(p.publishDate);
+    }
+    if (p.deadline) {
+      updateSet.deadline = p.deadline instanceof Date ? p.deadline : new Date(p.deadline);
+    }
+    if (p.status) {
+      updateSet.status = p.status;
+    }
+    if (p.torStatus) {
+      updateSet.torStatus = p.torStatus;
+    }
+    if (p.contractDate) {
+      updateSet.contractDate = p.contractDate instanceof Date ? p.contractDate : new Date(p.contractDate);
+    }
+    if (p.contractFinishDate) {
+      updateSet.contractFinishDate = p.contractFinishDate instanceof Date ? p.contractFinishDate : new Date(p.contractFinishDate);
+    }
+    if (p.winnerName) {
+      updateSet.winnerName = p.winnerName;
+    }
+    if (p.medianPrice !== undefined) {
+      updateSet.medianPrice = p.medianPrice;
+    }
+    if (p.timeline && p.timeline.length > 0) {
+      updateSet.timeline = p.timeline;
+    }
+    if (p.rawPayload) {
+      updateSet.rawPayload = p.rawPayload;
+    }
+
     updateSet.is_software = p.is_software ?? true;
     updateSet.software_category = p.software_category ?? 'Software / IT';
     updateSet.ai_confidence = p.ai_confidence ?? 'High';
@@ -172,8 +203,16 @@ export async function upsertDiscoveredProjects(
       : new Date();
     updateSet.admin_reviewed = p.admin_reviewed ?? false;
 
+    const setOnInsert: Record<string, unknown> = {
+      externalProjectId: p.externalProjectId,
+      discoveredAt: new Date(),
+      createdAt: new Date(),
+    };
+
     if (newRev !== undefined) {
       updateSet.revision = newRev;
+    } else {
+      setOnInsert.revision = 1;
     }
 
     return {
@@ -181,12 +220,7 @@ export async function upsertDiscoveredProjects(
         filter: { externalProjectId: p.externalProjectId },
         update: {
           $set: updateSet,
-          $setOnInsert: {
-            externalProjectId: p.externalProjectId,
-            revision: 1,
-            discoveredAt: new Date(),
-            createdAt: new Date(),
-          },
+          $setOnInsert: setOnInsert,
         },
         upsert: true,
       },
@@ -414,7 +448,18 @@ export async function updateProcurementProjectExtraction(
   extraction: {
     summary?: { th: string; en: string };
     budget?: number | null;
+    medianPrice?: number | null;
+    fiscalYear?: number | null;
+    agencyName?: string | null;
+    publishDate?: string | Date | null;
     deadline?: string | null;
+    timeline?: Array<{
+      id: string;
+      event: { th: string; en: string };
+      date: string;
+      description: { th: string; en: string };
+      status: 'completed' | 'active' | 'upcoming';
+    }>;
     requiredTechnologies?: string[];
     technicalRequirements?: { th: string[]; en: string[] };
     extractedQualifications?: Array<{
@@ -436,6 +481,25 @@ export async function updateProcurementProjectExtraction(
   if (extraction.technicalRequirements) updateData.technicalRequirements = extraction.technicalRequirements;
   if (extraction.extractedQualifications) updateData.extractedQualifications = extraction.extractedQualifications;
   if (extraction.budget && extraction.budget > 0) updateData.budget = extraction.budget;
+  if (extraction.medianPrice && extraction.medianPrice > 0) updateData.medianPrice = extraction.medianPrice;
+  if (extraction.fiscalYear && extraction.fiscalYear > 2500) updateData.fiscalYear = extraction.fiscalYear;
+  if (extraction.agencyName && extraction.agencyName.trim() && extraction.agencyName !== 'กรมบัญชีกลาง') {
+    updateData.agencyName = extraction.agencyName.trim();
+  }
+  if (extraction.publishDate) {
+    const pub = new Date(extraction.publishDate);
+    if (!isNaN(pub.getTime())) updateData.publishDate = pub;
+  }
+  if (extraction.timeline && Array.isArray(extraction.timeline) && extraction.timeline.length > 0) {
+    updateData.timeline = extraction.timeline;
+  }
+  if (extraction.deadline) {
+    const d = new Date(extraction.deadline);
+    if (!isNaN(d.getTime())) {
+      updateData.deadline = d;
+    }
+  }
+  updateData.torStatus = 'AVAILABLE';
 
   try {
     await connectToDatabase();
