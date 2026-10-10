@@ -203,8 +203,16 @@ export async function upsertDiscoveredProjects(
       : new Date();
     updateSet.admin_reviewed = p.admin_reviewed ?? false;
 
+    const setOnInsert: Record<string, unknown> = {
+      externalProjectId: p.externalProjectId,
+      discoveredAt: new Date(),
+      createdAt: new Date(),
+    };
+
     if (newRev !== undefined) {
       updateSet.revision = newRev;
+    } else {
+      setOnInsert.revision = 1;
     }
 
     return {
@@ -212,12 +220,7 @@ export async function upsertDiscoveredProjects(
         filter: { externalProjectId: p.externalProjectId },
         update: {
           $set: updateSet,
-          $setOnInsert: {
-            externalProjectId: p.externalProjectId,
-            revision: 1,
-            discoveredAt: new Date(),
-            createdAt: new Date(),
-          },
+          $setOnInsert: setOnInsert,
         },
         upsert: true,
       },

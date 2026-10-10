@@ -122,5 +122,126 @@ describe('BmaClient (egp2.bangkok.go.th)', () => {
       expect(result.total).toBe(0);
       expect(result.projects).toEqual([]);
     });
+
+    it('queries Bangkok e-GP GetProjectFromFilter and maps projectNumber and budget', async () => {
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          totalCount: 1,
+          data: [
+            {
+              projectId: 'bma-guid-1234',
+              projectNumber: '69109001213',
+              projectName: 'ประกวดราคาจ้างค่าบำรุงรักษาระบบเครือข่ายและโปรแกรมประยุกต์',
+              masterOrgGroupName: 'สำนักยุทธศาสตร์และประเมินผล',
+              masterOrgDepartmentName: 'สำนักงานพัฒนาระบบสารสนเทศดิจิทัล',
+              projectBudget: 3900000,
+            },
+          ],
+        }),
+      });
+
+      const client = new BmaClient({
+        apiBaseUrl: 'https://egp2.bangkok.go.th/appapi/api',
+        fetchImpl: mockFetch as unknown as typeof fetch,
+      });
+
+      const result = await client.searchProjects({ keyword: 'โปรแกรม' });
+
+      expect(result.total).toBe(1);
+      expect(result.projects).toHaveLength(1);
+      expect(result.projects[0].externalProjectId).toBe('69109001213');
+      expect(result.projects[0].fiscalYear).toBe(2569);
+      expect(result.projects[0].budget).toBe(3900000);
+      expect(result.projects[0].agencyName).toBe('สำนักงานพัฒนาระบบสารสนเทศดิจิทัล');
+      expect(result.projects[0].source).toBe('BMA_EGP');
+      expect(result.projects[0].sourceUrl).toBe('https://egp2.bangkok.go.th/project-detail/bma-guid-1234');
+    });
+  });
+
+  describe('enrichProject()', () => {
+    it('enriches project with TOR document link and signed contract winner', async () => {
+      const mockFetch = jest.fn().mockImplementation(async (urlStr: string) => {
+        if (urlStr.includes('GetAnnouncementDetailInProject')) {
+          return {
+            ok: true,
+            json: async () => ({
+              data: [
+                {
+                  id: 'ann-guid-001',
+                  masterAnnounceTypeName: 'ร่างขอบเขตของงาน (TOR)',
+                  projectAnnouncementPath: 'Attach_TOR_Document.pdf',
+                  projectAnnouncementPublishDate: '2026-09-15T00:00:00Z',
+                },
+              ],
+            }),
+          };
+        }
+        if (urlStr.includes('GetProjectDetail')) {
+          return {
+            ok: true,
+            json: async () => ({
+              masterMethodIdName: 'e-Bidding',
+              masterTypeIdName: 'จ้างทำของ',
+              masterGoodsIdName: 'เทคโนโลยีสารสนเทศ',
+              masterContractAvailableName: 'จัดทำสัญญาแล้ว',
+            }),
+          };
+        }
+        if (urlStr.includes('GetProjectContractInProject')) {
+          return {
+            ok: true,
+            json: async () => ({
+              data: [
+                {
+                  projectContractBidderName: 'บริษัท ทีเอ็กซ์ โซลูชั่นส์ จำกัด',
+                  projectContractContractBudget: 3800000,
+                  projectContractContractDate: '2026-09-28',
+                },
+              ],
+            }),
+          };
+        }
+        return { ok: false };
+      });
+
+      const client = new BmaClient({
+        apiBaseUrl: 'https://egp2.bangkok.go.th/appapi/api',
+        fetchImpl: mockFetch as unknown as typeof fetch,
+      });
+
+      const baseProject = {
+        externalProjectId: '69109001213',
+        projectName: 'บำรุงรักษาระบบ',
+        agencyName: 'กทม.',
+        fiscalYear: 2569,
+        source: 'BMA_EGP',
+        sourceUrl: 'https://egp2.bangkok.go.th/project-detail/pid-1',
+        rawPayload: { projectId: 'pid-1' },
+      };
+
+      const enriched = await client.enrichProject(baseProject);
+
+      expect(enriched.torStatus).toBe('AVAILABLE');
+      expect(enriched.sourceUrl).toBe('https://egp2.bangkok.go.th/api/file/ann-guid-001/Attach_TOR_Document.pdf');
+      expect(enriched.winnerName).toBe('บริษัท ทีเอ็กซ์ โซลูชั่นส์ จำกัด');
+      expect(enriched.contractPrice).toBe(3800000);
+      expect(enriched.contractDate).toBe('2026-09-28');
+      expect(enriched.status).toBe('จัดทำสัญญาแล้ว');
+    });
+  });
+
+  describe('URLs', () => {
+    it('constructs valid fileUrl and listingUrl', () => {
+      const client = new BmaClient();
+      expect(client.fileUrl('ann-123', 'file test.pdf')).toBe(
+        'https://egp2.bangkok.go.th/api/file/ann-123/file%20test.pdf',
+      );
+      expect(client.listingUrl('proj-456')).toBe(
+        'https://egp2.bangkok.go.th/project-detail/proj-456',
+      );
+    });
   });
 });
+
