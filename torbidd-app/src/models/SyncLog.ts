@@ -46,7 +46,7 @@ const SyncLogSchema = new Schema<ISyncLog>(
     source: {
       type: String,
       required: true,
-      default: 'CKAN_GOVSPENDING & National e-GP',
+      default: 'CKAN_GOVSPENDING, BMA_EGP & NATIONAL_EGP',
     },
     startedAt: {
       type: Date,

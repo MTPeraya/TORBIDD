@@ -18,7 +18,7 @@ export interface SyncStartResult {
  */
 export async function recordSyncStart(
   triggerType: SyncTriggerType = 'manual',
-  source = 'CKAN_GOVSPENDING & National e-GP',
+  source = 'CKAN_GOVSPENDING, BMA_EGP & NATIONAL_EGP',
 ): Promise<SyncStartResult> {
   const startedAt = new Date();
   try {

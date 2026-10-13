@@ -187,6 +187,35 @@ export function isContractAwarded(project: Project): boolean {
 }
 
 /**
+ * Determines whether a procurement project is already closed (past deadline or cancelled) or already awarded.
+ */
+export function isProjectClosedOrAwarded(project: Project): boolean {
+  if (isContractAwarded(project)) return true;
+  if (project.deadline) {
+    const deadlineTime = new Date(project.deadline).getTime();
+    if (!isNaN(deadlineTime) && deadlineTime < Date.now()) {
+      return true;
+    }
+  }
+  const rawStatus = String(project.status || '').toLowerCase();
+  if (rawStatus.includes('เปิด')) {
+    return false;
+  }
+  if (
+    rawStatus.includes('ปิดรับ') ||
+    rawStatus.includes('closed') ||
+    rawStatus.includes('ยกเลิก') ||
+    rawStatus.includes('สิ้นสุด') ||
+    rawStatus.includes('ได้ผู้ชนะ') ||
+    rawStatus.includes('ทำสัญญา') ||
+    rawStatus.includes('จัดทำสัญญา')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Filter procurements by submission deadline.
  * Excludes contracts that are already awarded as their bidding is closed.
  */
@@ -222,21 +251,26 @@ export function applyProcurementFilters(
 ): Project[] {
   let result = projects;
 
-  // If any filter is applied, exclude contracts that are already awarded
-  const isFiltering = Boolean(
-    filters.deadline ||
-    filters.search ||
-    (filters.categories && filters.categories.length > 0) ||
-    (filters.agencies && filters.agencies.length > 0) ||
-    filters.department ||
-    filters.minBudget !== undefined ||
-    filters.maxBudget !== undefined ||
-    filters.budgetPreset ||
-    filters.isSoftwareRelated !== undefined
-  );
+  // Filter out closed or awarded contracts if hideClosed is true
+  if (filters.hideClosed === true) {
+    result = result.filter((p) => !isProjectClosedOrAwarded(p));
+  } else if (filters.hideClosed !== false) {
+    // If any filter is applied, exclude contracts that are already awarded
+    const isFiltering = Boolean(
+      filters.deadline ||
+      filters.search ||
+      (filters.categories && filters.categories.length > 0) ||
+      (filters.agencies && filters.agencies.length > 0) ||
+      filters.department ||
+      filters.minBudget !== undefined ||
+      filters.maxBudget !== undefined ||
+      filters.budgetPreset ||
+      filters.isSoftwareRelated !== undefined
+    );
 
-  if (isFiltering) {
-    result = result.filter((p) => !isContractAwarded(p));
+    if (isFiltering) {
+      result = result.filter((p) => !isContractAwarded(p));
+    }
   }
 
   // 1. Keyword search

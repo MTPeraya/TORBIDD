@@ -31,6 +31,7 @@ export interface ProcurementFilters {
   page?: number;
   limit?: number;
   isSoftwareRelated?: boolean;
+  hideClosed?: boolean;
 }
 
 export interface ProcurementQueryResult {

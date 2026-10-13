@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
         page: parsed.data.page,
         limit: parsed.data.limit,
         isSoftwareRelated: parsed.data.isSoftwareRelated,
+        hideClosed: parsed.data.hideClosed,
       });
 
       return NextResponse.json({
@@ -133,6 +134,7 @@ export async function GET(req: NextRequest) {
       page: parsed.data.page,
       limit: effectiveLimit,
       isSoftwareRelated: parsed.data.isSoftwareRelated,
+      hideClosed: parsed.data.hideClosed,
     });
 
     return NextResponse.json({
