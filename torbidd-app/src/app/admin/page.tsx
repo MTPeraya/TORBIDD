@@ -825,52 +825,54 @@ export default function AdminPage() {
             <div className="admin-kpi-card">
               <div className="admin-kpi-icon blue">{ICONS.file}</div>
               <div className="admin-kpi-info">
-                <span className="admin-kpi-label">{L('totalOpps')}</span>
-                <span className="admin-kpi-value">{projects.length}</span>
+                <span className="admin-kpi-label">โครงการทั้งหมดในระบบ</span>
+                <span className="admin-kpi-value">{stats?.totalProjects ?? projects.length}</span>
               </div>
               <div className="admin-kpi-footer">
                 <span className="admin-kpi-trend positive">
-                  {ICONS.trendUp} +{projects.length}
+                  {ICONS.trendUp} ข้อมูลจริง e-GP
                 </span>
-                <span className="admin-kpi-sub">Managed tenders</span>
+                <span className="admin-kpi-sub">โครงการจัดซื้อจัดจ้างภาครัฐ</span>
               </div>
             </div>
 
             <div className="admin-kpi-card">
               <div className="admin-kpi-icon emerald">{ICONS.clock}</div>
               <div className="admin-kpi-info">
-                <span className="admin-kpi-label">{L('adminActiveTenders')}</span>
-                <span className="admin-kpi-value">{activeCount}</span>
+                <span className="admin-kpi-label">โครงการที่กำลังเปิดรับข้อเสนอ</span>
+                <span className="admin-kpi-value">{stats?.activeProjects ?? activeCount}</span>
               </div>
               <div className="admin-kpi-footer">
-                <span className="admin-kpi-trend neutral">{projects.length - activeCount} closed</span>
-                <span className="admin-kpi-sub">Accepting proposals</span>
+                <span className="admin-kpi-trend neutral">ตรวจสอบกำหนดการ e-GP</span>
+                <span className="admin-kpi-sub">สถานะตามประกาศทางการ</span>
               </div>
             </div>
 
             <div className="admin-kpi-card">
               <div className="admin-kpi-icon purple">{ICONS.dollarSign}</div>
               <div className="admin-kpi-info">
-                <span className="admin-kpi-label">{L('adminTotalBudgetManaged')}</span>
+                <span className="admin-kpi-label">งบประมาณรวมทั้งระบบ</span>
                 <span className="admin-kpi-value" style={{ fontSize: '1.45rem' }}>
-                  {formatTHB(totalBudget)}
+                  {formatTHB(stats?.totalBudget ?? totalBudget)}
                 </span>
               </div>
               <div className="admin-kpi-footer">
-                <span className="admin-kpi-trend positive">BMA FY2026</span>
-                <span className="admin-kpi-sub">Approved funding</span>
+                <span className="admin-kpi-trend positive">ปีงบประมาณ 2568 - 2569</span>
+                <span className="admin-kpi-sub">วงเงินงบประมาณที่บันทึก</span>
               </div>
             </div>
 
             <div className="admin-kpi-card">
               <div className="admin-kpi-icon amber">{ICONS.sparkles}</div>
               <div className="admin-kpi-info">
-                <span className="admin-kpi-label">{L('adminAiEnrichmentRate')}</span>
-                <span className="admin-kpi-value">100%</span>
+                <span className="admin-kpi-label">การสกัดข้อมูล TOR ด้วย AI</span>
+                <span className="admin-kpi-value">
+                  {stats?.aiEnrichedCount ?? 0} โครงการ
+                </span>
               </div>
               <div className="admin-kpi-footer">
-                <span className="admin-kpi-trend positive">Gemini 1.5 Pro</span>
-                <span className="admin-kpi-sub">Auto TOR clauses parsed</span>
+                <span className="admin-kpi-trend positive">Gemini 2.5 Flash / Studio</span>
+                <span className="admin-kpi-sub">สกัดสาระสำคัญและข้อกำหนด</span>
               </div>
             </div>
           </div>
@@ -882,36 +884,44 @@ export default function AdminPage() {
               <div className="admin-card-header">
                 <div className="admin-card-title-wrap">
                   {ICONS.server}
-                  <h3 className="admin-card-title">{L('adminSystemHealth')}</h3>
+                  <h3 className="admin-card-title">สถานะระบบและการเชื่อมต่อ (System Health)</h3>
                 </div>
-                <span className="status-badge-active">HEALTHY</span>
+                <span className="status-badge-active">พร้อมใช้งาน (ACTIVE)</span>
               </div>
 
               <div className="admin-vitals-list">
                 <div className="admin-vital-row">
-                  <span className="admin-vital-name">MongoDB Database</span>
+                  <span className="admin-vital-name">ฐานข้อมูล MongoDB</span>
                   <span className="admin-vital-status online">
-                    <span className="pulse-dot"></span> Connected (Cluster0 / Atlas)
+                    <span className="pulse-dot"></span> {stats?.systemStatus?.database || 'เชื่อมต่อสำเร็จ (Atlas Cluster0)'}
                   </span>
                 </div>
                 <div className="admin-vital-row">
-                  <span className="admin-vital-name">AI Pipeline (Vertex AI)</span>
+                  <span className="admin-vital-name">บริการ AI Pipeline</span>
                   <span className="admin-vital-status online">
-                    <span className="pulse-dot"></span> Gemini 1.5 Pro / Flash Ready
+                    <span className="pulse-dot"></span> {stats?.systemStatus?.aiService || 'Google AI Studio (Gemini 2.5 Flash)'}
                   </span>
                 </div>
                 <div className="admin-vital-row">
-                  <span className="admin-vital-name">BMA e-GP Webhook Scraper</span>
+                  <span className="admin-vital-name">ระบบนำเข้าข้อมูล e-GP / CKAN</span>
                   <span className="admin-vital-status neutral">
-                    {syncing ? 'Syncing...' : 'Idle (Scheduled 08:00 ICT)'}
+                    {syncing ? 'กำลังซิงค์ข้อมูล...' : 'พร้อมซิงค์ (Ready)'}
                   </span>
                 </div>
                 <div className="admin-vital-row">
-                  <span className="admin-vital-name">Server Node.js Process Uptime</span>
+                  <span className="admin-vital-name">ระยะเวลาเซิร์ฟเวอร์เปิดทำงาน (Uptime)</span>
                   <span className="admin-vital-value">
                     {stats?.systemStatus?.uptimeSeconds
-                      ? `${Math.floor(stats.systemStatus.uptimeSeconds / 60)}m ${stats.systemStatus.uptimeSeconds % 60}s`
-                      : 'Active'}
+                      ? `${Math.floor(stats.systemStatus.uptimeSeconds / 60)} นาที ${stats.systemStatus.uptimeSeconds % 60} วินาที`
+                      : 'เปิดทำงานปกติ'}
+                  </span>
+                </div>
+                <div className="admin-vital-row">
+                  <span className="admin-vital-name">การซิงค์ข้อมูลครั้งล่าสุด</span>
+                  <span className="admin-vital-value" style={{ fontSize: '0.82rem' }}>
+                    {stats?.systemStatus?.lastSync
+                      ? new Date(stats.systemStatus.lastSync).toLocaleString('th-TH')
+                      : '-'}
                   </span>
                 </div>
               </div>
@@ -1183,7 +1193,14 @@ export default function AdminPage() {
                           >
                             {title}
                           </Link>
-                          <div className="admin-cell-meta">{project.procurementType}</div>
+                          <div className="admin-cell-meta" style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+                            <span>{project.procurementType}</span>
+                            {project.fiscalYear && (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                • ปี {project.fiscalYear}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="admin-cell-dept">{dept}</td>
                         <td>
@@ -1388,9 +1405,8 @@ export default function AdminPage() {
             </div>
 
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
-              The TORBIDD Scraper daemon regularly connects to the BMA e-Government Procurement portal,
-              retrieves draft and official TOR specifications, passes PDFs into Vertex AI Gemini 1.5 Pro,
-              and structures requirements into JSON models.
+              ระบบซิงค์ข้อมูลจัดซื้อจัดจ้างภาครัฐ เชื่อมต่อข้อมูลจริงจากระบบจัดซื้อจัดจ้างภาครัฐ (e-GP) และ Open Government Data (CKAN / กรมบัญชีกลาง) 
+              พร้อมนำเข้าเอกสาร TOR และวิเคราะห์จำแนกสาระสำคัญด้วย Google Gemini 2.5 Flash
             </p>
 
             {/* Terminal Log Console */}

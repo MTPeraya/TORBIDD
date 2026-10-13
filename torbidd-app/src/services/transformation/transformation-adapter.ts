@@ -68,22 +68,38 @@ export class TransformationAdapter {
         ? normalizeCurrency(rawContractPrice, { allowNegative: false })
         : undefined;
 
-    // 5. Extract and normalize date (supporting Thai Buddhist Era พ.ศ.)
-    const rawDate =
+    // 5. Extract and normalize announcement/publish date
+    // IMPORTANT: discoveredAt/createdAt are SYNC dates, not announcement dates.
+    // Only use actual government-provided date fields for publishDate.
+    const rawAnnounceDate =
       raw.publish_date ??
       raw.publishDate ??
       raw.announce_date ??
+      raw.announceDate ??
       raw.date ??
-      raw.contract_date ??
-      raw.discovered_at;
-    const publishDate = parseToIsoDate(rawDate) || new Date().toISOString();
+      raw.contract_date ??  // For signed contracts, this IS the relevant date
+      null;
+    const publishDate = rawAnnounceDate
+      ? (parseToIsoDate(rawAnnounceDate) || undefined)
+      : undefined;
+
+    // 5b. Extract bid submission deadline
+    const rawDeadline =
+      raw.deadline ??
+      raw.submission_deadline ??
+      raw.submissionDeadline ??
+      raw.close_date ??
+      raw.closeDate ??
+      raw.end_date ??
+      null;
+    const deadline = rawDeadline ? (parseToIsoDate(rawDeadline) || undefined) : undefined;
 
     // 6. Extract and normalize fiscal year
     const rawYear = raw.year ?? raw.fiscal_year ?? raw.fiscalYear;
     let fiscalYear = typeof rawYear === 'number' ? rawYear : parseInt(String(rawYear || ''), 10);
     if (isNaN(fiscalYear) || fiscalYear <= 0) {
-      // Derive from publish date
-      const pubDateObj = new Date(publishDate);
+      // Derive from publish date (or current date if unknown)
+      const pubDateObj = new Date(publishDate || Date.now());
       fiscalYear = pubDateObj.getUTCFullYear() + (pubDateObj.getUTCMonth() >= 9 ? 544 : 543);
     }
 
@@ -133,7 +149,8 @@ export class TransformationAdapter {
       fiscalYear,
       budget,
       contractPrice: contractPrice && contractPrice > 0 ? contractPrice : undefined,
-      publishDate,
+      publishDate: publishDate || undefined,
+      deadline: deadline || undefined,
       procurementType,
       source: (raw.source as string) || 'CENTRAL_API',
       sourceUrl,

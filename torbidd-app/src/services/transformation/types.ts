@@ -38,9 +38,17 @@ export interface RawAgencyPayload {
   publish_date?: string | Date;
   publishDate?: string | Date;
   announce_date?: string | Date;
+  announceDate?: string | Date;
   date?: string | Date;
   contract_date?: string | Date;
   discovered_at?: string | Date;
+  // Deadline / closing date keys
+  deadline?: string | Date;
+  submission_deadline?: string | Date;
+  submissionDeadline?: string | Date;
+  close_date?: string | Date;
+  closeDate?: string | Date;
+  end_date?: string | Date;
 
   // Fiscal year keys
   year?: string | number;
@@ -75,7 +83,8 @@ export interface NormalizedProcurementProject {
   fiscalYear: number;
   budget: number;
   contractPrice?: number;
-  publishDate: string; // ISO-8601 UTC
+  publishDate?: string; // ISO-8601 UTC — actual announcement date (undefined if unknown)
+  deadline?: string;   // ISO-8601 UTC — bid submission deadline
   procurementType: string;
   source: string;
   sourceUrl: string;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { TechStackRequirements } from '../TechStackRequirements';
+import { TechStackRequirements, TechStackRequirementsProps } from '../TechStackRequirements';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
 describe('TechStackRequirements component', () => {
@@ -19,10 +19,10 @@ describe('TechStackRequirements component', () => {
     },
   };
 
-  const renderComponent = (props = defaultProps) => {
+  const renderComponent = (props: Partial<TechStackRequirementsProps> = defaultProps) => {
     return render(
       <LanguageProvider>
-        <TechStackRequirements {...props} />
+        <TechStackRequirements projectId="test-project-123" {...props} />
       </LanguageProvider>
     );
   };
@@ -31,26 +31,14 @@ describe('TechStackRequirements component', () => {
     localStorage.clear();
   });
 
-  it('renders normalized tech stack tags across categories', () => {
+  it('renders technical requirements checklist and progress readiness', () => {
     renderComponent();
 
-    // Verify canonical tag normalization
-    expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
-    expect(screen.getByText('React')).toBeInTheDocument();
-    expect(screen.getByText('Kubernetes')).toBeInTheDocument();
-    expect(screen.getByText('PDPA Compliance')).toBeInTheDocument();
-  });
-
-  it('filters tech tags when category button is clicked', () => {
-    renderComponent();
-
-    // Click on Frontend filter
-    const frontendBtn = screen.getByRole('button', { name: /Frontend/i });
-    fireEvent.click(frontendBtn);
-
-    // React should still be present, PostgreSQL should not be visible in tags
-    expect(screen.getByText('React')).toBeInTheDocument();
-    expect(screen.queryByText('PostgreSQL')).not.toBeInTheDocument();
+    // Verify title and requirement texts
+    expect(screen.getByText(/Technical Requirements Checklist|รายการตรวจสอบข้อกำหนดทางเทคนิค/i)).toBeInTheDocument();
+    expect(screen.getByText(/ระบบต้องรองรับ Concurrent Users 500 ผู้ใช้งานพร้อมกัน/i)).toBeInTheDocument();
+    expect(screen.getByText(/เข้ารหัสข้อมูลตามมาตรฐาน ISO\/IEC 27001/i)).toBeInTheDocument();
+    expect(screen.getByText(/0%/i)).toBeInTheDocument();
   });
 
   it('renders technical requirements and toggles checklist status', () => {
@@ -75,5 +63,14 @@ describe('TechStackRequirements component', () => {
     fireEvent.click(checkAllBtn);
     expect(checkboxes[0]).toBeChecked();
     expect(checkboxes[1]).toBeChecked();
+  });
+
+  it('displays empty state when no requirements exist', () => {
+    renderComponent({
+      projectId: 'empty-project',
+      rawRequirements: undefined,
+    });
+
+    expect(screen.getByText(/ยังไม่มีรายการตรวจสอบข้อกำหนดทางเทคนิค|No Technical Requirements Checklist Available/i)).toBeInTheDocument();
   });
 });

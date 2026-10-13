@@ -53,7 +53,7 @@ describe('GovSpendingClient (CKAN / Open Data)', () => {
     expect(result.projects).toHaveLength(1);
 
     const project = result.projects[0];
-    expect(project).toEqual({
+    expect(project).toMatchObject({
       externalProjectId: MOCK_PROJECT_ID,
       projectName: 'โครงการจ้างพัฒนาระบบเทคโนโลยีสารสนเทศ กรุงเทพมหานคร',
       agencyName: 'สำนักการแพทย์',

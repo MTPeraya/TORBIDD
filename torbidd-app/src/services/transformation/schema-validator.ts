@@ -33,7 +33,12 @@ export const NormalizedProcurementSchema = z.object({
     .optional(),
   publishDate: z
     .string()
-    .datetime({ message: 'Publish date must be a valid ISO-8601 UTC string' }),
+    .datetime({ message: 'Publish date must be a valid ISO-8601 UTC string' })
+    .optional(),
+  deadline: z
+    .string()
+    .datetime({ message: 'Deadline must be a valid ISO-8601 UTC string' })
+    .optional(),
   procurementType: z
     .string()
     .default('e-Bidding'),
@@ -110,10 +115,12 @@ export function validateNormalizedProject(
   }
 
   // 3. Publish date anomaly (e.g. far in the past or far in the future)
-  const pubYear = new Date(validData.publishDate).getUTCFullYear();
-  const currentYear = new Date().getUTCFullYear();
-  if (pubYear < currentYear - 5 || pubYear > currentYear + 2) {
-    flags.push(`Publish date year ${pubYear} is outside expected range (${currentYear - 5} - ${currentYear + 2})`);
+  if (validData.publishDate) {
+    const pubYear = new Date(validData.publishDate).getUTCFullYear();
+    const currentYear = new Date().getUTCFullYear();
+    if (pubYear < currentYear - 5 || pubYear > currentYear + 2) {
+      flags.push(`Publish date year ${pubYear} is outside expected range (${currentYear - 5} - ${currentYear + 2})`);
+    }
   }
 
   return {

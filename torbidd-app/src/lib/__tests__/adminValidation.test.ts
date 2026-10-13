@@ -27,9 +27,9 @@ describe('Admin Validation Schemas', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects missing bilingual title', () => {
+    it('rejects missing th title', () => {
       const invalid = {
-        title: { th: 'ไทยอย่างเดียว' }, // missing en
+        title: { en: 'English only without th' }, // missing th
         department: { th: 'สำนัก', en: 'Dept' },
         budget: 5000000,
         publishDate: '2026-09-01',
@@ -43,6 +43,27 @@ describe('Admin Validation Schemas', () => {
 
       const result = ProjectCreateSchema.safeParse(invalid);
       expect(result.success).toBe(false);
+    });
+
+    it('accepts Thai-only title and auto-populates English for auto-translation', () => {
+      const valid = {
+        title: { th: 'โครงการจัดทำระบบคลาวด์' }, // en is omitted
+        department: { th: 'สำนักการศึกษา' },
+        budget: 5000000,
+        publishDate: '2026-09-01',
+        deadline: '2026-10-01',
+        category: 'Cloud',
+        procurementType: 'e-Bidding',
+        description: { th: 'รายละเอียดภาษาไทย' },
+        scope: { th: ['ติดตั้งระบบ'] },
+        qualifications: { th: ['จดทะเบียนในไทย'] },
+      };
+
+      const result = ProjectCreateSchema.safeParse(valid);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.title.en).toBe('โครงการจัดทำระบบคลาวด์');
+      }
     });
 
     it('rejects negative budget', () => {

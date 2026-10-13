@@ -14,7 +14,9 @@ export type ProcurementSortOption =
   | 'publishDate_desc'
   | 'publishDate_asc'
   | 'budget_desc'
-  | 'budget_asc';
+  | 'budget_asc'
+  | 'deadline_asc'
+  | 'deadline_desc';
 
 export interface ProcurementFilters {
   search?: string;
@@ -59,6 +61,22 @@ export interface DiscoveredProject {
   budget?: number;
   contractPrice?: number;
   procurementType?: string;
+  publishDate?: string | Date;
+  deadline?: string | Date;
+  status?: string;
+  torStatus?: 'AVAILABLE' | 'NO_TOR' | 'PENDING';
+  contractDate?: string | Date;
+  contractFinishDate?: string | Date;
+  winnerName?: string;
+  medianPrice?: number;
+  timeline?: Array<{
+    id: string;
+    event: { th: string; en: string };
+    date: string;
+    description: { th: string; en: string };
+    status: 'completed' | 'active' | 'upcoming';
+  }>;
+  rawPayload?: Record<string, unknown>;
   summary?: { th: string; en: string };
   requiredTechnologies?: string[];
   technicalRequirements?: { th: string[]; en: string[] };

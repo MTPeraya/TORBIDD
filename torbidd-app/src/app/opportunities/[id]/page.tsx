@@ -4,6 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Project } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useBookmarks } from '@/hooks/useBookmarks';
 import { ICONS } from '@/components/ui/Icons';
 import { EligibilityChecklist } from '@/components/ui/EligibilityChecklist';
@@ -32,6 +33,7 @@ export default function ProjectDetailPage({
   const router = useRouter();
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
+  const { isAdmin } = useAuth();
 
   const [project, setProject] = useState<Project | null>(null);
   const [checkedIndices, setCheckedIndices] = useState<number[]>([]);
@@ -121,20 +123,45 @@ export default function ProjectDetailPage({
   }
 
   const closing = isClosingSoon(project.deadline);
-  const days = daysUntil(project.deadline);
+  const hasDeadline = project.deadline && project.deadline !== '';
+  const days = hasDeadline ? daysUntil(project.deadline) : null;
   const catClass = getCategoryClass(project.category);
   const catLabel = CATEGORY_LABELS[language][project.category] || project.category;
   const bookmarked = isBookmarked(project.externalId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const extProject = project as any;
+  const hasRealPublishDate = extProject._hasActualPublishDate !== false;
+  const fiscalYear = project.fiscalYear || extProject.fiscalYear;
+  const calendarYear = fiscalYear ? fiscalYear - 543 : null;
 
   // Status tag with dot
   let statusTagClass = 'tag open-dot';
   let statusText = language === 'th' ? '● เปิดรับข้อเสนอ' : '● Open';
-  if (closing) {
+  if (!hasDeadline) {
+    if (project.contractFinishDate) {
+      const isOngoing = daysUntil(project.contractFinishDate) >= 0;
+      statusTagClass = isOngoing ? 'tag open-dot' : 'tag closed-dot';
+      statusText = isOngoing
+        ? (language === 'th' ? '● สัญญากำลังดำเนินงาน' : '● Contract Active')
+        : (language === 'th' ? '● สิ้นสุดสัญญาแล้ว' : '● Contract Completed');
+    } else if (project.contractDate) {
+      statusTagClass = 'tag closed-dot';
+      statusText = language === 'th' ? '● ลงนามสัญญาแล้ว' : '● Contract Signed';
+    } else {
+      statusTagClass = 'tag open-dot';
+      statusText = language === 'th' ? '● ประกาศจัดซื้อ' : '● Announced';
+    }
+  } else if (closing) {
     statusTagClass = 'tag closing-soon-dot';
-    statusText = language === 'th' ? '● ใกล้ปิดรับ' : '● Closing Soon';
-  } else if (days < 0) {
+    statusText = language === 'th'
+      ? `● ใกล้ปิดรับ (${days}ว)`
+      : `● Closing Soon (${days}d)`;
+  } else if (days !== null && days < 0) {
     statusTagClass = 'tag closed-dot';
     statusText = language === 'th' ? '● ปิดรับข้อเสนอ' : '● Closed';
+  } else if (days !== null) {
+    statusTagClass = 'tag open-dot';
+    statusText = language === 'th' ? `● เปิดรับ (${days}ว)` : `● Open (${days}d)`;
   }
 
   const handleCopySummary = () => {
@@ -148,6 +175,10 @@ export default function ProjectDetailPage({
   };
 
   const handleReprocessTor = async () => {
+    if (!isAdmin) {
+      alert(language === 'th' ? 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถสั่งประมวลผล AI ซ้ำได้' : 'Only administrators can rerun the AI process');
+      return;
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const extId = (project as any).externalProjectId || project.externalId;
     setIsExtracting(true);
@@ -161,10 +192,13 @@ export default function ProjectDetailPage({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setProject((prev: any) => ({
           ...prev,
+          deadline: json.extraction.deadline || json.updatedProject?.deadline || prev?.deadline,
+          budget: json.extraction.budget || prev?.budget,
           summary: json.extraction.summary || prev?.summary,
           requiredTechnologies: json.extraction.requiredTechnologies || prev?.requiredTechnologies,
           technicalRequirements: json.extraction.technicalRequirements || prev?.technicalRequirements,
           extractedQualifications: json.extraction.extractedQualifications || prev?.extractedQualifications,
+          torStatus: 'AVAILABLE',
           extractionStatus: 'EXTRACTED',
           aiConfidence: json.extraction.confidence || 'High',
         }));
@@ -251,15 +285,31 @@ export default function ProjectDetailPage({
                   fontSize: 11,
                   padding: '3px 8px',
                   borderRadius: 6,
-                  background: '#e0f2fe',
-                  color: '#0369a1',
+                  background:
+                    (project.aiConfidence || 'Medium') === 'High'
+                      ? '#ecfdf5'
+                      : (project.aiConfidence || 'Medium') === 'Medium'
+                      ? '#fffbeb'
+                      : '#fef2f2',
+                  color:
+                    (project.aiConfidence || 'Medium') === 'High'
+                      ? '#065f46'
+                      : (project.aiConfidence || 'Medium') === 'Medium'
+                      ? '#92400e'
+                      : '#991b1b',
+                  border:
+                    (project.aiConfidence || 'Medium') === 'High'
+                      ? '1px solid rgba(16, 185, 129, 0.3)'
+                      : (project.aiConfidence || 'Medium') === 'Medium'
+                      ? '1px solid rgba(245, 158, 11, 0.3)'
+                      : '1px solid rgba(239, 68, 68, 0.3)',
                   fontWeight: 600,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 4,
                 }}
               >
-                🤖 AI Extraction: {project.extractionStatus === 'EXTRACTED' ? 'Complete' : 'Verified'}
+                🤖 {language === 'th' ? 'จำแนก AI' : 'AI Analysis'} · {language === 'th' ? 'ความเชื่อมั่น' : 'Confidence'}: {project.aiConfidence || 'Medium'}
               </span>
             </div>
 
@@ -275,7 +325,7 @@ export default function ProjectDetailPage({
               <div className="detail-meta-item">
                 <div className="meta-label">{L('budgetApproved')}</div>
                 <div className="meta-value budget" style={{ fontWeight: 700 }}>
-                  {formatBudgetFull(project.budget, language)}
+                  {project.budget > 0 ? formatBudgetFull(project.budget, language) : (language === 'th' ? 'ไม่ระบุ' : 'N/A')}
                 </div>
                 <span className="ai-extract-label">{L('extractedFromTOR')}</span>
               </div>
@@ -303,49 +353,156 @@ export default function ProjectDetailPage({
               <div className="detail-meta-item">
                 <div className="meta-label">{L('procurementType')}</div>
                 <div className="meta-value" style={{ fontWeight: 700 }}>
-                  {project.procurementType}
+                  {project.procurementType || 'N/A'}
                 </div>
                 <span className="ai-extract-label">{L('aiExtracted')}</span>
               </div>
 
+              {/* Fiscal Year: show both Thai พ.ศ. and CE calendar year */}
+              {fiscalYear && (
+                <div className="detail-meta-item">
+                  <div className="meta-label">{language === 'th' ? 'ปีงบประมาณ' : 'Fiscal Year'}</div>
+                  <div className="meta-value" style={{ fontWeight: 700 }}>
+                    {language === 'th'
+                      ? `พ.ศ. ${fiscalYear} (ค.ศ. ${calendarYear})`
+                      : `TH FY ${fiscalYear} (CE ${calendarYear})`}
+                  </div>
+                  <span className="ai-extract-label">{language === 'th' ? 'จากข้อมูลต้นทาง' : 'From source data'}</span>
+                </div>
+              )}
+
               <div className="detail-meta-item">
-                <div className="meta-label">{L('publishDate')}</div>
+                <div className="meta-label">
+                  {hasRealPublishDate
+                    ? L('publishDate')
+                    : (language === 'th' ? 'วันที่ซิงค์ข้อมูล ⚠' : 'Sync Date ⚠')}
+                </div>
                 <div className="meta-value" style={{ fontWeight: 700 }}>
-                  {formatDate(project.publishDate, language)}
+                  {project.publishDate ? formatDate(project.publishDate, language) : 'N/A'}
                 </div>
-                <span className="ai-extract-label">{L('aiExtracted')}</span>
+                {!hasRealPublishDate && (
+                  <span className="ai-extract-label" style={{ color: '#dc2626' }}>
+                    {language === 'th' ? 'ไม่พบวันประกาศจริง' : 'No actual publish date found'}
+                  </span>
+                )}
+                {hasRealPublishDate && <span className="ai-extract-label">{L('aiExtracted')}</span>}
               </div>
 
               <div className="detail-meta-item">
-                <div className="meta-label">{L('deadline')}</div>
+                <div className="meta-label">
+                  {hasDeadline
+                    ? L('deadline')
+                    : project.contractFinishDate
+                    ? (language === 'th' ? 'วันสิ้นสุดสัญญา' : 'Contract Finish Date')
+                    : project.contractDate
+                    ? (language === 'th' ? 'วันลงนามสัญญา' : 'Contract Date')
+                    : (language === 'th' ? 'สถานะโครงการ' : 'Project Status')}
+                </div>
                 <div
                   className={`meta-value ${closing ? 'deadline-soon' : ''}`}
-                  style={{ fontWeight: 700 }}
+                  style={{
+                    fontWeight: 700,
+                    color: project.contractFinishDate && !hasDeadline ? '#047857' : undefined,
+                  }}
                 >
-                  {formatDate(project.deadline, language)}
+                  {hasDeadline
+                    ? formatDate(project.deadline, language)
+                    : project.contractFinishDate
+                    ? formatDate(project.contractFinishDate, language)
+                    : project.contractDate
+                    ? formatDate(project.contractDate, language)
+                    : project.status
+                    ? project.status
+                    : (language === 'th' ? 'ประกาศจัดซื้อจัดจ้าง' : 'Active Announcement')}
                 </div>
-                <span className="ai-extract-label">{L('aiExtracted')}</span>
+                {hasDeadline && days !== null && days >= 0 && (
+                  <span className="ai-extract-label" style={{ color: days <= 7 ? '#dc2626' : undefined, fontWeight: days <= 7 ? 700 : undefined }}>
+                    {language === 'th' ? `เหลือ ${days} วัน` : `${days} days remaining`}
+                  </span>
+                )}
+                {hasDeadline && days !== null && days < 0 && (
+                  <span className="ai-extract-label" style={{ color: '#6b7280' }}>
+                    {language === 'th' ? 'ปิดรับแล้ว' : 'Closed'}
+                  </span>
+                )}
+                {!hasDeadline && project.contractFinishDate && (
+                  <span className="ai-extract-label" style={{ color: '#047857' }}>
+                    {language === 'th' ? 'ระยะเวลาสิ้นสุดตามสัญญาจ้าง' : 'Contract completion date'}
+                  </span>
+                )}
+                {!hasDeadline && !project.contractFinishDate && project.contractDate && (
+                  <span className="ai-extract-label" style={{ color: '#047857' }}>
+                    {language === 'th' ? 'ลงนามสัญญาเรียบร้อยแล้ว' : 'Contract formally signed'}
+                  </span>
+                )}
+                {!hasDeadline && !project.contractFinishDate && !project.contractDate && (
+                  <span className="ai-extract-label">
+                    {language === 'th' ? 'ตรวจสอบกำหนดการบน e-GP' : 'Check schedule on e-GP'}
+                  </span>
+                )}
               </div>
+
+              {/* Winning Bidder if awarded */}
+              {project.winnerName && (
+                <div className="detail-meta-item" style={{ borderColor: 'rgba(59, 130, 246, 0.3)', background: 'rgba(59, 130, 246, 0.04)' }}>
+                  <div className="meta-label" style={{ color: '#1d4ed8' }}>
+                    {language === 'th' ? 'ผู้ชนะการเสนอราคา' : 'Winning Bidder'}
+                  </div>
+                  <div className="meta-value" style={{ fontWeight: 700, color: '#1e40af', fontSize: 13 }}>
+                    {project.winnerName}
+                  </div>
+                  <span className="ai-extract-label" style={{ color: '#1d4ed8' }}>
+                    {language === 'th' ? 'ผู้ได้รับคัดเลือกตามสัญญา' : 'Awarded contractor'}
+                  </span>
+                </div>
+              )}
+
+              {/* TOR Status badge */}
+              {project.torStatus === 'NO_TOR' && (
+                <div className="detail-meta-item" style={{ borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)' }}>
+                  <div className="meta-label" style={{ color: '#dc2626' }}>
+                    {language === 'th' ? 'สถานะเอกสาร TOR' : 'TOR Document Status'}
+                  </div>
+                  <div className="meta-value" style={{ fontWeight: 700, color: '#dc2626', fontSize: 13 }}>
+                    {language === 'th' ? '📄 ไม่มีเอกสาร TOR' : '📄 No TOR Document'}
+                  </div>
+                  <span className="ai-extract-label" style={{ color: '#dc2626' }}>
+                    {language === 'th' ? 'ยังไม่แนบเอกสาร TOR ในระบบ e-GP' : 'TOR not yet attached on e-GP'}
+                  </span>
+                </div>
+              )}
+              {project.torStatus === 'PENDING' && (
+                <div className="detail-meta-item" style={{ borderColor: 'rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.04)' }}>
+                  <div className="meta-label" style={{ color: '#d97706' }}>
+                    {language === 'th' ? 'สถานะเอกสาร TOR' : 'TOR Document Status'}
+                  </div>
+                  <div className="meta-value" style={{ fontWeight: 700, color: '#d97706', fontSize: 13 }}>
+                    {language === 'th' ? '⏳ TOR อยู่ระหว่างดำเนินการ' : '⏳ TOR Pending Extraction'}
+                  </div>
+                  <span className="ai-extract-label">
+                    {language === 'th' ? 'กำลังดำเนินการสกัดข้อมูล TOR' : 'TOR document being processed by AI'}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Action Bar */}
             <div className="detail-hero-actions">
+              {/* Button: Official e-GP Announcement Portal */}
               <a
                 href={
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (project as any)?.sourceUrl ||
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   `https://process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=${(project as any)?.externalProjectId || project?.externalId || id}`
                 }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary"
-                id="btn-open-tor-doc"
+                id="btn-open-egp-portal"
                 style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                title={language === 'th' ? 'เปิดอ่านเอกสาร TOR / ประกาศบนเว็บ e-GP ทางการ' : 'Open TOR Document & Announcement on Official e-GP Web Portal'}
+                title={language === 'th' ? 'เปิดค้นหาประกาศบนเว็บ e-GP ทางการ' : 'Open Announcement Search on Official e-GP Web Portal'}
               >
-                {ICONS.bookOpen}
-                <span>{L('openTORViewer')} (PDF) ↗</span>
+                {ICONS.externalLink}
+                <span>{language === 'th' ? 'เปิดประกาศบน e-GP ↗' : 'View on e-GP ↗'}</span>
               </a>
 
               <button
@@ -384,7 +541,7 @@ export default function ProjectDetailPage({
             </div>
           </div>
 
-          {/* Issue #87: Executive Summary Card (สรุปสาระสำคัญของเอกสาร TOR) */}
+          {/* Issue #87: Executive Summary Card */}
           <div
             className="detail-card"
             style={{
@@ -424,96 +581,48 @@ export default function ProjectDetailPage({
               </button>
             </div>
 
-            <p
-              style={{
-                fontSize: 14.5,
-                lineHeight: 1.7,
-                color: '#1e1b4b',
-                fontWeight: 500,
-                margin: '0 0 16px 0',
-                background: 'rgba(255, 255, 255, 0.85)',
-                padding: '14px 16px',
-                borderRadius: 8,
-                border: '1px solid rgba(199, 210, 254, 0.5)',
-              }}
-            >
-              {summaryText}
-            </p>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: 12,
-                fontSize: 12.5,
-              }}
-            >
-              <div
+            {summaryText ? (
+              <p
                 style={{
-                  background: '#ffffff',
-                  padding: '10px 12px',
+                  fontSize: 14.5,
+                  lineHeight: 1.7,
+                  color: '#1e1b4b',
+                  fontWeight: 500,
+                  margin: '0 0 16px 0',
+                  background: 'rgba(255, 255, 255, 0.85)',
+                  padding: '14px 16px',
                   borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 8,
+                  border: '1px solid rgba(199, 210, 254, 0.5)',
                 }}
               >
-                <span style={{ fontSize: 16 }}>🎯</span>
+                {summaryText}
+              </p>
+            ) : (
+              <div
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 8,
+                  background: 'rgba(255, 255, 255, 0.85)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <span style={{ fontSize: 20 }}>📄</span>
                 <div>
-                  <div style={{ fontWeight: 700, color: 'var(--gray-800)' }}>
-                    {language === 'th' ? 'เป้าหมายโครงการ' : 'Project Objective'}
+                  <div style={{ fontWeight: 700, color: '#dc2626', fontSize: 14 }}>
+                    {language === 'th' ? 'ยังไม่มีสรุป TOR — ยังไม่ได้สกัดข้อมูลจากเอกสาร' : 'No TOR Summary — Document not yet extracted'}
                   </div>
-                  <div style={{ color: 'var(--gray-600)', marginTop: 2 }}>
-                    {language === 'th' ? 'พัฒนาระบบดิจิทัลและขยายขีดความสามารถการบริการ' : 'Modernize digital platform and service scalability'}
+                  <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                    {language === 'th'
+                      ? 'กดปุ่ม "ประมวลผล TOR อัตโนมัติ" ด้านล่างขวาเพื่อให้ AI สกัดข้อมูลจากเอกสาร'
+                      : 'Click "Auto-Extract TOR" button in the sidebar to let AI extract data from the document.'}
                   </div>
                 </div>
               </div>
-
-              <div
-                style={{
-                  background: '#ffffff',
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 8,
-                }}
-              >
-                <span style={{ fontSize: 16 }}>⏱️</span>
-                <div>
-                  <div style={{ fontWeight: 700, color: 'var(--gray-800)' }}>
-                    {language === 'th' ? 'กรอบเวลาส่งมอบ' : 'Delivery Timeline'}
-                  </div>
-                  <div style={{ color: 'var(--gray-600)', marginTop: 2 }}>
-                    {language === 'th' ? 'ส่งมอบภายใน 180 - 240 วันหลังลงนามสัญญา' : 'Deliver within 180 - 240 days from signing'}
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: '#ffffff',
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 8,
-                }}
-              >
-                <span style={{ fontSize: 16 }}>💼</span>
-                <div>
-                  <div style={{ fontWeight: 700, color: 'var(--gray-800)' }}>
-                    {language === 'th' ? 'รูปแบบสัญญา' : 'Contract Type'}
-                  </div>
-                  <div style={{ color: 'var(--gray-600)', marginTop: 2 }}>
-                    {project.procurementType || 'e-Bidding'} ({language === 'th' ? 'งวดงานตามความก้าวหน้า' : 'Milestone-based'})
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Issue #89: Tech Stack & Requirements with Tag Filters and Interactive Checklist */}
@@ -549,15 +658,11 @@ export default function ProjectDetailPage({
           </div>
 
           {/* Timeline Milestones */}
-          {project.timeline && project.timeline.length > 0 && (
-            <div className="detail-card">
-              <h2 className="detail-card-title">
-                {ICONS.clock}
-                <span>{L('procurementTimeline')}</span>
-              </h2>
-              <ProcurementTimeline timeline={project.timeline} />
-            </div>
-          )}
+          <ProcurementTimeline
+            timeline={project.timeline}
+            sourceUrl={project.sourceUrl}
+            externalProjectId={String(project.externalId || (project as { externalProjectId?: string | number }).externalProjectId || '')}
+          />
 
           {/* Issue #90: Qualifications & Go/No-Go Checklist */}
           <EligibilityChecklist
@@ -649,7 +754,7 @@ export default function ProjectDetailPage({
                   </div>
                 )}
 
-                {/* Automated Extraction Trigger */}
+                {/* Automated Extraction Status */}
                 <div
                   style={{
                     padding: '10px 12px',
@@ -663,43 +768,46 @@ export default function ProjectDetailPage({
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-700)' }}>
-                      🤖 AI Auto-Extraction
+                      🤖 {language === 'th' ? 'การประมวลผลอัตโนมัติ (AI)' : 'Automated AI Processing'}
                     </span>
                     <span
                       style={{
                         fontSize: 10.5,
                         fontWeight: 700,
-                        color: project.extractionStatus === 'EXTRACTED' ? '#059669' : '#0284c7',
+                        color: project.extractionStatus === 'EXTRACTED' || project.summary?.th ? '#059669' : '#0284c7',
                       }}
                     >
-                      {project.extractionStatus === 'EXTRACTED' ? '● EXTRACTED' : '● ACTIVE'}
+                      {project.extractionStatus === 'EXTRACTED' || project.summary?.th
+                        ? (language === 'th' ? '● ประมวลผลแล้ว (EXTRACTED)' : '● EXTRACTED')
+                        : (language === 'th' ? '● กำลังประมวลผลอัตโนมัติ' : '● AUTO-PROCESSING')}
                     </span>
                   </div>
-                  <button
-                    onClick={handleReprocessTor}
-                    disabled={isExtracting}
-                    style={{
-                      padding: '6px 10px',
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      borderRadius: 6,
-                      background: '#0284c7',
-                      color: '#ffffff',
-                      border: 'none',
-                      cursor: isExtracting ? 'wait' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    <span>{isExtracting ? '⏳' : '⚡'}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--gray-500)' }}>
                     <span>
-                      {isExtracting
-                        ? (language === 'th' ? 'กำลังสกัดข้อมูล...' : 'Extracting...')
-                        : (language === 'th' ? 'ประมวลผล TOR อัตโนมัติ' : 'Auto-Extract TOR')}
+                      {project.summary?.th
+                        ? (language === 'th' ? 'สกัดข้อกำหนดและสาระสำคัญเรียบร้อยแล้ว' : 'Requirements extracted automatically')
+                        : (language === 'th' ? 'ระบบกำลังวิเคราะห์ข้อกำหนดจากประกาศ' : 'Analyzing document specifications')}
                     </span>
-                  </button>
+                    {isAdmin && (
+                      <button
+                        onClick={handleReprocessTor}
+                        disabled={isExtracting}
+                        title={language === 'th' ? 'คลิกเพื่อประมวลผลซ้ำ (สิทธิ์ผู้ดูแลระบบ)' : 'Click to re-process (Admin only)'}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          borderRadius: 4,
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          border: '1px solid #cbd5e1',
+                          cursor: isExtracting ? 'wait' : 'pointer',
+                        }}
+                      >
+                        {isExtracting ? '⏳...' : (language === 'th' ? 'วิเคราะห์ซ้ำ (Admin)' : 'Re-run (Admin)')}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
@@ -742,8 +850,23 @@ export default function ProjectDetailPage({
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--gray-200)' }}>
-                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Accuracy Status</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--success)' }}>✓ Government Verified</span>
+                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                    {language === 'th' ? 'สถานะการตรวจทาน' : 'Verification Status'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color:
+                        project.classificationReviewStatus === 'APPROVED' || project.classificationReviewStatus === 'CORRECTED'
+                          ? 'var(--success)'
+                          : 'var(--primary-700)',
+                    }}
+                  >
+                    {project.classificationReviewStatus === 'APPROVED' || project.classificationReviewStatus === 'CORRECTED'
+                      ? (language === 'th' ? '✓ ตรวจทานโดยผู้ดูแล' : '✓ Admin Reviewed')
+                      : (language === 'th' ? '⚡ ดึงข้อมูลจาก e-GP (รอตรวจทาน)' : '⚡ AI Extracted (e-GP Source)')}
+                  </span>
                 </div>
 
                 {/* Real e-GP Downloadable Attachments List */}
@@ -797,9 +920,30 @@ export default function ProjectDetailPage({
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>AI Confidence</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--primary-700)' }}>
-                    {project.aiConfidence || 'High'}
+                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                    {language === 'th' ? 'ระดับความเชื่อมั่น AI' : 'AI Confidence'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      background:
+                        (project.aiConfidence || 'Medium') === 'High'
+                          ? 'rgba(16, 185, 129, 0.1)'
+                          : (project.aiConfidence || 'Medium') === 'Medium'
+                          ? 'rgba(245, 158, 11, 0.1)'
+                          : 'rgba(239, 68, 68, 0.1)',
+                      color:
+                        (project.aiConfidence || 'Medium') === 'High'
+                          ? '#059669'
+                          : (project.aiConfidence || 'Medium') === 'Medium'
+                          ? '#d97706'
+                          : '#dc2626',
+                    }}
+                  >
+                    {project.aiConfidence || 'Medium'}
                   </span>
                 </div>
               </div>

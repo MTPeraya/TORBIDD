@@ -28,12 +28,8 @@ export function ProjectFormModal({
   const after30 = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   const [titleTh, setTitleTh] = useState(isEdit ? initialProject.title?.th || '' : '');
-  const [titleEn, setTitleEn] = useState(isEdit ? initialProject.title?.en || '' : '');
   const [deptTh, setDeptTh] = useState(
     isEdit ? initialProject.department?.th || '' : INITIAL_DEPARTMENTS[0].th,
-  );
-  const [deptEn, setDeptEn] = useState(
-    isEdit ? initialProject.department?.en || '' : INITIAL_DEPARTMENTS[0].en,
   );
   const [category, setCategory] = useState<ProjectCategory>(
     isEdit ? initialProject.category || 'Website' : 'Website',
@@ -53,21 +49,21 @@ export function ProjectFormModal({
       : after30.toISOString().split('T')[0],
   );
   const [descTh, setDescTh] = useState(isEdit ? initialProject.description?.th || '' : '');
-  const [descEn, setDescEn] = useState(isEdit ? initialProject.description?.en || '' : '');
   const [scopeTh, setScopeTh] = useState(
     isEdit && initialProject.scope?.th ? initialProject.scope.th.join('\n') : '',
-  );
-  const [scopeEn, setScopeEn] = useState(
-    isEdit && initialProject.scope?.en ? initialProject.scope.en.join('\n') : '',
   );
   const [qualTh, setQualTh] = useState(
     isEdit && initialProject.qualifications?.th ? initialProject.qualifications.th.join('\n') : '',
   );
-  const [qualEn, setQualEn] = useState(
-    isEdit && initialProject.qualifications?.en ? initialProject.qualifications.en.join('\n') : '',
-  );
   const [aiConfidence, setAiConfidence] = useState<'High' | 'Medium' | 'Low'>(
     (isEdit && (initialProject.aiConfidence as 'High' | 'Medium' | 'Low')) || 'High',
+  );
+  const [fiscalYear, setFiscalYear] = useState<number>(
+    isEdit && initialProject.fiscalYear
+      ? initialProject.fiscalYear
+      : today.getMonth() >= 9
+        ? today.getFullYear() + 544
+        : today.getFullYear() + 543,
   );
   const [isSoftwareRelated, setIsSoftwareRelated] = useState<boolean>(
     isEdit && initialProject.isSoftwareRelated !== undefined
@@ -82,23 +78,13 @@ export function ProjectFormModal({
   if (!isOpen) return null;
 
 
-  const handleDeptSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = INITIAL_DEPARTMENTS.find((d) => d.th === e.target.value);
-    if (selected) {
-      setDeptTh(selected.th);
-      setDeptEn(selected.en);
-    } else {
-      setDeptTh(e.target.value);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titleTh.trim() || !titleEn.trim()) {
+    if (!titleTh.trim()) {
       setErrorMsg(
         language === 'th'
-          ? 'กรุณาระบุชื่อโครงการทั้งภาษาไทยและอังกฤษ'
-          : 'Please provide both Thai and English project titles',
+          ? 'กรุณาระบุชื่อโครงการ'
+          : 'Please provide the project title',
       );
       return;
     }
@@ -114,20 +100,21 @@ export function ProjectFormModal({
         .filter((s) => s.length > 0);
 
     const payload: Record<string, unknown> = {
-      title: { th: titleTh.trim(), en: titleEn.trim() },
-      department: { th: deptTh.trim(), en: deptEn.trim() || deptTh.trim() },
+      title: { th: titleTh.trim(), en: titleTh.trim() },
+      department: { th: deptTh.trim(), en: deptTh.trim() },
       category,
       budget: Number(budget),
+      fiscalYear: Number(fiscalYear) || undefined,
       procurementType,
       publishDate,
       deadline,
       description: {
         th: descTh.trim() || titleTh.trim(),
-        en: descEn.trim() || titleEn.trim(),
+        en: descTh.trim() || titleTh.trim(),
       },
       scope: {
         th: splitLines(scopeTh).length > 0 ? splitLines(scopeTh) : [titleTh.trim()],
-        en: splitLines(scopeEn).length > 0 ? splitLines(scopeEn) : [titleEn.trim()],
+        en: splitLines(scopeTh).length > 0 ? splitLines(scopeTh) : [titleTh.trim()],
       },
       qualifications: {
         th:
@@ -135,8 +122,8 @@ export function ProjectFormModal({
             ? splitLines(qualTh)
             : ['เป็นนิติบุคคลจดทะเบียนในประเทศไทย'],
         en:
-          splitLines(qualEn).length > 0
-            ? splitLines(qualEn)
+          splitLines(qualTh).length > 0
+            ? splitLines(qualTh)
             : ['Registered legal entity in Thailand'],
       },
       aiConfidence,
@@ -289,7 +276,7 @@ export function ProjectFormModal({
                 )}
               </div>
 
-              {/* Project Title TH */}
+              {/* Project Title */}
               <div className="admin-form-field full-width">
                 <label className="admin-form-label">
                   {L('adminFieldTitleTh')} <span style={{ color: '#ef4444' }}>*</span>
@@ -299,52 +286,28 @@ export function ProjectFormModal({
                   className="admin-form-input"
                   value={titleTh}
                   onChange={(e) => setTitleTh(e.target.value)}
-                  placeholder="เช่น โครงการพัฒนาระบบคลาวด์ กทม."
+                  placeholder="เช่น ประกวดราคาจ้างพัฒนาระบบเทคโนโลยีสารสนเทศ..."
                   required
                 />
               </div>
 
-              {/* Project Title EN */}
-              <div className="admin-form-field full-width">
-                <label className="admin-form-label">
-                  {L('adminFieldTitleEn')} <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  className="admin-form-input"
-                  value={titleEn}
-                  onChange={(e) => setTitleEn(e.target.value)}
-                  placeholder="e.g. BMA Cloud Services Management System"
-                  required
-                />
-              </div>
-
-              {/* Department Dropdown / TH */}
+              {/* Department Dropdown */}
               <div className="admin-form-field">
                 <label className="admin-form-label">{L('adminFieldDeptTh')}</label>
-                <select
-                  className="admin-form-input"
-                  value={deptTh}
-                  onChange={handleDeptSelect}
-                >
-                  {INITIAL_DEPARTMENTS.map((dept) => (
-                    <option key={dept.th} value={dept.th}>
-                      {language === 'th' ? dept.th : dept.en}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Department EN */}
-              <div className="admin-form-field">
-                <label className="admin-form-label">{L('adminFieldDeptEn')}</label>
                 <input
                   type="text"
                   className="admin-form-input"
-                  value={deptEn}
-                  onChange={(e) => setDeptEn(e.target.value)}
-                  placeholder="Department in English"
+                  value={deptTh}
+                  onChange={(e) => setDeptTh(e.target.value)}
+                  placeholder="ระบุหน่วยงานเจ้าของโครงการ..."
+                  list="departmentList"
+                  required
                 />
+                <datalist id="departmentList">
+                  {INITIAL_DEPARTMENTS.map((dept) => (
+                    <option key={dept.th} value={dept.th} />
+                  ))}
+                </datalist>
               </div>
 
               {/* Category */}
@@ -357,14 +320,14 @@ export function ProjectFormModal({
                     setCategory(e.target.value as ProjectCategory)
                   }
                 >
-                  <option value="Website">Website / Portal</option>
-                  <option value="Mobile App">Mobile App</option>
-                  <option value="AI">AI / GIS Mapping</option>
-                  <option value="Database">Database / Data Warehouse</option>
-                  <option value="ERP">ERP</option>
-                  <option value="Cloud">Cloud</option>
-                  <option value="Data Analytics">Data Analytics</option>
-                  <option value="Information System">Information System</option>
+                  <option value="Information System">Information System (ระบบสารสนเทศ)</option>
+                  <option value="AI">AI / GIS Mapping (ปัญญาประดิษฐ์และแผนที่)</option>
+                  <option value="Cloud">Cloud (คลาวด์และโครงสร้างพื้นฐาน)</option>
+                  <option value="ERP">ERP (ระบบบริหารจัดการทรัพยากรองค์กร)</option>
+                  <option value="Database">Database (ฐานข้อมูลและคลังข้อมูล)</option>
+                  <option value="Data Analytics">Data Analytics (การวิเคราะห์ข้อมูล)</option>
+                  <option value="Website">Website / Portal (เว็บไซต์และพอร์ทัล)</option>
+                  <option value="Mobile App">Mobile App (แอปพลิเคชันมือถือ)</option>
                 </select>
               </div>
 
@@ -384,6 +347,23 @@ export function ProjectFormModal({
                 />
               </div>
 
+              {/* Fiscal Year (ปีงบประมาณ พ.ศ.) */}
+              <div className="admin-form-field">
+                <label className="admin-form-label">
+                  {language === 'th' ? 'ปีงบประมาณ (พ.ศ.)' : 'Fiscal Year (B.E.)'}
+                </label>
+                <input
+                  type="number"
+                  className="admin-form-input"
+                  value={fiscalYear}
+                  onChange={(e) => setFiscalYear(Number(e.target.value))}
+                  min={2500}
+                  max={2600}
+                  step={1}
+                  placeholder="เช่น 2568, 2569"
+                />
+              </div>
+
               {/* Procurement Type */}
               <div className="admin-form-field">
                 <label className="admin-form-label">{L('adminFieldProcurementType')}</label>
@@ -392,8 +372,8 @@ export function ProjectFormModal({
                   value={procurementType}
                   onChange={(e) => setProcurementType(e.target.value)}
                 >
-                  <option value="e-Bidding">e-Bidding</option>
-                  <option value="e-Market">e-Market</option>
+                  <option value="e-Bidding">e-Bidding (ประกวดราคาอิเล็กทรอนิกส์)</option>
+                  <option value="e-Market">e-Market (ตลาดอิเล็กทรอนิกส์)</option>
                   <option value="Specific Method">Specific Method (วิธีเฉพาะเจาะจง)</option>
                   <option value="Selection">Selection Method (วิธีคัดเลือก)</option>
                 </select>
@@ -409,9 +389,9 @@ export function ProjectFormModal({
                     setAiConfidence(e.target.value as 'High' | 'Medium' | 'Low')
                   }
                 >
-                  <option value="High">High (95%+ match)</option>
-                  <option value="Medium">Medium (80-94%)</option>
-                  <option value="Low">Low (Requires Review)</option>
+                  <option value="High">High (ความเชื่อมั่นสูง)</option>
+                  <option value="Medium">Medium (ความเชื่อมั่นปานกลาง)</option>
+                  <option value="Low">Low (รอตรวจสอบ)</option>
                 </select>
               </div>
 
@@ -439,7 +419,7 @@ export function ProjectFormModal({
                 />
               </div>
 
-              {/* Description TH */}
+              {/* Description */}
               <div className="admin-form-field full-width">
                 <label className="admin-form-label">{L('adminFieldDescTh')}</label>
                 <textarea
@@ -451,19 +431,7 @@ export function ProjectFormModal({
                 />
               </div>
 
-              {/* Description EN */}
-              <div className="admin-form-field full-width">
-                <label className="admin-form-label">{L('adminFieldDescEn')}</label>
-                <textarea
-                  className="admin-form-input admin-textarea"
-                  rows={3}
-                  value={descEn}
-                  onChange={(e) => setDescEn(e.target.value)}
-                  placeholder="Overview and objectives in English..."
-                />
-              </div>
-
-              {/* Scope TH */}
+              {/* Scope of Work */}
               <div className="admin-form-field full-width">
                 <label className="admin-form-label">{L('adminFieldScopeTh')}</label>
                 <textarea
@@ -475,19 +443,7 @@ export function ProjectFormModal({
                 />
               </div>
 
-              {/* Scope EN */}
-              <div className="admin-form-field full-width">
-                <label className="admin-form-label">{L('adminFieldScopeEn')}</label>
-                <textarea
-                  className="admin-form-input admin-textarea"
-                  rows={3}
-                  value={scopeEn}
-                  onChange={(e) => setScopeEn(e.target.value)}
-                  placeholder="1. Design system architecture&#10;2. Install and configure software..."
-                />
-              </div>
-
-              {/* Qualifications TH */}
+              {/* Qualifications */}
               <div className="admin-form-field full-width">
                 <label className="admin-form-label">{L('adminFieldQualTh')}</label>
                 <textarea
@@ -496,18 +452,6 @@ export function ProjectFormModal({
                   value={qualTh}
                   onChange={(e) => setQualTh(e.target.value)}
                   placeholder="1. ทุนจดทะเบียนไม่น้อยกว่า 5,000,000 บาท&#10;2. มีผลงานประเภทเดียวกันไม่น้อยกว่า..."
-                />
-              </div>
-
-              {/* Qualifications EN */}
-              <div className="admin-form-field full-width">
-                <label className="admin-form-label">{L('adminFieldQualEn')}</label>
-                <textarea
-                  className="admin-form-input admin-textarea"
-                  rows={3}
-                  value={qualEn}
-                  onChange={(e) => setQualEn(e.target.value)}
-                  placeholder="1. Registered capital not less than 5,000,000 THB&#10;2. Proven past track record in..."
                 />
               </div>
             </div>

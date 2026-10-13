@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { SoftwareCategory } from '@/types/procurement-category';
+import { DeadlineFilter, DeadlineCounts } from './DeadlineFilter';
 import { CategoryFilter } from './CategoryFilter';
 import { AgencyFilter } from './AgencyFilter';
 import { BudgetFilter } from './BudgetFilter';
@@ -32,6 +33,7 @@ interface ProcurementFilterPanelProps {
   onCloseMobile?: () => void;
   categoryCounts?: Record<string, number>;
   availableAgencies?: { th: string; en: string }[];
+  deadlineCounts?: DeadlineCounts;
 }
 
 export function ProcurementFilterPanel({
@@ -50,6 +52,7 @@ export function ProcurementFilterPanel({
   onCloseMobile,
   categoryCounts,
   availableAgencies,
+  deadlineCounts,
 }: ProcurementFilterPanelProps) {
   const { L } = useLanguage();
 
@@ -107,7 +110,16 @@ export function ProcurementFilterPanel({
         </div>
 
         <div className="filter-sidebar-body">
-          {/* 1. Software Category Filter (Issue #147) */}
+          {/* 1. Priority Submission Deadline Filter (Top Priority for Bidders) */}
+          <DeadlineFilter
+            selectedDeadline={selectedDeadline}
+            onChange={onDeadlineChange}
+            deadlineCounts={deadlineCounts}
+          />
+
+          <hr className="filter-divider" />
+
+          {/* 2. Software Category Filter (Issue #147) */}
           <CategoryFilter
             selectedCategories={selectedCategories}
             onChange={onCategoryChange}
@@ -116,7 +128,7 @@ export function ProcurementFilterPanel({
 
           <hr className="filter-divider" />
 
-          {/* 2. Government Agency Filter (Issue #149) */}
+          {/* 3. Government Agency Filter (Issue #149) */}
           <AgencyFilter
             selectedAgencies={selectedAgencies}
             onChange={onAgencyChange}
@@ -125,45 +137,13 @@ export function ProcurementFilterPanel({
 
           <hr className="filter-divider" />
 
-          {/* 3. Budget Range Filter (Issue #150) */}
+          {/* 4. Budget Range Filter (Issue #150) */}
           <BudgetFilter
             minBudget={minBudget}
             maxBudget={maxBudget}
             budgetPreset={budgetPreset}
             onChange={onBudgetChange}
           />
-
-          <hr className="filter-divider" />
-
-          {/* 4. Submission Deadline Filter */}
-          <div className="filter-group deadline-filter-group">
-            <div className="filter-group-header">
-              <label className="filter-group-label" htmlFor="deadline-select">
-                {L('deadline')}
-              </label>
-              {selectedDeadline && (
-                <button
-                  type="button"
-                  className="filter-group-reset-btn"
-                  onClick={() => onDeadlineChange('')}
-                >
-                  {L('clearFilters')}
-                </button>
-              )}
-            </div>
-            <select
-              id="deadline-select"
-              className="filter-select"
-              value={selectedDeadline}
-              onChange={(e) => onDeadlineChange(e.target.value)}
-              aria-label={L('deadline')}
-            >
-              <option value="">{L('allDeadlines')}</option>
-              <option value="within7">{L('within7days')}</option>
-              <option value="within30">{L('within30days')}</option>
-              <option value="moreThan30">{L('moreThan30')}</option>
-            </select>
-          </div>
         </div>
 
         {isOpenMobile && onCloseMobile && (
