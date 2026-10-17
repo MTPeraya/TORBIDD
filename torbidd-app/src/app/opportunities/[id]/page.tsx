@@ -124,7 +124,15 @@ export default function ProjectDetailPage({
   const days = daysUntil(project.deadline);
   const catClass = getCategoryClass(project.category);
   const catLabel = CATEGORY_LABELS[language][project.category] || project.category;
-  const bookmarked = isBookmarked(project.externalId);
+  const projDetailId =
+    project.externalId ??
+    (project as { externalProjectId?: string | number }).externalProjectId ??
+    project._id ??
+    id;
+  const bookmarked =
+    isBookmarked(projDetailId) ||
+    (project.externalId !== undefined && isBookmarked(project.externalId)) ||
+    isBookmarked(id);
 
   // Status tag with dot
   let statusTagClass = 'tag open-dot';
@@ -360,7 +368,7 @@ export default function ProjectDetailPage({
 
               <button
                 className={`btn btn-bookmark ${bookmarked ? 'active' : ''}`}
-                onClick={() => toggleBookmark(project.externalId)}
+                onClick={() => toggleBookmark(projDetailId)}
               >
                 {bookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
                 <span>{bookmarked ? L('saved') : L('saveBookmark')}</span>

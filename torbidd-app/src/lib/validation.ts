@@ -38,7 +38,12 @@ export const ProjectFiltersSchema = z.object({
     .enum(['publishDate_desc', 'publishDate_asc', 'budget_desc', 'budget_asc', 'newest', 'oldest'])
     .optional(),
   page: z.coerce.number().int().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(2000).optional(),
+  limit: z
+    .preprocess((v) => {
+      if (v === 'all' || v === 'ALL') return 2000;
+      return v;
+    }, z.coerce.number().int().min(1).max(2000).optional()),
+  all: z.union([z.string(), z.boolean()]).optional(),
 }).refine(
   (data) => {
     if (data.minBudget !== undefined && data.maxBudget !== undefined) {
