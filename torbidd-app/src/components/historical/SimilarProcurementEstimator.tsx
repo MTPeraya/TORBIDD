@@ -23,8 +23,16 @@ export function SimilarProcurementEstimator({
   const { language, L, getLocalized } = useLanguage();
 
   const [selectedProjectId, setSelectedProjectId] = useState<number | string>(
-    projects[0]?.externalId || 1,
+    projects[0]?.externalId ?? projects[0]?._id ?? '',
   );
+
+  // Sync selectedProjectId when projects arrive from API
+  React.useEffect(() => {
+    if (!selectedProjectId && projects.length > 0) {
+      setSelectedProjectId(projects[0].externalId ?? projects[0]._id ?? '');
+    }
+  }, [projects, selectedProjectId]);
+
   const [keywordFilter, setKeywordFilter] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
   const [modalProject, setModalProject] = useState<HistoricalProject | null>(null);
@@ -33,7 +41,9 @@ export function SimilarProcurementEstimator({
   const targetProject = useMemo(() => {
     return (
       projects.find(
-        (p) => p.externalId === Number(selectedProjectId) || p._id === selectedProjectId,
+        (p) =>
+          (p.externalId && String(p.externalId) === String(selectedProjectId)) ||
+          (p._id && String(p._id) === String(selectedProjectId)),
       ) || projects[0]
     );
   }, [projects, selectedProjectId]);
@@ -56,8 +66,8 @@ export function SimilarProcurementEstimator({
         category: selectedCategory || targetProject.category,
         budget: targetProject.budget,
         description: keywordFilter
-          ? `${targetProject.description.th} ${keywordFilter}`
-          : targetProject.description,
+          ? `${targetProject.description?.th || (typeof targetProject.description === 'string' ? targetProject.description : '')} ${keywordFilter}`
+          : targetProject.description || '',
       },
       historicalPool,
       4,
@@ -92,12 +102,27 @@ export function SimilarProcurementEstimator({
             className="control-input"
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
+            disabled={projects.length === 0}
           >
-            {projects.map((p) => (
-              <option key={p.externalId || p._id} value={p.externalId}>
-                #{p.externalId} {getLocalized(p.title) as string} ({formatBudget(p.budget, language)})
+            {projects.length === 0 ? (
+              <option value="">
+                {language === 'th' ? 'ไม่มีโครงการที่เปิดรับข้อเสนอ' : 'No active projects available'}
               </option>
-            ))}
+            ) : (
+              projects.map((p) => {
+                const titleStr = (getLocalized(p.title) as string) || '';
+                const displayTitle = titleStr.length > 70 ? `${titleStr.slice(0, 68)}...` : titleStr;
+                return (
+                  <option
+                    key={p.externalId || p._id}
+                    value={p.externalId || p._id}
+                    title={`#${p.externalId} ${titleStr}`}
+                  >
+                    #{p.externalId} {displayTitle} ({formatBudget(p.budget, language)})
+                  </option>
+                );
+              })
+            )}
           </select>
         </div>
 
@@ -196,12 +221,22 @@ export function SimilarProcurementEstimator({
                 </span>
               </div>
               <ul className="scope-list">
-                {(targetProject.scope[language] || targetProject.scope.th || []).map((item, idx) => (
-                  <li key={idx} className="scope-bullet">
-                    <span className="bullet-icon">✓</span>
-                    <span>{item}</span>
+                {targetProject.scope &&
+                ((targetProject.scope[language] && targetProject.scope[language].length > 0) ||
+                  (targetProject.scope.th && targetProject.scope.th.length > 0)) ? (
+                  (targetProject.scope[language] || targetProject.scope.th || []).map((item, idx) => (
+                    <li key={idx} className="scope-bullet">
+                      <span className="bullet-icon">✓</span>
+                      <span>{item}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="scope-bullet empty">
+                    {language === 'th'
+                      ? 'ไม่มีข้อมูลขอบเขตงานโดยละเอียดสำหรับโครงการนี้'
+                      : 'No detailed scope records available for this project'}
                   </li>
-                ))}
+                )}
               </ul>
             </div>
 
@@ -221,7 +256,9 @@ export function SimilarProcurementEstimator({
                 </span>
               </div>
               <ul className="scope-list">
-                {topMatch.scope ? (
+                {topMatch.scope &&
+                ((topMatch.scope[language] && topMatch.scope[language].length > 0) ||
+                  (topMatch.scope.th && topMatch.scope.th.length > 0)) ? (
                   (topMatch.scope[language] || topMatch.scope.th || []).map((item, idx) => (
                     <li key={idx} className="scope-bullet">
                       <span className="bullet-icon">✦</span>
@@ -377,7 +414,9 @@ export function SimilarProcurementEstimator({
               <div className="modal-section">
                 <h4 className="section-subtitle">{L('scopeOfWork')}</h4>
                 <ul className="modal-scope-list">
-                  {modalProject.scope ? (
+                  {modalProject.scope &&
+                  ((modalProject.scope[language] && modalProject.scope[language].length > 0) ||
+                    (modalProject.scope.th && modalProject.scope.th.length > 0)) ? (
                     (modalProject.scope[language] || modalProject.scope.th || []).map((item, idx) => (
                       <li key={idx} className="modal-scope-item">
                         <span className="bullet-check">✓</span>

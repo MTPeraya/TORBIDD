@@ -170,19 +170,9 @@ export async function POST(req: NextRequest) {
     try {
       const created = await createProject(parsed.data);
       return NextResponse.json({ data: created, success: true }, { status: 201 });
-    } catch {
-      // Fallback for mock/offline environment
-      const mockProject = {
-        ...parsed.data,
-        _id: 'mock_' + Date.now(),
-        externalId: parsed.data.externalId ?? Math.floor(100 + Math.random() * 900),
-        historicalAvg: parsed.data.historicalAvg ?? Math.round(parsed.data.budget * 0.95),
-        processedDate: new Date().toISOString(),
-        aiConfidence: parsed.data.aiConfidence ?? 'High',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      return NextResponse.json({ data: mockProject, success: true }, { status: 201 });
+    } catch (dbErr) {
+      console.error('[POST /api/projects] Database error:', dbErr);
+      return NextResponse.json({ error: 'Failed to create project in database' }, { status: 500 });
     }
   } catch (err) {
     console.error('[POST /api/projects]', err);

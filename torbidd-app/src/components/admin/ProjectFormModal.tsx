@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { Project, ProjectCategory } from '@/types/project';
-import { INITIAL_DEPARTMENTS } from '@/lib/initialData';
 
 interface ProjectFormModalProps {
   isOpen: boolean;
@@ -12,6 +11,7 @@ interface ProjectFormModalProps {
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
   initialProject?: Project | null;
   mode: 'create' | 'edit';
+  availableDepartments?: string[];
 }
 
 export function ProjectFormModal({
@@ -20,6 +20,7 @@ export function ProjectFormModal({
   onSubmit,
   initialProject,
   mode,
+  availableDepartments = [],
 }: ProjectFormModalProps) {
   const { L, language } = useLanguage();
 
@@ -29,7 +30,9 @@ export function ProjectFormModal({
 
   const [titleTh, setTitleTh] = useState(isEdit ? initialProject.title?.th || '' : '');
   const [deptTh, setDeptTh] = useState(
-    isEdit ? initialProject.department?.th || '' : INITIAL_DEPARTMENTS[0].th,
+    isEdit
+      ? initialProject.department?.th || ''
+      : (availableDepartments.length > 0 ? availableDepartments[0] : ''),
   );
   const [category, setCategory] = useState<ProjectCategory>(
     isEdit ? initialProject.category || 'Website' : 'Website',
@@ -304,8 +307,8 @@ export function ProjectFormModal({
                   required
                 />
                 <datalist id="departmentList">
-                  {INITIAL_DEPARTMENTS.map((dept) => (
-                    <option key={dept.th} value={dept.th} />
+                  {availableDepartments.map((dept) => (
+                    <option key={dept} value={dept} />
                   ))}
                 </datalist>
               </div>

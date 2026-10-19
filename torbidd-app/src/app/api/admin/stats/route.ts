@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     }
 
     let auditLogs: Array<{ id: string; action: string; actor: string; details: string; timestamp: string; status: string }> = [];
-    let lastSyncTime = new Date(Date.now() - 42 * 60 * 1000).toISOString();
+    let lastSyncTime: string | null = null;
 
     try {
       const { default: SyncLog } = await import('@/models/SyncLog');
@@ -48,19 +48,6 @@ export async function GET(req: NextRequest) {
       }
     } catch {}
 
-    if (auditLogs.length === 0) {
-      auditLogs = [
-        {
-          id: 'log-1',
-          action: 'SYSTEM_READY',
-          actor: 'ระบบจัดซื้อจัดจ้าง e-GP',
-          details: 'ฐานข้อมูลพร้อมใช้งาน บันทึกโครงการจาก e-GP ทั้งสิ้น ' + stats.totalProjects + ' โครงการ',
-          timestamp: new Date().toISOString(),
-          status: 'success',
-        },
-      ];
-    }
-
     const aiProviderName = process.env.GEMINI_API_KEY
       ? `Google AI Studio (${process.env.GEMINI_MODEL || 'gemini-2.5-flash'})`
       : process.env.GOOGLE_CLOUD_PROJECT
@@ -73,7 +60,7 @@ export async function GET(req: NextRequest) {
         database: 'Connected (MongoDB Atlas)',
         aiService: aiProviderName,
         crawler: 'Ready',
-        lastSync: lastSyncTime,
+        lastSync: lastSyncTime || 'ยังไม่มีการซิงค์ข้อมูล (Never)',
         uptimeSeconds: Math.floor(process.uptime()),
         memoryUsageMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       },
