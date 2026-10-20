@@ -169,12 +169,34 @@ export function filterBySearch(projects: Project[], query?: string | null): Proj
 }
 
 /**
+ * Determines whether a procurement contract is already awarded.
+ */
+export function isContractAwarded(project: Project): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const p = project as any;
+  const rawStatus = String(p.status || '');
+  const winner = p.winnerName || p.winner_name;
+  return Boolean(
+    winner ||
+    rawStatus === 'จัดทำสัญญาแล้ว' ||
+    rawStatus === 'มีผู้ชนะ/ทำสัญญาแล้ว' ||
+    rawStatus.includes('จัดทำสัญญาแล้ว') ||
+    rawStatus.includes('ได้ผู้ชนะ') ||
+    (p.contractPrice && p.contractPrice > 0 && (p.contractDate || p.contractFinishDate))
+  );
+}
+
+/**
  * Filter procurements by submission deadline.
+ * Excludes contracts that are already awarded as their bidding is closed.
  */
 export function filterByDeadline(projects: Project[], deadline?: string | null): Project[] {
   if (!deadline) return projects;
 
   return projects.filter((p) => {
+    // Contract already awarded should not show when filtering by deadline
+    if (isContractAwarded(p)) return false;
+
     if (!p.deadline) return false;
     const d = daysUntil(p.deadline);
     switch (deadline) {
@@ -199,6 +221,23 @@ export function applyProcurementFilters(
   filters: ProcurementFilters = {},
 ): Project[] {
   let result = projects;
+
+  // If any filter is applied, exclude contracts that are already awarded
+  const isFiltering = Boolean(
+    filters.deadline ||
+    filters.search ||
+    (filters.categories && filters.categories.length > 0) ||
+    (filters.agencies && filters.agencies.length > 0) ||
+    filters.department ||
+    filters.minBudget !== undefined ||
+    filters.maxBudget !== undefined ||
+    filters.budgetPreset ||
+    filters.isSoftwareRelated !== undefined
+  );
+
+  if (isFiltering) {
+    result = result.filter((p) => !isContractAwarded(p));
+  }
 
   // 1. Keyword search
   if (filters.search) {

@@ -22,37 +22,41 @@ export const VALID_CATEGORIES_SET = new Set<string>(SOFTWARE_CATEGORIES);
 export const VALID_CONFIDENCE_SET = new Set<string>(['High', 'Medium', 'Low']);
 
 export function buildClassificationPrompt(title: string, description: string): string {
-  return `You are a procurement classification expert for Bangkok Metropolitan Administration (BMA) software projects.
+  return `You are an expert procurement classifier for Thai government and municipal (e.g. BMA) IT and software projects.
 
-First, determine if this procurement project is SOFTWARE-RELATED or NOT.
-Then, if it is software-related, classify it into exactly one of these categories:
-- Website: Web portals, e-government sites, web applications, online services
-- Mobile App: iOS/Android applications, mobile platforms, smartphone apps
-- AI: Artificial intelligence, machine learning, GIS mapping, computer vision, NLP
-- Database: Database systems, data center hardware, server infrastructure, storage
-- ERP: Enterprise Resource Planning, HR systems, payroll, accounting, supply chain
-- Cloud: Cloud computing services, IaaS/PaaS/SaaS infrastructure, containerization
-- Data Analytics: Business intelligence, BI dashboards, data warehouses, big data pipelines
-- Information System: Management systems, e-government registration, EMR, document management, MIS
+TASK:
+1. Determine whether this procurement project is SOFTWARE-RELATED (isSoftwareRelated: true) or NOT (isSoftwareRelated: false).
+2. If software-related, classify it into EXACTLY ONE of the following 8 categories:
+   - Website: Public web portals, responsive e-services, citizen portals, web applications, CMS platforms.
+   - Mobile App: iOS / Android mobile applications, smartphone smart service apps, mobile citizen platforms.
+   - AI: Artificial Intelligence, machine learning models, computer vision, GIS spatial mapping/analytics, NLP/Chatbots.
+   - Database: Database management systems (DBMS), enterprise database licenses (Oracle, SQL, Postgres), medical PACS/DICOM storage systems, data backup & storage infrastructure.
+   - ERP: Enterprise Resource Planning, HR management (HRMS), payroll systems, accounting/budgeting (GFMIS), supply chain & asset management.
+   - Cloud: Cloud computing subscriptions (SaaS, PaaS, IaaS), Government Cloud (GDCC), cloud infrastructure, virtualization, hosting.
+   - Data Analytics: Business Intelligence (BI), management dashboards, data warehouses, big data analytics, open data pipelines.
+   - Information System: Management Information Systems (MIS), e-government registry, Hospital Information Systems (HIS), electronic document systems (e-Saraban).
 
-If the project is NOT software-related, set isSoftwareRelated to false.
-The following are NOT software-related (isSoftwareRelated: false):
-- Hardware/display/screen rentals or event logistics (e.g., เช่าจอ LCD, เช่าสถานที่, เช่าระบบเสียง, จัดประชุมเชิงปฏิบัติการ, จัดสัมมนา, อาหารว่าง) even if the event topic mentions software or AI.
-- Off-the-shelf consumer/retail tool subscriptions or single licenses (e.g., buying licenses for ChatGPT Plus, Claude, Canva, Zoom, Microsoft 365 Family, domain name renewals).
-- Physical computer hardware/laptop/printer purchases (even if bundled with Windows/OS).
-- Construction, roads, furniture, vehicles, air conditioning, electrical work, renovation.
+SOFTWARE-RELATED CRITERIA (isSoftwareRelated: true):
+- Custom software, web, mobile, or system development and implementation.
+- Procurement of enterprise software licenses, subscriptions, or annual software renewals (e.g., จัดหาลิขสิทธิ์ซอฟต์แวร์, license subscription, software maintenance agreement / MA).
+- Cloud computing services, hosting platforms, and database system procurements.
+- System integration, data migration, and software maintenance services.
 
-A project is ONLY software-related (isSoftwareRelated: true) if it involves genuine software engineering: custom software/web/mobile development, enterprise system implementation, data platforms, or enterprise software maintenance.
+NON-SOFTWARE CRITERIA (isSoftwareRelated: false):
+- Physical construction, road work, building repairs, civil engineering, electrical wiring, air conditioning, plumbing.
+- Furniture, desks, chairs, uniforms, vehicles, passenger transport, catering, food, logistics.
+- Venue rentals and event organization (e.g., เช่าสถานที่, จัดสัมมนา, จัดประชุม) even if the seminar topic mentions computers or AI.
+- Pure physical hardware without software systems (e.g. buying empty paper, toner cartridges, bare office desks).
 
 Project Title: ${title}
 Project Description: ${description}
 
-Respond with ONLY valid JSON in this exact format (no markdown, no preamble, no backticks):
+Respond with ONLY valid JSON in this exact structure (no markdown fences, no preamble):
 {
   "category": "Website|Mobile App|AI|Database|ERP|Cloud|Data Analytics|Information System",
   "isSoftwareRelated": true,
   "confidence": "High|Medium|Low",
-  "reasoning": "One sentence explanation"
+  "reasoning": "One concise sentence explaining the classification."
 }`;
 }
 

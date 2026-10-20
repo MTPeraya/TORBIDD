@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { ProjectCarousel } from '@/components/ui/ProjectCarousel';
 import { isClosingSoon } from '@/lib/utils';
+import { isContractAwarded } from '@/services/procurement-filter';
 
 export default function HomePage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function HomePage() {
   }, [loadProjects]);
 
   const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
-  const closingCount = projects.filter((p) => isClosingSoon(p.deadline)).length;
+  const closingCount = projects.filter((p) => !isContractAwarded(p) && isClosingSoon(p.deadline)).length;
   const recentProjects = projects.slice(0, 8);
 
   const handleHeroSearch = (e: React.FormEvent) => {
@@ -93,7 +94,13 @@ export default function HomePage() {
               </span>
             </div>
 
-            <div className="hero-stat-chip accent" onClick={() => router.push('/opportunities')} role="button" tabIndex={0}>
+            <div
+              className="hero-stat-chip accent"
+              onClick={() => router.push('/opportunities?deadline=within7&sortBy=deadline_asc')}
+              role="button"
+              tabIndex={0}
+              title={language === 'th' ? 'ดูโครงการที่ใกล้ปิดรับข้อเสนอภายใน 7 วัน' : 'View projects closing within 7 days'}
+            >
               <span className="hero-stat-num">{closingCount}</span>
               <span className="hero-stat-label">
                 {language === 'th' ? 'ใกล้ปิดรับ 7 วัน' : 'Closing in 7 days'}

@@ -53,6 +53,24 @@ export function sortProcurements(
         return (a.externalId || 0) - (b.externalId || 0);
       }
 
+      case 'deadline_asc': {
+        const timeA = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+        const timeB = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+        if (timeA !== timeB) {
+          return timeA - timeB;
+        }
+        return (a.externalId || 0) - (b.externalId || 0);
+      }
+
+      case 'deadline_desc': {
+        const timeA = a.deadline ? new Date(a.deadline).getTime() : -Infinity;
+        const timeB = b.deadline ? new Date(b.deadline).getTime() : -Infinity;
+        if (timeA !== timeB) {
+          return timeB - timeA;
+        }
+        return (b.externalId || 0) - (a.externalId || 0);
+      }
+
       case 'publishDate_desc':
       case 'newest':
       default: {
