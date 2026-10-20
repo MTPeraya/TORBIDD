@@ -24,10 +24,22 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
   const isSaved = pathname === '/saved';
   const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
 
+  const toggleTooltip = collapsed
+    ? (L('expandSidebar') || 'Expand sidebar')
+    : (L('collapseSidebar') || 'Collapse sidebar');
+
   return (
-    <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
+    <aside
+      className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}
+      aria-label="Application Sidebar"
+    >
       <div className="sidebar-brand">
-        <Link href="/" className="sidebar-brand-logo">
+        <Link
+          href="/"
+          className="sidebar-brand-logo"
+          data-tooltip={collapsed ? L('navHome') : undefined}
+          aria-label={L('appName')}
+        >
           <div className="sidebar-brand-icon">B</div>
           <div className="sidebar-brand-text">
             <div className="sidebar-brand-name">{L('appName')}</div>
@@ -37,13 +49,31 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
         <button
           className="sidebar-toggle-btn"
           onClick={onToggle}
-          title="Toggle sidebar"
+          title={toggleTooltip}
+          aria-label={toggleTooltip}
+          data-tooltip={collapsed ? toggleTooltip : undefined}
           id="sidebarToggleBtn"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="18" x2="21" y2="18" />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            {collapsed ? (
+              <polyline points="9 18 15 12 9 6" />
+            ) : (
+              <>
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </>
+            )}
           </svg>
         </button>
       </div>
@@ -92,7 +122,7 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
 
         {isAuthenticated && isAdmin && (
           <>
-            <div className="sidebar-section-label" style={{ marginTop: 12 }}>
+            <div className="sidebar-section-label sidebar-section-tools">
               <span className="sidebar-link-label">{L('sectionTools')}</span>
             </div>
 
@@ -104,18 +134,20 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
             >
               {ICONS.shield}
               <span className="sidebar-link-label">{L('navAdmin')}</span>
-              <span
-                className="sidebar-badge"
-                style={{
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  color: '#3b82f6',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                }}
-              >
-                ADMIN
-              </span>
+              {!collapsed && (
+                <span
+                  className="sidebar-badge"
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    color: '#3b82f6',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  ADMIN
+                </span>
+              )}
             </Link>
           </>
         )}
