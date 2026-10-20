@@ -52,23 +52,10 @@ export async function GET(req: NextRequest) {
       try {
         const { getSyncStatus } = await import('@/services/ingestion/sync-state');
         const localStatus = getSyncStatus();
-        lastSyncTime = localStatus.lastSuccessfulSyncAt || localStatus.lastAttemptAt || new Date().toISOString();
+        lastSyncTime = localStatus.lastSuccessfulSyncAt || localStatus.lastAttemptAt || null;
       } catch {
-        lastSyncTime = new Date().toISOString();
+        lastSyncTime = null;
       }
-    }
-
-    if (auditLogs.length === 0) {
-      auditLogs = [
-        {
-          id: 'log-1',
-          action: 'SYSTEM_READY',
-          actor: 'ระบบจัดซื้อจัดจ้าง e-GP / CKAN / BMA',
-          details: 'ฐานข้อมูลพร้อมใช้งาน บันทึกโครงการจากทั้ง 3 แหล่งทั้งสิ้น ' + stats.totalProjects + ' โครงการ',
-          timestamp: new Date().toISOString(),
-          status: 'success',
-        },
-      ];
     }
 
     const aiProviderName = process.env.GEMINI_API_KEY
@@ -83,7 +70,7 @@ export async function GET(req: NextRequest) {
         database: 'Connected (MongoDB Atlas)',
         aiService: aiProviderName,
         crawler: 'Ready',
-        lastSync: lastSyncTime,
+        lastSync: lastSyncTime || 'ยังไม่มีการซิงค์ข้อมูล (Never)',
         lastPullTime: lastSyncTime,
         uptimeSeconds: Math.floor(process.uptime()),
         memoryUsageMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),

@@ -13,6 +13,7 @@ import { IngestionService } from '../ingestion.service';
 import { GovSpendingClient } from '../clients/govspending-client';
 import { EgpClient } from '../clients/egp-client';
 import { BmaClient } from '../clients/bma-client';
+import { DiscoveredProject } from '@/types/procurement';
 
 describe('IngestionService - All 3 External Government Data Sources', () => {
   it('checks health across BMA, e-GP, and Data.go.th simultaneously', async () => {
@@ -149,7 +150,7 @@ describe('IngestionService - All 3 External Government Data Sources', () => {
             source: 'BMA_EGP',
             sourceUrl: 'https://egp2.bangkok.go.th',
           },
-        ] as any,
+        ] as unknown as DiscoveredProject[],
       });
 
     const syncRes = await triggerImmediateSync({ triggerType: 'manual' });

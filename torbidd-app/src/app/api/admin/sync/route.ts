@@ -6,8 +6,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 import { triggerImmediateSync } from '@/services/ingestion/sync-state';
-import SyncLog from '@/models/SyncLog';
-import connectToDatabase from '@/lib/mongodb';
 
 export const dynamic = 'force-dynamic';
 

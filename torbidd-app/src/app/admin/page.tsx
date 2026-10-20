@@ -617,6 +617,14 @@ export default function AdminPage() {
     return projects.filter((p) => new Date(p.deadline) >= now).length;
   }, [projects]);
 
+  const availableDepartments = useMemo(() => {
+    const set = new Set<string>();
+    projects.forEach((p) => {
+      if (p.department?.th) set.add(p.department.th);
+    });
+    return Array.from(set);
+  }, [projects]);
+
   if (isLoading) {
     return (
       <div className="admin-page-container" style={{ padding: '80px 24px', textAlign: 'center' }}>
@@ -1575,34 +1583,31 @@ export default function AdminPage() {
             </div>
 
             <div className="admin-audit-list">
-              {(stats?.auditLogs || [
-                {
-                  id: 'default-1',
-                  action: 'ADMIN_ACCESS',
-                  actor: 'BMA Procurement Officer',
-                  details: 'Accessed Administration Panel dashboard',
-                  timestamp: new Date().toISOString(),
-                  status: 'success',
-                },
-              ]).map((log) => (
-                <div key={log.id} className="admin-audit-item">
-                  <div className="admin-audit-badge success">
-                    {ICONS.check}
-                  </div>
-                  <div className="admin-audit-content">
-                    <div className="admin-audit-action">
-                      <strong>{log.action}</strong> • <span style={{ color: 'var(--text-secondary)' }}>{log.actor}</span>
+              {stats?.auditLogs && stats.auditLogs.length > 0 ? (
+                stats.auditLogs.map((log) => (
+                  <div key={log.id} className="admin-audit-item">
+                    <div className="admin-audit-badge success">
+                      {ICONS.check}
                     </div>
-                    <div className="admin-audit-desc">{log.details}</div>
+                    <div className="admin-audit-content">
+                      <div className="admin-audit-action">
+                        <strong>{log.action}</strong> • <span style={{ color: 'var(--text-secondary)' }}>{log.actor}</span>
+                      </div>
+                      <div className="admin-audit-desc">{log.details}</div>
+                    </div>
+                    <div className="admin-audit-time">
+                      {new Date(log.timestamp).toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </div>
                   </div>
-                  <div className="admin-audit-time">
-                    {new Date(log.timestamp).toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  {language === 'th' ? 'ไม่มีประวัติการบันทึกกิจกรรมล่าสุด' : 'No recent audit logs recorded'}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </section>
@@ -1620,6 +1625,7 @@ export default function AdminPage() {
         onSubmit={formMode === 'create' ? handleCreateProject : handleEditProject}
         initialProject={editingProject}
         mode={formMode}
+        availableDepartments={availableDepartments}
       />
 
       <DeleteConfirmModal
