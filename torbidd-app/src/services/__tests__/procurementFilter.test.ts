@@ -10,6 +10,7 @@ import {
   filterBySearch,
   filterByDeadline,
   isContractAwarded,
+  isProjectClosedOrAwarded,
   applyProcurementFilters,
 } from '../procurement-filter';
 import {
@@ -406,6 +407,44 @@ describe('Procurement Filtering & Search Services', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].externalId).toBe(201);
+    });
+
+    it('accurately identifies closed or awarded projects with isProjectClosedOrAwarded', () => {
+      const awardedProject = { ...MOCK_PROJECTS[0], winnerName: 'Winner Co.' };
+      const expiredProject = { ...MOCK_PROJECTS[0], deadline: '2020-01-01' };
+      const closedStatusProject = { ...MOCK_PROJECTS[0], status: 'ปิดรับข้อเสนอแล้ว' };
+      const futureActiveProject = { ...MOCK_PROJECTS[0], deadline: '2099-12-31', status: 'เปิดรับข้อเสนอ' };
+
+      expect(isProjectClosedOrAwarded(awardedProject)).toBe(true);
+      expect(isProjectClosedOrAwarded(expiredProject)).toBe(true);
+      expect(isProjectClosedOrAwarded(closedStatusProject)).toBe(true);
+      expect(isProjectClosedOrAwarded(futureActiveProject)).toBe(false);
+    });
+
+    it('filters out closed/awarded projects when hideClosed is true', () => {
+      const mixedProjects: Project[] = [
+        { ...MOCK_PROJECTS[0], externalId: 301, deadline: '2099-12-31' },
+        { ...MOCK_PROJECTS[1], externalId: 302, winnerName: 'Got Winner' },
+        { ...MOCK_PROJECTS[2], externalId: 303, deadline: '2020-01-01' },
+      ];
+
+      const filtered = applyProcurementFilters(mixedProjects, { hideClosed: true });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].externalId).toBe(301);
+    });
+
+    it('sorts active projects before closed/awarded projects in deadline_asc', () => {
+      const mixedProjects: Project[] = [
+        { ...MOCK_PROJECTS[0], externalId: 401, deadline: '2020-01-01', winnerName: 'Winner' }, // expired & won
+        { ...MOCK_PROJECTS[1], externalId: 402, deadline: '2099-05-01' }, // active later
+        { ...MOCK_PROJECTS[2], externalId: 403, deadline: '2099-01-01' }, // active sooner
+      ];
+
+      const sorted = sortProcurements(mixedProjects, 'deadline_asc');
+      // Active sooner (403), then active later (402), then closed/awarded (401) at the end!
+      expect(sorted[0].externalId).toBe(403);
+      expect(sorted[1].externalId).toBe(402);
+      expect(sorted[2].externalId).toBe(401);
     });
   });
 });

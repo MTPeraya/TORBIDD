@@ -34,6 +34,12 @@ export const ProjectFiltersSchema = z.object({
   minBudget: z.coerce.number().min(0).optional(),
   maxBudget: z.coerce.number().min(0).optional(),
   deadline: z.enum(['within7', 'within30', 'moreThan30']).optional(),
+  hideClosed: z
+    .preprocess((v) => {
+      if (v === 'true' || v === true) return true;
+      if (v === 'false' || v === false) return false;
+      return undefined;
+    }, z.boolean().optional()),
   sortBy: z
     .enum([
       'publishDate_desc',

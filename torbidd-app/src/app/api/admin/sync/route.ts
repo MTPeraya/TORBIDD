@@ -6,8 +6,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
 
 import { triggerImmediateSync } from '@/services/ingestion/sync-state';
-import SyncLog from '@/models/SyncLog';
-import connectToDatabase from '@/lib/mongodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,66 +21,59 @@ export async function POST(req: NextRequest) {
 
     const startTime = Date.now();
 
-    // Trigger real multi-source synchronization
+    let reqBody: { keyword?: string; limit?: number; fiscalYear?: number } = {};
+    try {
+      reqBody = await req.json();
+    } catch {}
+
+    // Trigger real multi-source synchronization across all 3 government sources:
+    // 1. CKAN (data.go.th)
+    // 2. BMA e-Procurement (egp2.bangkok.go.th)
+    // 3. National e-GP (process3/process5.gprocurement.go.th)
     const result = await triggerImmediateSync({
-      keyword: 'ซอฟต์แวร์',
-      limit: 100,
+      keyword: reqBody.keyword || 'ซอฟต์แวร์',
+      fiscalYear: reqBody.fiscalYear,
+      limit: reqBody.limit || 1000,
+      triggerType: 'manual',
     });
 
     const duration = Date.now() - startTime;
-
-    const syncData = result as unknown as {
-      success: boolean;
-      total: number;
-      upsertedCount?: number;
-      modifiedCount?: number;
-      bySource?: Record<string, number>;
+    const completedAt = new Date();
+    const bySource = result.bySource || {
+      CKAN_GOVSPENDING: 0,
+      BMA_EGP: 0,
+      NATIONAL_EGP: 0,
     };
 
-    // Log to sync database
-    try {
-      await connectToDatabase();
-      await SyncLog.create({
-        triggerType: 'manual',
-        status: syncData.success ? 'SUCCESS' : 'FAILED',
-        recordsSyncedCount: syncData.upsertedCount || syncData.modifiedCount || syncData.total || 0,
-        source: 'CKAN_GOVSPENDING & National e-GP',
-        startedAt: new Date(startTime),
-        completedAt: new Date(),
-        durationMs: duration,
-        details: {
-          total: syncData.total,
-          upsertedCount: syncData.upsertedCount ?? 0,
-          modifiedCount: syncData.modifiedCount ?? 0,
-          bySource: syncData.bySource,
-        },
-      });
-    } catch {}
-
     const logDetails = [
-      `[${new Date().toLocaleTimeString('th-TH')}] เชื่อมต่อระบบจัดซื้อจัดจ้าง e-GP และ Open Data (CKAN)...`,
-      `[${new Date().toLocaleTimeString('th-TH')}] ค้นหาและจำแนกโครงการด้านซอฟต์แวร์และใบอนุญาตลิขสิทธิ์: พบ ${syncData.total || 0} โครงการ`,
-      `[${new Date().toLocaleTimeString('th-TH')}] บันทึก/อัปเดตข้อมูลโครงการสำเร็จ: ${syncData.upsertedCount || syncData.total || 0} รายการ`,
-      `[${new Date().toLocaleTimeString('th-TH')}] การซิงค์และจัดหมวดหมู่เสร็จสมบูรณ์ใน ${duration}ms`,
+      `[${completedAt.toLocaleTimeString('th-TH')}] เชื่อมต่อระบบจัดซื้อจัดจ้างครบ 3 แหล่ง (CKAN data.go.th, BMA egp2, National e-GP)...`,
+      `[${completedAt.toLocaleTimeString('th-TH')}] 1. Data.go.th (CKAN Open Government Data): ดึงสำเร็จ ${bySource.CKAN_GOVSPENDING ?? 0} โครงการ`,
+      `[${completedAt.toLocaleTimeString('th-TH')}] 2. BMA e-Procurement (กทม. egp2.bangkok.go.th): ดึงสำเร็จ ${bySource.BMA_EGP ?? 0} โครงการ`,
+      `[${completedAt.toLocaleTimeString('th-TH')}] 3. National e-GP (กรมบัญชีกลาง gprocurement.go.th): ดึงสำเร็จ ${bySource.NATIONAL_EGP ?? 0} โครงการ`,
+      `[${completedAt.toLocaleTimeString('th-TH')}] คัดกรองและจำแนกโครงการด้านซอฟต์แวร์ (UC-10): พบรวม ${result.total || 0} โครงการ`,
+      `[${completedAt.toLocaleTimeString('th-TH')}] บันทึก/อัปเดตลงฐานข้อมูล MongoDB Atlas: สร้างใหม่ ${result.upsertedCount || 0} รายการ, อัปเดต ${result.modifiedCount || 0} รายการ`,
+      `[${completedAt.toLocaleTimeString('th-TH')}] การซิงค์ทั้ง 3 แหล่งเสร็จสมบูรณ์ใน ${duration}ms`,
     ];
 
     const syncResult = {
       jobId: 'sync_' + Date.now(),
       status: 'completed',
       durationMs: duration,
-      timestamp: new Date().toISOString(),
-      source: 'National e-GP & CKAN Open Government Data',
-      scrapedNoticesCount: syncData.total || 0,
-      softwareTendersMatched: syncData.total || 0,
-      aiClassifiedCount: syncData.total || 0,
-      createdProjectsCount: syncData.upsertedCount || 0,
-      updatedProjectsCount: syncData.modifiedCount || 0,
+      timestamp: completedAt.toISOString(),
+      lastPullTime: completedAt.toISOString(),
+      source: 'CKAN_GOVSPENDING, BMA_EGP & NATIONAL_EGP',
+      bySource,
+      scrapedNoticesCount: result.total || 0,
+      softwareTendersMatched: result.total || 0,
+      aiClassifiedCount: result.total || 0,
+      createdProjectsCount: result.upsertedCount || 0,
+      updatedProjectsCount: result.modifiedCount || 0,
       logDetails,
     };
 
     return NextResponse.json({
       success: true,
-      message: 'การซิงค์ข้อมูลจัดซื้อจัดจ้าง e-GP สำเร็จเรียบร้อย',
+      message: 'การซิงค์ข้อมูลจัดซื้อจัดจ้างทั้ง 3 แหล่ง (CKAN, BMA, e-GP) สำเร็จเรียบร้อย',
       data: syncResult,
       executionTimeMs: duration,
     });
