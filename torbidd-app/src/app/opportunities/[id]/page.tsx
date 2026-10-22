@@ -127,9 +127,17 @@ export default function ProjectDetailPage({
   const days = hasDeadline ? daysUntil(project.deadline) : null;
   const catClass = getCategoryClass(project.category);
   const catLabel = CATEGORY_LABELS[language][project.category] || project.category;
-  const bookmarked = isBookmarked(project.externalId);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const extProject = project as any;
+  const projDetailId =
+    project.externalId ??
+    extProject.externalProjectId ??
+    project._id ??
+    id;
+  const bookmarked =
+    isBookmarked(projDetailId) ||
+    (project.externalId !== undefined && isBookmarked(project.externalId)) ||
+    isBookmarked(id);
   const hasRealPublishDate = extProject._hasActualPublishDate !== false;
   const fiscalYear = project.fiscalYear || extProject.fiscalYear;
   const calendarYear = fiscalYear ? fiscalYear - 543 : null;
@@ -517,7 +525,7 @@ export default function ProjectDetailPage({
 
               <button
                 className={`btn btn-bookmark ${bookmarked ? 'active' : ''}`}
-                onClick={() => toggleBookmark(project.externalId)}
+                onClick={() => toggleBookmark(projDetailId)}
               >
                 {bookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
                 <span>{bookmarked ? L('saved') : L('saveBookmark')}</span>
