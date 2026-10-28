@@ -81,7 +81,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const days = hasDeadline ? daysUntil(project.deadline) : null;
   const catClass = getCategoryClass(project.category);
   const catLabel = CATEGORY_LABELS[language][project.category] || project.category;
-  const bookmarked = isBookmarked(project.externalId);
+  const cardId = project.externalId ?? extProject.externalProjectId ?? project._id;
+  const bookmarked =
+    isBookmarked(cardId) ||
+    (project.externalId !== undefined && isBookmarked(project.externalId)) ||
+    (extProject.externalProjectId !== undefined && isBookmarked(extProject.externalProjectId));
 
   // ─── Status Tag (based on official status & actual deadline) ────────────────
   const rawStatus = project.status || '';
@@ -115,7 +119,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   }
 
   const handleCardClick = () => {
-    const targetId = extProject.externalProjectId || project.externalId;
+    const targetId = extProject.externalProjectId ?? project.externalId ?? project._id;
     router.push(`/opportunities/${targetId}`);
   };
 
@@ -142,7 +146,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <button
             type="button"
             className={`bookmark-btn ${bookmarked ? 'active' : ''}`}
-            onClick={(e) => toggleBookmark(project.externalId, e)}
+            onClick={(e) => toggleBookmark(cardId, e)}
             aria-label={bookmarked ? L('saved') : L('saveBookmark')}
           >
             {bookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}

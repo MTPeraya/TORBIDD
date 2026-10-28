@@ -41,12 +41,22 @@ export async function GET(req: NextRequest) {
           id: String(l._id),
           action: l.triggerType === 'manual' ? 'MANUAL_SYNC' : 'SCHEDULED_SYNC',
           actor: l.triggerType === 'manual' ? 'ผู้ดูแลระบบ (Admin)' : 'ระบบอัตโนมัติ (Daemon)',
-          details: `ซิงค์ข้อมูล ${l.source || 'e-GP / CKAN'}: สำเร็จ ${l.recordsSyncedCount || 0} รายการ (ใช้เวลา ${l.durationMs || 0}ms)`,
+          details: `ซิงค์ข้อมูล 3 แหล่ง (${l.source || 'CKAN / BMA / e-GP'}): สำเร็จ ${l.recordsSyncedCount || 0} รายการ (ใช้เวลา ${l.durationMs || 0}ms)`,
           timestamp: (l.completedAt || l.startedAt || new Date()).toISOString(),
           status: l.status === 'SUCCESS' ? 'success' : 'error',
         }));
       }
     } catch {}
+
+    if (!lastSyncTime) {
+      try {
+        const { getSyncStatus } = await import('@/services/ingestion/sync-state');
+        const localStatus = getSyncStatus();
+        lastSyncTime = localStatus.lastSuccessfulSyncAt || localStatus.lastAttemptAt || null;
+      } catch {
+        lastSyncTime = null;
+      }
+    }
 
     const aiProviderName = process.env.GEMINI_API_KEY
       ? `Google AI Studio (${process.env.GEMINI_MODEL || 'gemini-2.5-flash'})`
@@ -61,6 +71,7 @@ export async function GET(req: NextRequest) {
         aiService: aiProviderName,
         crawler: 'Ready',
         lastSync: lastSyncTime || 'ยังไม่มีการซิงค์ข้อมูล (Never)',
+        lastPullTime: lastSyncTime,
         uptimeSeconds: Math.floor(process.uptime()),
         memoryUsageMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       },

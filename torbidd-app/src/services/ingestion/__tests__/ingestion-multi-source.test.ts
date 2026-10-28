@@ -13,6 +13,7 @@ import { IngestionService } from '../ingestion.service';
 import { GovSpendingClient } from '../clients/govspending-client';
 import { EgpClient } from '../clients/egp-client';
 import { BmaClient } from '../clients/bma-client';
+import { DiscoveredProject } from '@/types/procurement';
 
 describe('IngestionService - All 3 External Government Data Sources', () => {
   it('checks health across BMA, e-GP, and Data.go.th simultaneously', async () => {
@@ -125,5 +126,48 @@ describe('IngestionService - All 3 External Government Data Sources', () => {
     expect(result.bySource.CKAN_GOVSPENDING).toBe(1);
     expect(result.bySource.BMA_EGP).toBe(1);
     expect(result.bySource.NATIONAL_EGP).toBe(1);
+  });
+
+  it('triggers immediate multi-source sync and captures all 3 sources in sync state', async () => {
+    const { triggerImmediateSync, getSyncStatus } = await import('../sync-state');
+    const mockDiscoverAll = jest
+      .spyOn(IngestionService.prototype, 'discoverFromAllSources')
+      .mockResolvedValueOnce({
+        totalProjects: 12,
+        upsertedCount: 10,
+        modifiedCount: 2,
+        bySource: {
+          CKAN_GOVSPENDING: 5,
+          BMA_EGP: 4,
+          NATIONAL_EGP: 3,
+        },
+        projects: [
+          {
+            externalProjectId: '670001',
+            projectName: 'BMA Digital Portal',
+            agencyName: 'กทม.',
+            fiscalYear: 2568,
+            source: 'BMA_EGP',
+            sourceUrl: 'https://egp2.bangkok.go.th',
+          },
+        ] as unknown as DiscoveredProject[],
+      });
+
+    const syncRes = await triggerImmediateSync({ triggerType: 'manual' });
+
+    expect(mockDiscoverAll).toHaveBeenCalledTimes(1);
+    expect(syncRes.success).toBe(true);
+    expect(syncRes.total).toBe(12);
+    expect(syncRes.upsertedCount).toBe(10);
+    expect(syncRes.bySource?.CKAN_GOVSPENDING).toBe(5);
+    expect(syncRes.bySource?.BMA_EGP).toBe(4);
+    expect(syncRes.bySource?.NATIONAL_EGP).toBe(3);
+    expect(syncRes.syncStatus.source).toContain('BMA_EGP');
+
+    const state = getSyncStatus();
+    expect(state.source).toContain('BMA_EGP');
+    expect(state.status).toBe('success');
+
+    mockDiscoverAll.mockRestore();
   });
 });

@@ -65,7 +65,7 @@ export function getSyncStatus(): SyncStatus {
     totalDiscovered: 0,
     lastDiscoveredCount: 0,
     lastError: null,
-    source: 'CKAN_GOVSPENDING & National e-GP',
+    source: 'CKAN_GOVSPENDING, BMA_EGP & NATIONAL_EGP',
   };
 
   if (!fs.existsSync(STATE_FILE)) {
@@ -170,6 +170,8 @@ export async function triggerImmediateSync(options: {
   success: boolean;
   total: number;
   upsertedCount: number;
+  modifiedCount?: number;
+  bySource?: Record<string, number>;
   projects: DiscoveredProject[];
   syncStatus: SyncStatus;
 }> {
@@ -177,7 +179,7 @@ export async function triggerImmediateSync(options: {
   const now = new Date();
 
   // 1. Record sync start in DB and local state
-  const { logId, startedAt } = await recordSyncStart(triggerType);
+  const { logId, startedAt } = await recordSyncStart(triggerType, 'CKAN_GOVSPENDING, BMA_EGP & NATIONAL_EGP');
   saveSyncStatus({
     status: 'syncing',
     lastAttemptAt: now.toISOString(),
@@ -187,7 +189,7 @@ export async function triggerImmediateSync(options: {
 
   try {
     const service = new IngestionService();
-    const result = await service.discoverProjects({
+    const result = await service.discoverFromAllSources({
       keyword: options.keyword || 'ซอฟต์แวร์',
       fiscalYear: options.fiscalYear,
       limit: options.limit || 1000,
@@ -208,9 +210,10 @@ export async function triggerImmediateSync(options: {
       nextScheduledSyncAt: nextSync,
       startedAt,
       details: {
-        total: result.total,
+        total: result.totalProjects,
         upsertedCount: result.upsertedCount,
         modifiedCount: result.modifiedCount,
+        bySource: result.bySource,
       },
     });
 
@@ -223,15 +226,18 @@ export async function triggerImmediateSync(options: {
       nextSyncAt: nextSync.toISOString(),
       triggerType,
       recordsSyncedCount: result.projects.length,
-      totalDiscovered: cachedTotal || result.total,
+      totalDiscovered: cachedTotal || result.totalProjects,
       lastDiscoveredCount: result.projects.length,
+      source: 'CKAN_GOVSPENDING, BMA_EGP & NATIONAL_EGP',
       lastError: null,
     });
 
     return {
       success: true,
-      total: result.total,
+      total: result.totalProjects,
       upsertedCount: result.upsertedCount,
+      modifiedCount: result.modifiedCount,
+      bySource: result.bySource,
       projects: result.projects,
       syncStatus: newStatus,
     };
@@ -272,7 +278,7 @@ export async function triggerImmediateSync(options: {
         stackTrace: err instanceof Error ? err.stack : undefined,
         payloadSnippet: message,
         retryCount: 3,
-        source: 'CKAN_GOVSPENDING',
+        source: 'CKAN_GOVSPENDING, BMA_EGP & NATIONAL_EGP',
       });
       dlqId = dlqItem._id.toString();
     } catch (dlqErr) {
@@ -284,7 +290,7 @@ export async function triggerImmediateSync(options: {
       await alertService.sendRetryExceededAlert({
         errorCode: message.includes('429') ? 'HTTP_429_RATE_LIMIT' : 'SYNC_RETRIES_EXCEEDED',
         errorMessage: message,
-        source: 'CKAN_GOVSPENDING',
+        source: 'CKAN_GOVSPENDING, BMA_EGP & NATIONAL_EGP',
         retryAttempts: 3,
         maxAttempts: 3,
         requestParameters: {

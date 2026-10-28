@@ -24,6 +24,7 @@ interface AdminStats {
     aiService: string;
     crawler: string;
     lastSync: string;
+    lastPullTime?: string;
     uptimeSeconds: number;
     memoryUsageMb: number;
   };
@@ -70,9 +71,32 @@ export default function AdminPage() {
 
   // Syncing state
   const [syncing, setSyncing] = useState(false);
+  const [latestPullTime, setLatestPullTime] = useState<string | null>(null);
+  const [lastSyncBySource, setLastSyncBySource] = useState<Record<string, number> | null>(null);
   const [syncLogs, setSyncLogs] = useState<string[]>([
-    'System standby. Ready to query BMA e-GP API and crawl PDF TOR publications.',
+    'System standby. พร้อมเชื่อมต่อข้อมูลจัดซื้อจัดจ้างภาครัฐครบทั้ง 3 แหล่ง (CKAN, BMA, e-GP)',
   ]);
+
+  const effectiveLastPullTime =
+    latestPullTime || stats?.systemStatus?.lastPullTime || stats?.systemStatus?.lastSync || null;
+
+  const formatDateTime = (isoString?: string | null) => {
+    if (!isoString) return language === 'th' ? 'ยังไม่มีข้อมูลการดึง' : 'Not synced yet';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return isoString;
+      return d.toLocaleString(language === 'th' ? 'th-TH' : 'en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch {
+      return isoString;
+    }
+  };
 
   // Alert toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -472,12 +496,12 @@ export default function AdminPage() {
     }
   };
 
-  // Handle BMA e-GP Crawler Sync
+  // Handle Multi-Source Government Procurement Crawler Sync
   const handleTriggerSync = async () => {
     try {
       setSyncing(true);
       setSyncLogs((prev) => [
-        `[${new Date().toLocaleTimeString()}] Initializing BMA e-GP scraper and TOR parser...`,
+        `[${new Date().toLocaleTimeString('th-TH')}] เริ่มต้นเชื่อมต่อและดึงข้อมูลจากทั้ง 3 แหล่ง (CKAN, BMA e-GP, National e-GP)...`,
         ...prev,
       ]);
 
@@ -485,22 +509,27 @@ export default function AdminPage() {
       const json = await res.json();
 
       if (res.ok && json.data) {
+        const completedTime = json.data.lastPullTime || json.data.timestamp || new Date().toISOString();
+        setLatestPullTime(completedTime);
+        if (json.data.bySource) {
+          setLastSyncBySource(json.data.bySource);
+        }
         setSyncLogs((prev) => [
-          ...json.data.logDetails.map((l: string) => `[${new Date().toLocaleTimeString()}] ${l}`),
-          `[${new Date().toLocaleTimeString()}] Sync completed in ${json.data.durationMs}ms`,
+          ...(json.data.logDetails || []),
+          `[${new Date().toLocaleTimeString('th-TH')}] ซิงค์ข้อมูลสำเร็จใน ${json.data.durationMs}ms (ดึงข้อมูลล่าสุด: ${new Date(completedTime).toLocaleTimeString('th-TH')})`,
           ...prev,
         ]);
         showToast(L('adminSyncSuccess'));
         fetchData();
       } else {
         setSyncLogs((prev) => [
-          `[${new Date().toLocaleTimeString()}] Error: ${json.error || 'Sync request failed'}`,
+          `[${new Date().toLocaleTimeString('th-TH')}] Error: ${json.error || 'Sync request failed'}`,
           ...prev,
         ]);
       }
     } catch {
       setSyncLogs((prev) => [
-        `[${new Date().toLocaleTimeString()}] Network error during sync execution`,
+        `[${new Date().toLocaleTimeString('th-TH')}] Network error during sync execution`,
         ...prev,
       ]);
     } finally {
@@ -744,15 +773,26 @@ export default function AdminPage() {
         </div>
 
         <div className="admin-header-actions">
+          <div className="admin-last-sync-badge" title="เวลาดึงข้อมูลล่าสุดจากทั้ง 3 แหล่ง (CKAN, BMA, e-GP)">
+            <span className="admin-sync-indicator-dot"></span>
+            <span className="admin-last-sync-label">
+              {language === 'th' ? 'ดึงข้อมูลล่าสุด:' : 'Last Pulled:'}
+            </span>
+            <strong className="admin-last-sync-time">
+              {formatDateTime(effectiveLastPullTime)}
+            </strong>
+          </div>
+
           <button
             type="button"
             className="btn btn-secondary admin-sync-btn"
             onClick={handleTriggerSync}
             disabled={syncing}
             id="adminTriggerSyncBtn"
+            title="ซิงค์ข้อมูลจากทั้ง 3 แหล่ง (CKAN, BMA e-GP, National e-GP)"
           >
             <span className={syncing ? 'admin-spin' : ''}>{ICONS.refreshCw}</span>
-            <span>{syncing ? L('adminSyncing') : L('adminSyncNow')}</span>
+            <span>{syncing ? L('adminSyncing') : (language === 'th' ? 'ซิงค์ 3 แหล่งเดี๋ยวนี้' : 'Sync All 3 Sources')}</span>
           </button>
 
           <button
@@ -911,7 +951,7 @@ export default function AdminPage() {
                   </span>
                 </div>
                 <div className="admin-vital-row">
-                  <span className="admin-vital-name">ระบบนำเข้าข้อมูล e-GP / CKAN</span>
+                  <span className="admin-vital-name">ระบบนำเข้าข้อมูล 3 แหล่ง (CKAN / BMA / e-GP)</span>
                   <span className="admin-vital-status neutral">
                     {syncing ? 'กำลังซิงค์ข้อมูล...' : 'พร้อมซิงค์ (Ready)'}
                   </span>
@@ -925,11 +965,9 @@ export default function AdminPage() {
                   </span>
                 </div>
                 <div className="admin-vital-row">
-                  <span className="admin-vital-name">การซิงค์ข้อมูลครั้งล่าสุด</span>
-                  <span className="admin-vital-value" style={{ fontSize: '0.82rem' }}>
-                    {stats?.systemStatus?.lastSync
-                      ? new Date(stats.systemStatus.lastSync).toLocaleString('th-TH')
-                      : '-'}
+                  <span className="admin-vital-name">เวลาดึงข้อมูลล่าสุด (Latest Data Pull)</span>
+                  <span className="admin-vital-value" style={{ fontSize: '0.82rem', color: 'var(--primary-600)' }}>
+                    {formatDateTime(effectiveLastPullTime)}
                   </span>
                 </div>
               </div>
@@ -1408,14 +1446,108 @@ export default function AdminPage() {
                 disabled={syncing}
               >
                 <span className={syncing ? 'admin-spin' : ''}>{ICONS.refreshCw}</span>
-                <span>{syncing ? L('adminSyncing') : L('adminSyncNow')}</span>
+                <span>{syncing ? L('adminSyncing') : (language === 'th' ? 'ซิงค์ 3 แหล่งเดี๋ยวนี้' : 'Sync All 3 Sources')}</span>
               </button>
             </div>
 
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
-              ระบบซิงค์ข้อมูลจัดซื้อจัดจ้างภาครัฐ เชื่อมต่อข้อมูลจริงจากระบบจัดซื้อจัดจ้างภาครัฐ (e-GP) และ Open Government Data (CKAN / กรมบัญชีกลาง) 
-              พร้อมนำเข้าเอกสาร TOR และวิเคราะห์จำแนกสาระสำคัญด้วย Google Gemini 2.5 Flash
+              ระบบซิงค์ข้อมูลจัดซื้อจัดจ้างภาครัฐ เชื่อมต่อข้อมูลจริงครบทั้ง 3 แหล่ง (Open Government Data CKAN, BMA e-Procurement กทม. และ National e-GP กรมบัญชีกลาง) 
+              พร้อมนำเข้าเอกสาร TOR และวิเคราะห์จำแนกสาระสำคัญด้วย AI
             </p>
+
+            {/* Latest Data Pull Time Banner */}
+            <div className="admin-pull-banner">
+              <div className="admin-pull-banner-info">
+                <div className="admin-pull-banner-icon">
+                  {ICONS.refreshCw}
+                </div>
+                <div>
+                  <div className="admin-pull-banner-title">
+                    {language === 'th' ? 'เวลาดึงข้อมูลล่าสุด (Latest Data Pull Time)' : 'Latest Data Pull Time'}
+                  </div>
+                  <div className="admin-pull-banner-subtitle">
+                    {language === 'th'
+                      ? 'บันทึกเวลาที่เสร็จสิ้นกระบวนการเชื่อมต่อและดึงข้อมูลจากแหล่งภาครัฐ'
+                      : 'Timestamp of the most recent completed synchronization cycle across all sources'}
+                  </div>
+                </div>
+              </div>
+              <div className="admin-last-sync-badge" style={{ fontSize: '13px', padding: '8px 18px' }}>
+                <span className="admin-sync-indicator-dot"></span>
+                <strong className="admin-last-sync-time" style={{ fontSize: '13.5px' }}>
+                  {formatDateTime(effectiveLastPullTime)}
+                </strong>
+              </div>
+            </div>
+
+            {/* 3 Connected Government Sources Cards */}
+            <div className="admin-sources-overview-grid">
+              {/* Source 1: CKAN Open Data */}
+              <div className="admin-source-box">
+                <div className="admin-source-box-header">
+                  <div className="admin-source-box-title">
+                    <span className="pulse-dot"></span>
+                    <span>1. CKAN Open Data</span>
+                  </div>
+                  <span className="status-badge-active">ONLINE</span>
+                </div>
+                <div className="admin-source-box-endpoint">opend.data.go.th / data.go.th</div>
+                <div className="admin-source-box-metric">
+                  <span className="admin-source-box-count">
+                    {lastSyncBySource?.CKAN_GOVSPENDING !== undefined
+                      ? `${lastSyncBySource.CKAN_GOVSPENDING}`
+                      : 'เชื่อมต่อแล้ว'}
+                  </span>
+                  <span className="admin-source-box-desc">
+                    {lastSyncBySource?.CKAN_GOVSPENDING !== undefined ? 'โครงการล่าสุด' : 'API พร้อมใช้งาน'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Source 2: BMA e-Procurement */}
+              <div className="admin-source-box">
+                <div className="admin-source-box-header">
+                  <div className="admin-source-box-title">
+                    <span className="pulse-dot"></span>
+                    <span>2. กทม. BMA e-GP</span>
+                  </div>
+                  <span className="status-badge-active">ONLINE</span>
+                </div>
+                <div className="admin-source-box-endpoint">egp2.bangkok.go.th</div>
+                <div className="admin-source-box-metric">
+                  <span className="admin-source-box-count">
+                    {lastSyncBySource?.BMA_EGP !== undefined
+                      ? `${lastSyncBySource.BMA_EGP}`
+                      : 'เชื่อมต่อแล้ว'}
+                  </span>
+                  <span className="admin-source-box-desc">
+                    {lastSyncBySource?.BMA_EGP !== undefined ? 'โครงการล่าสุด' : 'ระบบจัดซื้อจัดจ้าง กทม.'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Source 3: National e-GP */}
+              <div className="admin-source-box">
+                <div className="admin-source-box-header">
+                  <div className="admin-source-box-title">
+                    <span className="pulse-dot"></span>
+                    <span>3. National e-GP</span>
+                  </div>
+                  <span className="status-badge-active">ONLINE</span>
+                </div>
+                <div className="admin-source-box-endpoint">process5.gprocurement.go.th</div>
+                <div className="admin-source-box-metric">
+                  <span className="admin-source-box-count">
+                    {lastSyncBySource?.NATIONAL_EGP !== undefined
+                      ? `${lastSyncBySource.NATIONAL_EGP}`
+                      : 'เชื่อมต่อแล้ว'}
+                  </span>
+                  <span className="admin-source-box-desc">
+                    {lastSyncBySource?.NATIONAL_EGP !== undefined ? 'โครงการล่าสุด' : 'กรมบัญชีกลาง (e-GP)'}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* Terminal Log Console */}
             <div className="admin-terminal-window">

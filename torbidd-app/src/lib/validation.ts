@@ -34,6 +34,12 @@ export const ProjectFiltersSchema = z.object({
   minBudget: z.coerce.number().min(0).optional(),
   maxBudget: z.coerce.number().min(0).optional(),
   deadline: z.enum(['within7', 'within30', 'moreThan30']).optional(),
+  hideClosed: z
+    .preprocess((v) => {
+      if (v === 'true' || v === true) return true;
+      if (v === 'false' || v === false) return false;
+      return undefined;
+    }, z.boolean().optional()),
   sortBy: z
     .enum([
       'publishDate_desc',
@@ -47,7 +53,12 @@ export const ProjectFiltersSchema = z.object({
     ])
     .optional(),
   page: z.coerce.number().int().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(2000).optional(),
+  limit: z
+    .preprocess((v) => {
+      if (v === 'all' || v === 'ALL') return 2000;
+      return v;
+    }, z.coerce.number().int().min(1).max(2000).optional()),
+  all: z.union([z.string(), z.boolean()]).optional(),
 }).refine(
   (data) => {
     if (data.minBudget !== undefined && data.maxBudget !== undefined) {

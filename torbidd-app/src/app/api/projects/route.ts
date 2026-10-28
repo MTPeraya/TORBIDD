@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
         page: parsed.data.page,
         limit: parsed.data.limit,
         isSoftwareRelated: parsed.data.isSoftwareRelated,
+        hideClosed: parsed.data.hideClosed,
       });
 
       return NextResponse.json({
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
     try {
       const { projects: discProjects } = await getProcurementProjects({
         search: parsed.data.search,
-        limit: 1000,
+        limit: params.all === 'true' || params.limit === 'all' ? 2000 : (parsed.data.limit || 1000),
       });
       if (discProjects && discProjects.length > 0) {
         discoveredProjectsMapped = discProjects.map(procurementToProject);
@@ -118,7 +119,7 @@ export async function GET(req: NextRequest) {
       : (parsed.data.agency ? [parsed.data.agency] : (parsed.data.department ? [parsed.data.department] : undefined));
 
     const effectiveLimit = params.all === 'true' || params.limit === 'all'
-      ? (combined.length || 1000)
+      ? (combined.length || 2000)
       : parsed.data.limit;
 
     const searchResult = executeProcurementSearch(combined, {
@@ -133,6 +134,7 @@ export async function GET(req: NextRequest) {
       page: parsed.data.page,
       limit: effectiveLimit,
       isSoftwareRelated: parsed.data.isSoftwareRelated,
+      hideClosed: parsed.data.hideClosed,
     });
 
     return NextResponse.json({

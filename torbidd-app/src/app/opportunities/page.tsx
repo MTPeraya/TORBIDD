@@ -15,7 +15,7 @@ import { ICONS } from '@/components/ui/Icons';
 import { StatCard } from '@/components/ui/StatCard';
 import { formatBudget, isNew, daysUntil } from '@/lib/utils';
 import { executeProcurementSearch } from '@/services/procurement-search';
-import { isContractAwarded } from '@/services/procurement-filter';
+import { isContractAwarded, isProjectClosedOrAwarded } from '@/services/procurement-filter';
 
 // Discovery Components
 import { ProcurementSearchBar } from '@/components/procurement-search/ProcurementSearchBar';
@@ -44,6 +44,7 @@ function OpportunitiesContent() {
   const initialMaxBudget = searchParams.get('maxBudget') ? Number(searchParams.get('maxBudget')) : null;
   const initialBudgetPreset = searchParams.get('budget') || '';
   const initialDeadline = searchParams.get('deadline') || '';
+  const initialHideClosed = searchParams.get('hideClosed') !== 'false';
   const initialSortBy = (searchParams.get('sortBy') as ProcurementSortOption) || 'publishDate_desc';
   const initialPage = searchParams.get('page') ? Number(searchParams.get('page')) : 1;
 
@@ -56,6 +57,7 @@ function OpportunitiesContent() {
   const [maxBudget, setMaxBudget] = useState<number | null>(initialMaxBudget);
   const [budgetPreset, setBudgetPreset] = useState<string>(initialBudgetPreset);
   const [selectedDeadline, setSelectedDeadline] = useState<string>(initialDeadline);
+  const [hideClosed, setHideClosed] = useState<boolean>(initialHideClosed);
   const [sortBy, setSortBy] = useState<ProcurementSortOption>(initialSortBy);
   const [page, setPage] = useState<number>(initialPage);
 
@@ -101,6 +103,7 @@ function OpportunitiesContent() {
     if (maxBudget !== null) queryParams.set('maxBudget', String(maxBudget));
     if (budgetPreset) queryParams.set('budget', budgetPreset);
     if (selectedDeadline) queryParams.set('deadline', selectedDeadline);
+    queryParams.set('hideClosed', hideClosed ? 'true' : 'false');
     queryParams.set('sortBy', sortBy);
     queryParams.set('page', String(page));
     queryParams.set('limit', '12');
@@ -114,6 +117,7 @@ function OpportunitiesContent() {
       maxBudget: maxBudget !== null ? maxBudget : null,
       budget: budgetPreset || null,
       deadline: selectedDeadline || null,
+      hideClosed: hideClosed ? null : 'false',
       sortBy: sortBy !== 'publishDate_desc' ? sortBy : null,
       page: page > 1 ? page : null,
     });
@@ -142,6 +146,7 @@ function OpportunitiesContent() {
         maxBudget,
         budgetPreset: budgetPreset as ProcurementFilters['budgetPreset'],
         deadline: selectedDeadline as ProcurementFilters['deadline'],
+        hideClosed,
         sortBy,
         page,
         limit: 12,
@@ -161,6 +166,7 @@ function OpportunitiesContent() {
     maxBudget,
     budgetPreset,
     selectedDeadline,
+    hideClosed,
     sortBy,
     page,
     allProjects,
@@ -238,6 +244,16 @@ function OpportunitiesContent() {
       total: allProjects.filter((p) => !isContractAwarded(p)).length,
     };
   }, [allProjects]);
+
+  // Count of already closed or awarded contracts
+  const closedCount = useMemo(() => {
+    return allProjects.filter((p) => isProjectClosedOrAwarded(p)).length;
+  }, [allProjects]);
+
+  const handleToggleHideClosed = () => {
+    setHideClosed((prev) => !prev);
+    setPage(1);
+  };
 
   // Toggle quick deadline filter
   const handleToggleDeadlineWithin7 = () => {
@@ -467,6 +483,34 @@ function OpportunitiesContent() {
             >
               <span>{L('quickDeadlineOver30')}</span>
               <span className="pill-badge">{deadlineCounts.moreThan30}</span>
+            </button>
+          </div>
+
+          {/* Toggle Button to Hide/Close Already Closed or Got Winner Projects (Aligned to the Right) */}
+          <div className="quick-deadline-toggle-wrap">
+            <button
+              type="button"
+              className={`hide-closed-toggle-btn ${hideClosed ? 'active' : ''}`}
+              onClick={handleToggleHideClosed}
+              id="toggle-hide-closed-btn"
+              title={
+                language === 'th'
+                  ? 'ซ่อนโครงการที่ปิดรับข้อเสนอแล้ว หรือได้ผู้ชนะแล้ว'
+                  : 'Hide projects that are closed or contract already awarded'
+              }
+              aria-pressed={hideClosed}
+            >
+              <span className="toggle-switch-track">
+                <span className="toggle-switch-thumb" />
+              </span>
+              <span className="toggle-btn-text">
+                {language === 'th' ? 'ซ่อนที่ปิดรับ/ได้ผู้ชนะแล้ว' : 'Hide Closed / Awarded'}
+              </span>
+              {closedCount > 0 && (
+                <span className="toggle-count-badge" title={`${closedCount} โครงการที่ปิดรับ/มีผู้ชนะ`}>
+                  {closedCount}
+                </span>
+              )}
             </button>
           </div>
         </div>

@@ -9,7 +9,7 @@ import {
   ProcurementQueryResult,
   ProcurementSortOption,
 } from '@/types/procurement';
-import { applyProcurementFilters } from './procurement-filter';
+import { applyProcurementFilters, isProjectClosedOrAwarded } from './procurement-filter';
 
 /**
  * Deterministically sort procurements.
@@ -54,6 +54,11 @@ export function sortProcurements(
       }
 
       case 'deadline_asc': {
+        const closedA = isProjectClosedOrAwarded(a);
+        const closedB = isProjectClosedOrAwarded(b);
+        if (closedA !== closedB) {
+          return closedA ? 1 : -1; // Open/active opportunities come first; closed/awarded placed at the end
+        }
         const timeA = a.deadline ? new Date(a.deadline).getTime() : Infinity;
         const timeB = b.deadline ? new Date(b.deadline).getTime() : Infinity;
         if (timeA !== timeB) {
