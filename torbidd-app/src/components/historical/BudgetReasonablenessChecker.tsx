@@ -25,9 +25,7 @@ export function BudgetReasonablenessChecker({
 
   const activeProjectId =
     selectedProjectId ||
-    projects[0]?.externalId ??
-    projects[0]?._id ??
-    '';
+    (projects[0]?.externalId ?? projects[0]?._id ?? '');
 
   // Custom input state
   const [customTitle, setCustomTitle] = useState('');

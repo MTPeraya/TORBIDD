@@ -26,9 +26,7 @@ export function SimilarProcurementEstimator({
 
   const activeProjectId =
     selectedProjectId ||
-    projects[0]?.externalId ??
-    projects[0]?._id ??
-    '';
+    (projects[0]?.externalId ?? projects[0]?._id ?? '');
 
   const [keywordFilter, setKeywordFilter] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
