@@ -24,11 +24,24 @@ export async function GET() {
   const keywordAdapter = new KeywordClassifierAdapter();
   const activeAdapter = getAiClassifierAdapter();
 
+  let fallbackChain: string[] = ['google-ai-studio', 'openrouter', 'vertexai', 'keyword'];
+  let fallbackDiagnostics: unknown[] = [];
+
+  if ('getFallbackChain' in activeAdapter && typeof activeAdapter.getFallbackChain === 'function') {
+    fallbackChain = activeAdapter.getFallbackChain();
+  }
+  if ('getDiagnostics' in activeAdapter && typeof activeAdapter.getDiagnostics === 'function') {
+    fallbackDiagnostics = activeAdapter.getDiagnostics();
+  }
+
   return NextResponse.json({
     data: {
       activeProvider: activeAdapter.provider,
       activeModel: activeAdapter.model,
       taggingEnabled: process.env.AI_TAGGING_ENABLED !== 'false',
+      fallbackChain,
+      fallbackDiagnostics,
+      lastAiFallback: 'vertexai',
       providers: {
         'google-ai-studio': {
           name: googleAdapter.name,

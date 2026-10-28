@@ -58,11 +58,23 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const aiProviderName = process.env.GEMINI_API_KEY
-      ? `Google AI Studio (${process.env.GEMINI_MODEL || 'gemini-2.5-flash'})`
-      : process.env.GOOGLE_CLOUD_PROJECT
-        ? `Vertex AI (${process.env.VERTEX_AI_MODEL || 'gemini-2.0-flash'})`
-        : 'Rule-based Classifier (Keywords)';
+    const { getAiClassifierAdapter, FallbackClassifierAdapter } = await import('@/services/ai/adapters');
+    const adapter = getAiClassifierAdapter();
+    const isFallback = adapter instanceof FallbackClassifierAdapter;
+    const activeProvider = adapter.provider;
+
+    let aiProviderName = 'Rule-based Classifier (Keywords)';
+    if (activeProvider === 'google-ai-studio') {
+      aiProviderName = `Google AI Studio (${process.env.GEMINI_MODEL || 'gemini-2.5-flash'})`;
+    } else if (activeProvider === 'openrouter') {
+      aiProviderName = `OpenRouter (${process.env.OPENROUTER_MODEL || 'qwen/qwen3.5-flash-02-23'})`;
+    } else if (activeProvider === 'vertexai') {
+      aiProviderName = `Vertex AI (${process.env.VERTEX_AI_MODEL || 'gemini-2.0-flash'})`;
+    }
+
+    if (isFallback) {
+      aiProviderName += ' [Fallback Active: Vertex AI Last]';
+    }
 
     const payload = {
       ...stats,
