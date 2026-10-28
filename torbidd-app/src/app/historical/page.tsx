@@ -13,13 +13,12 @@ import { AgencyComparisonView } from '@/components/historical/AgencyComparisonVi
 import { aggregateAgencyMetrics } from '@/lib/historicalAnalytics';
 import { formatBudget, formatBudgetFull, getCategoryAvg, getOutlierStatus } from '@/lib/utils';
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
-import { INITIAL_HISTORICAL } from '@/lib/initialData';
 
 export default function HistoricalPage() {
   const router = useRouter();
   const { language, L, getLocalized } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [historicalData, setHistoricalData] = useState<HistoricalProject[]>(INITIAL_HISTORICAL);
+  const [historicalData, setHistoricalData] = useState<HistoricalProject[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [apiAgencyMetrics, setApiAgencyMetrics] = useState<AgencyComparisonMetrics[] | null>(null);
 
@@ -34,6 +33,7 @@ export default function HistoricalPage() {
   const [selectedYear, setSelectedYear] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [kpiModalProject, setKpiModalProject] = useState<HistoricalProject | null>(null);
 
   // Client-side auth guard (middleware is the primary guard)
   useEffect(() => {
@@ -46,10 +46,10 @@ export default function HistoricalPage() {
     fetch('/api/historical?stats=true&agencies=true')
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.data && Array.isArray(json.data)) {
           setHistoricalData(json.data);
         }
-        if (json.agencies && Array.isArray(json.agencies) && json.agencies.length > 0) {
+        if (json.agencies && Array.isArray(json.agencies)) {
           setApiAgencyMetrics(json.agencies);
         }
       })
@@ -58,7 +58,7 @@ export default function HistoricalPage() {
     fetch('/api/projects')
       .then((res) => res.json())
       .then((json) => {
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.data && Array.isArray(json.data)) {
           setProjects(json.data);
         }
       })
@@ -88,6 +88,10 @@ export default function HistoricalPage() {
     const totalSpend = historicalData.reduce((sum, d) => sum + d.budget, 0);
     const avgSpend = historicalData.length > 0 ? totalSpend / historicalData.length : 0;
     const maxBudget = historicalData.reduce((max, d) => (d.budget > max ? d.budget : max), 0);
+    const maxBudgetProject = historicalData.reduce<HistoricalProject | null>(
+      (max, d) => (!max || d.budget > max.budget ? d : max),
+      null,
+    );
 
     // Calculate outlier rate
     let outlierCount = 0;
@@ -99,7 +103,7 @@ export default function HistoricalPage() {
     const outlierRate =
       historicalData.length > 0 ? Math.round((outlierCount / historicalData.length) * 100) : 0;
 
-    return { totalSpend, avgSpend, maxBudget, outlierRate };
+    return { totalSpend, avgSpend, maxBudget, maxBudgetProject, outlierRate };
   }, [historicalData]);
 
   const filteredHistorical = useMemo(() => {
@@ -215,13 +219,37 @@ export default function HistoricalPage() {
           </span>
         </div>
 
-        <div className="kpi-card">
+        <div
+          className={`kpi-card ${kpiStats.maxBudgetProject ? 'clickable' : ''}`}
+          onClick={() => {
+            if (kpiStats.maxBudgetProject) {
+              setKpiModalProject(kpiStats.maxBudgetProject);
+            }
+          }}
+          role={kpiStats.maxBudgetProject ? 'button' : undefined}
+          tabIndex={kpiStats.maxBudgetProject ? 0 : undefined}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && kpiStats.maxBudgetProject) {
+              e.preventDefault();
+              setKpiModalProject(kpiStats.maxBudgetProject);
+            }
+          }}
+          title={
+            kpiStats.maxBudgetProject
+              ? language === 'th'
+                ? 'คลิกเพื่อดูรายละเอียดโครงการมูลค่าสูงสุด'
+                : 'Click to view largest recorded tender'
+              : undefined
+          }
+        >
           <span className="kpi-label">{L('kpiHighestTender')}</span>
           <strong className="kpi-value text-warning">
             {formatBudget(kpiStats.maxBudget, language)}
           </strong>
           <span className="kpi-sub">
-            {language === 'th' ? 'โครงการสเกลใหญ่สุดของ กทม.' : 'Largest recorded procurement'}
+            {language === 'th'
+              ? 'โครงการสเกลใหญ่สุด (คลิกเพื่อดูรายละเอียด 👁️)'
+              : 'Largest recorded procurement (Click to view 👁️)'}
           </span>
         </div>
 
@@ -431,7 +459,24 @@ export default function HistoricalPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHistorical.map((d, index) => {
+                  {filteredHistorical.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        style={{
+                          textAlign: 'center',
+                          padding: '36px 16px',
+                          color: 'var(--text-secondary)',
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        {language === 'th'
+                          ? 'ไม่พบข้อมูลประวัติโครงการจัดซื้อจัดจ้างที่ตรงกับเงื่อนไข'
+                          : 'No historical procurement records match the criteria'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredHistorical.map((d, index) => {
                     const catAvg = getCategoryAvg(d.category, historicalData);
                     const outlierStatus = getOutlierStatus(d.budget, catAvg);
                     const rowKey = d._id || String(index);
@@ -513,7 +558,7 @@ export default function HistoricalPage() {
                         )}
                       </React.Fragment>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>
@@ -521,6 +566,104 @@ export default function HistoricalPage() {
             <span className="analysis-disclaimer" style={{ marginTop: 14 }}>
               {L('budgetDisclaimer')}
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Largest Tender Inspector Modal from KPI Card */}
+      {kpiModalProject && (
+        <div className="modal-backdrop" onClick={() => setKpiModalProject(null)}>
+          <div className="modal-content-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <span className="modal-category">
+                  {kpiModalProject.category
+                    ? CATEGORY_LABELS[language][kpiModalProject.category]
+                    : L('kpiHighestTender')}{' '}
+                  · {kpiModalProject.year + (language === 'th' ? 543 : 0)}
+                </span>
+                <h3 className="modal-title">{getLocalized(kpiModalProject.title) as string}</h3>
+                <span className="modal-dept">
+                  {kpiModalProject.department ? (getLocalized(kpiModalProject.department) as string) : ''}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setKpiModalProject(null)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="modal-meta-grid">
+                <div className="meta-card">
+                  <span className="meta-label">{L('budget')}</span>
+                  <strong className="meta-value text-primary">
+                    {formatBudgetFull(kpiModalProject.budget, language)}
+                  </strong>
+                </div>
+                <div className="meta-card">
+                  <span className="meta-label">
+                    {language === 'th' ? 'วิธีการจัดหา' : 'Procurement Type'}
+                  </span>
+                  <strong className="meta-value">
+                    {kpiModalProject.procurementType || 'e-Bidding'}
+                  </strong>
+                </div>
+                {kpiModalProject.awardedVendor && (
+                  <div className="meta-card">
+                    <span className="meta-label">{L('awardedVendor')}</span>
+                    <strong className="meta-value">
+                      {getLocalized(kpiModalProject.awardedVendor) as string}
+                    </strong>
+                  </div>
+                )}
+              </div>
+
+              {kpiModalProject.description && (
+                <div className="modal-section">
+                  <h4 className="section-subtitle">{L('projectDesc')}</h4>
+                  <p className="modal-desc-text">
+                    {getLocalized(kpiModalProject.description) as string}
+                  </p>
+                </div>
+              )}
+
+              <div className="modal-section">
+                <h4 className="section-subtitle">{L('scopeOfWork')}</h4>
+                <ul className="modal-scope-list">
+                  {kpiModalProject.scope &&
+                  ((kpiModalProject.scope[language] && kpiModalProject.scope[language].length > 0) ||
+                    (kpiModalProject.scope.th && kpiModalProject.scope.th.length > 0)) ? (
+                    (kpiModalProject.scope[language] || kpiModalProject.scope.th || []).map((item, idx) => (
+                      <li key={idx} className="modal-scope-item">
+                        <span className="bullet-check">✓</span>
+                        <span>{item}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li>
+                      {language === 'th'
+                        ? 'ไม่มีข้อมูลขอบเขตงานโดยละเอียดสำหรับโครงการนี้'
+                        : 'No detailed scope records available for this project'}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-close-modal"
+                onClick={() => setKpiModalProject(null)}
+              >
+                {L('closeModal')}
+              </button>
+            </div>
           </div>
         </div>
       )}

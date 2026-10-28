@@ -110,6 +110,26 @@ describe('Historical Price Dashboard Components', () => {
       fireEvent.click(screen.getByText('✕'));
       expect(screen.queryByText(/ปิดหน้าต่าง/i)).not.toBeInTheDocument();
     });
+
+    it('gracefully handles projects where scope is null or undefined (e.g. real e-GP data)', () => {
+      const realWorldProjectsWithoutScope = [
+        {
+          ...INITIAL_PROJECTS[0],
+          scope: null as unknown as { th: string[]; en: string[] },
+        },
+      ];
+
+      renderWithProviders(
+        <SimilarProcurementEstimator
+          projects={realWorldProjectsWithoutScope}
+          historicalData={INITIAL_HISTORICAL}
+        />,
+      );
+
+      // Verify it renders safely without throwing TypeError
+      expect(screen.getByText(/ค้นหาโครงการย้อนหลังที่คล้ายคลึง/i)).toBeInTheDocument();
+      expect(screen.getByText(/ไม่มีข้อมูลขอบเขตงานโดยละเอียดสำหรับโครงการนี้/i)).toBeInTheDocument();
+    });
   });
 
   describe('AgencyComparisonView (User Story 3)', () => {
@@ -127,6 +147,25 @@ describe('Historical Price Dashboard Components', () => {
       // Check table is rendered with headers
       expect(screen.getByText(/ตารางสรุปข้อมูลการจัดซื้อจัดจ้างรายหน่วยงาน/i)).toBeInTheDocument();
       expect(screen.getAllByText(/งบประมาณรวมทั้งหมด/i).length).toBeGreaterThan(0);
+    });
+
+    it('opens Largest Tender details modal when clicking on a largest tender box or table cell', () => {
+      const metrics = aggregateAgencyMetrics(INITIAL_HISTORICAL, INITIAL_PROJECTS);
+      renderWithProviders(<AgencyComparisonView agencyMetrics={metrics} />);
+
+      // Find the "View Tender Details" badge or click the first largest project box
+      const viewButtons = screen.getAllByText(/ดูรายละเอียดโครงการ/i);
+      expect(viewButtons.length).toBeGreaterThan(0);
+      fireEvent.click(viewButtons[0]);
+
+      // Verify the Largest Tender modal opened
+      expect(screen.getByText('✕')).toBeInTheDocument();
+      expect(screen.getByText(/ปิดหน้าต่าง/i)).toBeInTheDocument();
+      expect(screen.getByText(/วิธีการจัดหา/i)).toBeInTheDocument();
+
+      // Close the modal
+      fireEvent.click(screen.getByText('✕'));
+      expect(screen.queryByText(/ปิดหน้าต่าง/i)).not.toBeInTheDocument();
     });
   });
 });
