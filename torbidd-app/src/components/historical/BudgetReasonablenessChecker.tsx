@@ -21,16 +21,13 @@ export function BudgetReasonablenessChecker({
   const { language, L, getLocalized } = useLanguage();
 
   const [mode, setMode] = useState<'select' | 'custom'>('select');
-  const [selectedProjectId, setSelectedProjectId] = useState<number | string>(
-    projects[0]?.externalId ?? projects[0]?._id ?? '',
-  );
+  const [selectedProjectId, setSelectedProjectId] = useState<number | string>('');
 
-  // Sync selectedProjectId when projects arrive from API
-  React.useEffect(() => {
-    if (!selectedProjectId && projects.length > 0) {
-      setSelectedProjectId(projects[0].externalId ?? projects[0]._id ?? '');
-    }
-  }, [projects, selectedProjectId]);
+  const activeProjectId =
+    selectedProjectId ||
+    projects[0]?.externalId ??
+    projects[0]?._id ??
+    '';
 
   // Custom input state
   const [customTitle, setCustomTitle] = useState('');
@@ -42,8 +39,8 @@ export function BudgetReasonablenessChecker({
     if (mode === 'select') {
       const p = projects.find(
         (proj) =>
-          (proj.externalId && String(proj.externalId) === String(selectedProjectId)) ||
-          (proj._id && String(proj._id) === String(selectedProjectId)),
+          (proj.externalId && String(proj.externalId) === String(activeProjectId)) ||
+          (proj._id && String(proj._id) === String(activeProjectId)),
       ) || projects[0];
 
       return {
@@ -58,7 +55,7 @@ export function BudgetReasonablenessChecker({
         evalBudget: customBudget > 0 ? customBudget : 0,
       };
     }
-  }, [mode, selectedProjectId, projects, customTitle, customCategory, customBudget, getLocalized, language]);
+  }, [mode, activeProjectId, projects, customTitle, customCategory, customBudget, getLocalized, language]);
 
   const evaluation = useMemo(() => {
     return evaluateBudgetReasonableness(evalBudget, evalCategory, historicalData);
@@ -123,7 +120,7 @@ export function BudgetReasonablenessChecker({
             <select
               id="projectSelector"
               className="control-input"
-              value={selectedProjectId}
+              value={activeProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
               disabled={projects.length === 0}
             >

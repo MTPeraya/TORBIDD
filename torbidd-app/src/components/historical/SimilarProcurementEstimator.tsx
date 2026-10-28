@@ -22,16 +22,13 @@ export function SimilarProcurementEstimator({
 }: SimilarProcurementEstimatorProps) {
   const { language, L, getLocalized } = useLanguage();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<number | string>(
-    projects[0]?.externalId ?? projects[0]?._id ?? '',
-  );
+  const [selectedProjectId, setSelectedProjectId] = useState<number | string>('');
 
-  // Sync selectedProjectId when projects arrive from API
-  React.useEffect(() => {
-    if (!selectedProjectId && projects.length > 0) {
-      setSelectedProjectId(projects[0].externalId ?? projects[0]._id ?? '');
-    }
-  }, [projects, selectedProjectId]);
+  const activeProjectId =
+    selectedProjectId ||
+    projects[0]?.externalId ??
+    projects[0]?._id ??
+    '';
 
   const [keywordFilter, setKeywordFilter] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | ''>('');
@@ -42,11 +39,11 @@ export function SimilarProcurementEstimator({
     return (
       projects.find(
         (p) =>
-          (p.externalId && String(p.externalId) === String(selectedProjectId)) ||
-          (p._id && String(p._id) === String(selectedProjectId)),
+          (p.externalId && String(p.externalId) === String(activeProjectId)) ||
+          (p._id && String(p._id) === String(activeProjectId)),
       ) || projects[0]
     );
-  }, [projects, selectedProjectId]);
+  }, [projects, activeProjectId]);
 
   // Filter pool of historical data if category selected
   const historicalPool = useMemo(() => {
@@ -100,7 +97,7 @@ export function SimilarProcurementEstimator({
           <select
             id="targetProjectSelect"
             className="control-input"
-            value={selectedProjectId}
+            value={activeProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
             disabled={projects.length === 0}
           >
