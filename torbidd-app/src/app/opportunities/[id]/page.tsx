@@ -14,6 +14,7 @@ import { BudgetBreakdownCard } from '@/components/ui/BudgetBreakdownCard';
 import { TorDocumentViewer } from '@/components/ui/TorDocumentViewer';
 import { SetAlertModal } from '@/components/ui/SetAlertModal';
 import { TechStackRequirements } from '@/components/ui/TechStackRequirements';
+import { AuthPromptModal, AuthFeatureType } from '@/components/ui/AuthPromptModal';
 import {
   formatBudgetFull,
   formatDate,
@@ -33,7 +34,10 @@ export default function ProjectDetailPage({
   const router = useRouter();
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
-  const { isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalFeature, setAuthModalFeature] = useState<AuthFeatureType>('bookmark');
 
   const [project, setProject] = useState<Project | null>(null);
   const [checkedIndices, setCheckedIndices] = useState<number[]>([]);
@@ -525,7 +529,15 @@ export default function ProjectDetailPage({
 
               <button
                 className={`btn btn-bookmark ${bookmarked ? 'active' : ''}`}
-                onClick={() => toggleBookmark(projDetailId)}
+                data-testid="detail-bookmark-btn"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setAuthModalFeature('bookmark');
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  toggleBookmark(projDetailId);
+                }}
               >
                 {bookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
                 <span>{bookmarked ? L('saved') : L('saveBookmark')}</span>
@@ -533,10 +545,34 @@ export default function ProjectDetailPage({
 
               <button
                 className="btn btn-secondary"
-                onClick={() => setIsAlertModalOpen(true)}
+                data-testid="detail-alert-btn"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setAuthModalFeature('alert');
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  setIsAlertModalOpen(true);
+                }}
               >
                 {ICONS.bell}
                 <span>{L('setAlert')}</span>
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                data-testid="detail-compare-btn"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setAuthModalFeature('comparison');
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  router.push(`/historical?project=${projDetailId}`);
+                }}
+              >
+                {ICONS.chart}
+                <span>{language === 'th' ? 'เปรียบเทียบ' : 'Compare'}</span>
               </button>
 
               <button className="btn btn-icon" onClick={handleShare} title={L('share')}>
@@ -1032,6 +1068,14 @@ export default function ProjectDetailPage({
           </div>
         </div>
       )}
+
+      {/* Sign-in Prompt Modal for Gated Features */}
+      <AuthPromptModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        feature={authModalFeature}
+        returnUrl={`/opportunities/${id}`}
+      />
     </div>
   );
 }

@@ -187,7 +187,7 @@ export async function GET(req: NextRequest) {
                 org: 'กรุงเทพมหานคร',
               },
             },
-            { returnDocument: 'after', upsert: true },
+            { new: true, returnDocument: 'after', upsert: true },
           );
 
           if (dbUser?._id) {

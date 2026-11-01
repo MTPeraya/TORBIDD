@@ -15,7 +15,8 @@
     "db:migrate": "npx tsx scripts/db-migrate.ts",
     "docker:build": "docker build -t torbidd-app .",
     "docker:run": "docker run -p 3000:3000 --env-file .env.local torbidd-app",
-    "test": "jest"
+    "test": "jest",
+    "test:e2e": "jest tests/e2e"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.12.0",

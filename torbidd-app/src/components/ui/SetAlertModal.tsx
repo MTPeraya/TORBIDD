@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import { Project } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ICONS } from '@/components/ui/Icons';
 import { formatDate, daysUntil } from '@/lib/utils';
+import { AuthPromptModal } from '@/components/ui/AuthPromptModal';
 
 interface SetAlertModalProps {
   project: Project;
@@ -14,16 +16,28 @@ interface SetAlertModalProps {
 
 export function SetAlertModal({ project, isOpen, onClose }: SetAlertModalProps) {
   const { language, L, getLocalized } = useLanguage();
+  let isAuthenticated = true;
+  try {
+    const auth = useAuth();
+    isAuthenticated = auth.isAuthenticated;
+  } catch {}
+
   const [notify3Days, setNotify3Days] = useState(true);
   const [notify24Hours, setNotify24Hours] = useState(true);
   const [notifyAmendments, setNotifyAmendments] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   if (!isOpen) return null;
 
   const daysLeft = daysUntil(project.deadline);
 
   const handleSaveAlert = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+
     // Save to localStorage or mock notification service
     try {
       const existingAlerts = JSON.parse(localStorage.getItem('torbidd_opportunity_alerts') || '[]');
@@ -146,6 +160,13 @@ export function SetAlertModal({ project, isOpen, onClose }: SetAlertModalProps) 
           </button>
         </div>
       </div>
+
+      <AuthPromptModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        feature="alert"
+        returnUrl={`/opportunities/${project.externalId || (project as any).externalProjectId || project._id}`}
+      />
     </div>
   );
 }

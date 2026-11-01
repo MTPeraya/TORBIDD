@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Project, TorStatus } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useBookmarks } from '@/hooks/useBookmarks';
 import { ICONS } from '@/components/ui/Icons';
+import { AuthPromptModal, AuthFeatureType } from '@/components/ui/AuthPromptModal';
 import {
   formatBudget,
   formatDate,
@@ -76,6 +78,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
 
+  let isAuthenticated = true;
+  try {
+    const auth = useAuth();
+    isAuthenticated = auth.isAuthenticated;
+  } catch {}
+
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authFeature, setAuthFeature] = useState<AuthFeatureType>('bookmark');
+
   const extProject = project as ExtendedProject;
   const hasDeadline = project.deadline && project.deadline !== '';
   const days = hasDeadline ? daysUntil(project.deadline) : null;
@@ -134,6 +145,17 @@ export function ProjectCard({ project }: ProjectCardProps) {
     ? (language === 'th' ? 'วันประกาศ' : 'Published')
     : (language === 'th' ? 'วันที่ซิงค์' : 'Synced');
 
+  const handleBookmarkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!isAuthenticated) {
+      setAuthFeature('bookmark');
+      setShowAuthModal(true);
+      return;
+    }
+    toggleBookmark(cardId, e);
+  };
+
   return (
     <div className="project-card" onClick={handleCardClick} role="button" tabIndex={0}>
       <div>
@@ -143,14 +165,50 @@ export function ProjectCard({ project }: ProjectCardProps) {
             {statusText && <span className={statusTagClass}>{statusText}</span>}
             {getTorBadge(project.torStatus, language)}
           </div>
-          <button
-            type="button"
-            className={`bookmark-btn ${bookmarked ? 'active' : ''}`}
-            onClick={(e) => toggleBookmark(cardId, e)}
-            aria-label={bookmarked ? L('saved') : L('saveBookmark')}
-          >
-            {bookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button
+              type="button"
+              className="compare-btn"
+              data-testid="card-compare-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (!isAuthenticated) {
+                  setAuthFeature('comparison');
+                  setShowAuthModal(true);
+                  return;
+                }
+                router.push(`/historical?project=${cardId}`);
+              }}
+              aria-label={language === 'th' ? 'เปรียบเทียบโครงการ' : 'Compare Project'}
+              title={language === 'th' ? 'เปรียบเทียบโครงการ' : 'Compare Project'}
+              style={{
+                background: 'none',
+                border: '1px solid var(--gray-200, #e2e8f0)',
+                borderRadius: '6px',
+                padding: '4px 6px',
+                fontSize: '11px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                cursor: 'pointer',
+                color: 'var(--gray-600, #475569)',
+                marginRight: '6px',
+              }}
+            >
+              {ICONS.chart}
+              <span>{language === 'th' ? 'เปรียบเทียบ' : 'Compare'}</span>
+            </button>
+            <button
+              type="button"
+              className={`bookmark-btn ${bookmarked ? 'active' : ''}`}
+              data-testid="bookmark-btn"
+              onClick={handleBookmarkClick}
+              aria-label={bookmarked ? L('saved') : L('saveBookmark')}
+            >
+              {bookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
+            </button>
+          </div>
         </div>
 
         <div className="ai-tag-label">
@@ -295,6 +353,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
           )}
         </div>
       </div>
+
+      <AuthPromptModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        feature={authFeature}
+        returnUrl={`/opportunities/${cardId}`}
+      />
     </div>
   );
 }
