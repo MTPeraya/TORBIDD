@@ -18,6 +18,8 @@ export interface IProcurementProject extends Document {
   deadline?: Date;           // Actual bid closing date from source/TOR
   torStatus?: 'AVAILABLE' | 'NO_TOR' | 'PENDING'; // Whether TOR doc exists
   summary?: { th: string; en: string };
+  scope?: string[] | { th: string[]; en: string[] };
+  deliverables?: string[] | Array<{ id: string; name: string; date?: string }>;
   requiredTechnologies?: string[];
   technicalRequirements?: { th: string[]; en: string[] };
   extractedQualifications?: Array<{
@@ -151,6 +153,14 @@ const ProcurementProjectSchema = new Schema<IProcurementProject>(
     summary: {
       th: { type: String, default: '' },
       en: { type: String, default: '' },
+    },
+    scope: {
+      type: Schema.Types.Mixed,
+      default: [],
+    },
+    deliverables: {
+      type: Schema.Types.Mixed,
+      default: [],
     },
     requiredTechnologies: {
       type: [String],

@@ -446,6 +446,11 @@ export async function saveProcurementDocument(
 export async function updateProcurementProjectExtraction(
   externalProjectId: string,
   extraction: {
+    projectName?: string;
+    title?: { th: string; en: string } | null;
+    department?: string | { th: string; en: string } | null;
+    scope?: string[] | { th: string[]; en: string[] };
+    deliverables?: string[] | Array<{ id: string; name: string; date?: string }>;
     summary?: { th: string; en: string };
     budget?: number | null;
     medianPrice?: number | null;
@@ -476,6 +481,13 @@ export async function updateProcurementProjectExtraction(
     updatedAt: new Date(),
   };
 
+  if (extraction.projectName && extraction.projectName.trim()) {
+    updateData.projectName = extraction.projectName.trim();
+  } else if (extraction.title?.th) {
+    updateData.projectName = extraction.title.th.trim();
+  }
+  if (extraction.scope) updateData.scope = extraction.scope;
+  if (extraction.deliverables) updateData.deliverables = extraction.deliverables;
   if (extraction.summary) updateData.summary = extraction.summary;
   if (extraction.requiredTechnologies) updateData.requiredTechnologies = extraction.requiredTechnologies;
   if (extraction.technicalRequirements) updateData.technicalRequirements = extraction.technicalRequirements;
@@ -485,6 +497,9 @@ export async function updateProcurementProjectExtraction(
   if (extraction.fiscalYear && extraction.fiscalYear > 2500) updateData.fiscalYear = extraction.fiscalYear;
   if (extraction.agencyName && extraction.agencyName.trim() && extraction.agencyName !== 'กรมบัญชีกลาง') {
     updateData.agencyName = extraction.agencyName.trim();
+  } else if (extraction.department) {
+    const dept = typeof extraction.department === 'string' ? extraction.department : extraction.department.th;
+    if (dept && dept.trim()) updateData.agencyName = dept.trim();
   }
   if (extraction.publishDate) {
     const pub = new Date(extraction.publishDate);
