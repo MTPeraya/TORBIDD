@@ -7,3 +7,7 @@ if (typeof global.TextEncoder === 'undefined') {
 if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
+
+jest.mock('uuid', () => ({
+  v4: () => 'mocked-session-uuid-12345',
+}));
