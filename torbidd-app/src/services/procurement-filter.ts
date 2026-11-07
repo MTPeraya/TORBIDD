@@ -138,12 +138,14 @@ export function filterByBudget(
 }
 
 /**
- * Filter procurements by search query (title, department, category, description).
+ * Filter procurements by search query (title, scope, description, summary, department, category).
+ * Supports single keyword matching and multi-keyword queries (AND-matching across fields).
  */
 export function filterBySearch(projects: Project[], query?: string | null): Project[] {
   if (!query || !query.trim()) return projects;
 
   const q = query.trim().toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
 
   return projects.filter((p) => {
     const titleTh = p.title?.th?.toLowerCase() || '';
@@ -153,18 +155,30 @@ export function filterBySearch(projects: Project[], query?: string | null): Proj
     const cat = p.category?.toLowerCase() || '';
     const descTh = p.description?.th?.toLowerCase() || '';
     const descEn = p.description?.en?.toLowerCase() || '';
+    const summaryTh = p.summary?.th?.toLowerCase() || '';
+    const summaryEn = p.summary?.en?.toLowerCase() || '';
     const idStr = String(p.externalId || '');
 
-    return (
-      titleTh.includes(q) ||
-      titleEn.includes(q) ||
-      deptTh.includes(q) ||
-      deptEn.includes(q) ||
-      cat.includes(q) ||
-      descTh.includes(q) ||
-      descEn.includes(q) ||
-      idStr.includes(q)
-    );
+    // Extract scope text from both object { th, en } and array forms
+    const scopeTh = Array.isArray(p.scope?.th) ? p.scope.th.join(' ').toLowerCase() : '';
+    const scopeEn = Array.isArray(p.scope?.en) ? p.scope.en.join(' ').toLowerCase() : '';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawScope = Array.isArray((p as any).scope) ? ((p as any).scope as string[]).join(' ').toLowerCase() : '';
+    const combinedScope = `${scopeTh} ${scopeEn} ${rawScope}`;
+
+    const searchableText = `${titleTh} ${titleEn} ${deptTh} ${deptEn} ${cat} ${descTh} ${descEn} ${summaryTh} ${summaryEn} ${combinedScope} ${idStr}`;
+
+    // 1. Direct phrase / single keyword match
+    if (searchableText.includes(q)) {
+      return true;
+    }
+
+    // 2. Multi-keyword match: all terms must be present across searchable fields
+    if (tokens.length > 1) {
+      return tokens.every((token) => searchableText.includes(token));
+    }
+
+    return false;
   });
 }
 

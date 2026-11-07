@@ -204,7 +204,11 @@ export function procurementToProject(
     summary: p.summary?.th
       ? p.summary
       : undefined, // No fake summary — if no TOR extracted, show nothing
-    scope: p.scope && Array.isArray(p.scope?.th) && p.scope.th.length > 0 ? p.scope : undefined,
+    scope: p.scope && Array.isArray(p.scope?.th) && p.scope.th.length > 0
+      ? p.scope
+      : Array.isArray(p.scope) && p.scope.length > 0
+        ? { th: p.scope, en: p.scope }
+        : undefined,
     qualifications: p.qualifications && Array.isArray(p.qualifications?.th) && p.qualifications.th.length > 0 ? p.qualifications : undefined,
     // Only show technologies if actually extracted from TOR documents (no hardcoded fallbacks)
     requiredTechnologies: p.requiredTechnologies?.length ? p.requiredTechnologies : [],

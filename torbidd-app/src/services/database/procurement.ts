@@ -294,12 +294,29 @@ export async function getProcurementProjects(params: {
     const query: Record<string, any> = {};
 
     if (params.search) {
-      const regex = new RegExp(params.search, 'i');
-      query.$or = [
-        { projectName: regex },
-        { agencyName: regex },
-        { externalProjectId: regex },
-      ];
+      const rawSearch = params.search.trim();
+      const tokens = rawSearch.split(/\s+/).filter(Boolean);
+      const tokenConditions = tokens.map((t) => {
+        const regex = new RegExp(t, 'i');
+        return {
+          $or: [
+            { projectName: regex },
+            { agencyName: regex },
+            { externalProjectId: regex },
+            { scope: regex },
+            { 'scope.th': regex },
+            { 'scope.en': regex },
+            { 'summary.th': regex },
+            { 'summary.en': regex },
+          ],
+        };
+      });
+
+      if (tokenConditions.length === 1) {
+        query.$or = tokenConditions[0].$or;
+      } else if (tokenConditions.length > 1) {
+        query.$and = tokenConditions;
+      }
     }
 
     if (params.fiscalYear) {
@@ -331,13 +348,21 @@ export async function getProcurementProjects(params: {
 
   let cached = getCachedDiscoveredProjects();
   if (params.search) {
-    const q = params.search.toLowerCase();
-    cached = cached.filter(
-      (p) =>
-        p.projectName.toLowerCase().includes(q) ||
-        p.agencyName.toLowerCase().includes(q) ||
-        p.externalProjectId.includes(q),
-    );
+    const q = params.search.toLowerCase().trim();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    cached = cached.filter((p) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pAny = p as any;
+      const scopeStr = Array.isArray(pAny.scope)
+        ? pAny.scope.join(' ')
+        : pAny.scope && typeof pAny.scope === 'object'
+          ? `${pAny.scope.th?.join(' ') || ''} ${pAny.scope.en?.join(' ') || ''}`
+          : '';
+      const text = `${p.projectName} ${p.agencyName} ${p.externalProjectId} ${scopeStr} ${pAny.summary?.th || ''} ${pAny.summary?.en || ''}`.toLowerCase();
+      if (text.includes(q)) return true;
+      if (tokens.length > 1) return tokens.every((token) => text.includes(token));
+      return false;
+    });
   }
   if (params.fiscalYear) {
     cached = cached.filter((p) => p.fiscalYear === params.fiscalYear);
