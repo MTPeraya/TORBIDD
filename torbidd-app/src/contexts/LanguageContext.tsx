@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language } from '@/types/settings';
 import { LABELS, LabelKey } from '@/lib/labels';
-import { translateDepartment, translateProjectTitle } from '@/services/translation/dictionary';
+import { translateDepartment, translateProjectTitle, translateProcurementType } from '@/services/translation/dictionary';
 
 interface LanguageContextValue {
   language: Language;
@@ -97,21 +97,98 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     obj: { th: string; en: string } | { th: string[]; en: string[] } | string | string[] | undefined
   ): string | string[] => {
     if (!obj) return '';
-    if (typeof obj === 'string') return obj;
-    if (Array.isArray(obj)) return obj;
-    if (language === 'en') {
-      if (typeof obj === 'object') {
-        if ('en' in obj && obj.en && (!Array.isArray(obj.en) ? obj.en.trim() !== '' : obj.en.length > 0)) {
-          // If en is not identical to th, or if th is not Thai
-          return obj.en;
+
+    // If obj is a plain string
+    if (typeof obj === 'string') {
+      if (language === 'en' && /[\u0E00-\u0E7F]/.test(obj)) {
+        const trimmed = obj.trim();
+        // If it looks like a project title:
+        if (
+          trimmed.startsWith('โครงการ') ||
+          trimmed.includes('พัฒนาระบบ') ||
+          trimmed.includes('จัดซื้อ') ||
+          trimmed.includes('จ้าง')
+        ) {
+          const proj = translateProjectTitle(trimmed);
+          if (proj && proj !== trimmed && !/[\u0E00-\u0E7F]/.test(proj)) return proj;
         }
-        if ('th' in obj && typeof obj.th === 'string') {
-          // Automatic translation fallback for Thai text missing English translation
-          return translateDepartment(obj.th) || translateProjectTitle(obj.th) || obj.th;
+        // Try department translation
+        const dept = translateDepartment(trimmed);
+        if (dept && dept !== trimmed && !/[\u0E00-\u0E7F]/.test(dept)) return dept;
+        // Try procurement type
+        const proc = translateProcurementType(trimmed);
+        if (proc && proc !== trimmed && !/[\u0E00-\u0E7F]/.test(proc)) return proc;
+        // Fallback project title
+        const proj = translateProjectTitle(trimmed);
+        if (proj && proj !== trimmed && !/[\u0E00-\u0E7F]/.test(proj)) return proj;
+      }
+      return obj;
+    }
+
+    // If obj is an array of strings
+    if (Array.isArray(obj)) {
+      if (language === 'en') {
+        return obj.map((item) => {
+          if (typeof item === 'string' && /[\u0E00-\u0E7F]/.test(item)) {
+            return translateDepartment(item) || translateProjectTitle(item) || item;
+          }
+          return item;
+        });
+      }
+      return obj;
+    }
+
+    // If obj is a bilingual object { th, en }
+    if (typeof obj === 'object') {
+      if (language === 'en') {
+        if ('en' in obj && obj.en) {
+          if (Array.isArray(obj.en)) {
+            if (obj.en.length > 0) return obj.en;
+          } else if (typeof obj.en === 'string' && obj.en.trim() !== '') {
+            const enVal = obj.en.trim();
+            const thVal = typeof obj.th === 'string' ? obj.th.trim() : '';
+            const isThai = /[\u0E00-\u0E7F]/.test(enVal);
+            const isSameAsTh = enVal === thVal;
+            if (!isThai && !isSameAsTh) {
+              return enVal;
+            }
+          }
+        }
+
+        // Automatic fallback: translate obj.th to English
+        if ('th' in obj) {
+          if (Array.isArray(obj.th)) {
+            return obj.th;
+          }
+          if (typeof obj.th === 'string') {
+            const thVal = obj.th.trim();
+            // If it looks like a project title:
+            if (
+              thVal.startsWith('โครงการ') ||
+              thVal.includes('พัฒนาระบบ') ||
+              thVal.includes('จัดซื้อ') ||
+              thVal.includes('จ้าง')
+            ) {
+              const proj = translateProjectTitle(thVal);
+              if (proj && !/[\u0E00-\u0E7F]/.test(proj)) return proj;
+            }
+            // Check department
+            const dept = translateDepartment(thVal);
+            if (dept && !/[\u0E00-\u0E7F]/.test(dept)) return dept;
+            // Check procurement type
+            const proc = translateProcurementType(thVal);
+            if (proc && !/[\u0E00-\u0E7F]/.test(proc)) return proc;
+            // Fallback project title
+            const proj = translateProjectTitle(thVal);
+            if (proj && !/[\u0E00-\u0E7F]/.test(proj)) return proj;
+            return thVal;
+          }
         }
       }
+
+      if ('th' in obj && obj.th) return obj.th;
     }
-    if (obj.th) return obj.th;
+
     return '';
   };
 

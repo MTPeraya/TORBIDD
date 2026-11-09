@@ -56,6 +56,14 @@ export function Topbar() {
 
   const canonicalPath = stripLocale(pathname);
 
+  /** Navigate to the same page in the given locale using URL-based routing */
+  const switchLocale = (newLocale: 'th' | 'en') => {
+    setLanguage(newLocale);
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    const target = `/${newLocale}${canonicalPath === '/' ? '' : canonicalPath}${search}`;
+    router.push(target);
+  };
+
   // Sync unread notification count on navigation
   useEffect(() => {
     let mounted = true;
@@ -187,14 +195,14 @@ export function Topbar() {
           <button
             type="button"
             className={`lang-btn ${language === 'th' ? 'active' : ''}`}
-            onClick={() => setLanguage('th')}
+            onClick={() => switchLocale('th')}
           >
             TH
           </button>
           <button
             type="button"
             className={`lang-btn ${language === 'en' ? 'active' : ''}`}
-            onClick={() => setLanguage('en')}
+            onClick={() => switchLocale('en')}
           >
             EN
           </button>

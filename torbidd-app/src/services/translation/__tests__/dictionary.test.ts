@@ -1,4 +1,8 @@
-import { translateDepartment, translateProjectTitle } from '../dictionary';
+import {
+  translateDepartment,
+  translateProjectTitle,
+  translateProcurementType,
+} from '../dictionary';
 
 describe('Translation Dictionary & Heuristics', () => {
   describe('translateDepartment', () => {
@@ -85,6 +89,32 @@ describe('Translation Dictionary & Heuristics', () => {
       expect(translateProjectTitle('')).toBe('');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(translateProjectTitle(null as any)).toBe('');
+    });
+  });
+
+  describe('translateProcurementType', () => {
+    it('translates common Thai procurement method types', () => {
+      expect(translateProcurementType('e-Bidding')).toBe('e-Bidding');
+      expect(translateProcurementType('ประกวดราคาอิเล็กทรอนิกส์ (e-bidding)')).toBe('e-Bidding');
+      expect(translateProcurementType('วิธีเฉพาะเจาะจง')).toBe('Specific Method');
+      expect(translateProcurementType('วิธีคัดเลือก')).toBe('Selective Method');
+      expect(translateProcurementType('สอบราคา')).toBe('Price Inquiry');
+      expect(translateProcurementType('ประกวดราคา')).toBe('Open Competitive Bidding');
+      expect(translateProcurementType('ตลาดอิเล็กทรอนิกส์ (e-market)')).toBe('e-Market');
+      expect(translateProcurementType('ตกลงราคา')).toBe('Agreed Price Method');
+    });
+
+    it('handles substrings and variations gracefully', () => {
+      expect(translateProcurementType('จัดซื้อจัดจ้างโดยวิธีเฉพาะเจาะจง')).toBe('Specific Method Procurement');
+      expect(translateProcurementType('จัดซื้อจัดจ้างโดยวิธีคัดเลือก')).toBe('Selective Method Procurement');
+    });
+
+    it('handles empty and null inputs', () => {
+      expect(translateProcurementType('')).toBe('');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(translateProcurementType(null as any)).toBe('');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(translateProcurementType(undefined as any)).toBe('');
     });
   });
 });

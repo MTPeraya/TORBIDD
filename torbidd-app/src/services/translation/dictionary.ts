@@ -4,6 +4,46 @@
 // agencies, BMA departments, 50 district offices, and procurement project titles.
 // =============================================================================
 
+/** Thai procurement method types mapped to English equivalents */
+export const PROCUREMENT_TYPES: Record<string, string> = {
+  'e-Bidding': 'e-Bidding',
+  'ประกวดราคาอิเล็กทรอนิกส์ (e-bidding)': 'e-Bidding',
+  'ประกวดราคาอิเล็กทรอนิกส์': 'e-Bidding',
+  'ตลาดอิเล็กทรอนิกส์ (e-market)': 'e-Market',
+  'วิธีตลาดอิเล็กทรอนิกส์': 'e-Market',
+  'วิธีคัดเลือก': 'Selective Method',
+  'วิธีเฉพาะเจาะจง': 'Specific Method',
+  'เฉพาะเจาะจง': 'Specific Method',
+  'คัดเลือก': 'Selective Method',
+  'วิธีประกวดราคา': 'Open Price Competition',
+  'สอบราคา': 'Price Inquiry',
+  'ประกวดราคา': 'Open Competitive Bidding',
+  'ตกลงราคา': 'Agreed Price Method',
+  'จัดซื้อจัดจ้างโดยวิธีเฉพาะเจาะจง': 'Specific Method Procurement',
+  'จัดซื้อจัดจ้างโดยวิธีคัดเลือก': 'Selective Method Procurement',
+};
+
+/**
+ * Translates a Thai procurement method type to English.
+ * Returns the original string if no match is found.
+ */
+export function translateProcurementType(type: string | undefined | null): string {
+  if (!type || typeof type !== 'string') return type ?? '';
+  const trimmed = type.trim();
+  if (!trimmed) return trimmed;
+  if (PROCUREMENT_TYPES[trimmed]) return PROCUREMENT_TYPES[trimmed];
+  const lower = trimmed.toLowerCase();
+  if (lower.includes('e-bidding') || lower.includes('ebidding')) return 'e-Bidding';
+  if (lower.includes('e-market') || lower.includes('emarket')) return 'e-Market';
+  if (trimmed.includes('เฉพาะเจาะจง')) return 'Specific Method';
+  if (trimmed.includes('คัดเลือก')) return 'Selective Method';
+  if (trimmed.includes('สอบราคา')) return 'Price Inquiry';
+  if (trimmed.includes('ประกวดราคา')) return 'Competitive Bidding';
+  if (trimmed.includes('ตกลงราคา')) return 'Agreed Price Method';
+  if (!/[\u0E00-\u0E7F]/.test(trimmed)) return trimmed;
+  return '';
+}
+
 /** Standard BMA Departments */
 export const BMA_DEPARTMENTS: Record<string, string> = {
   'สำนักยุทธศาสตร์และประเมินผล': 'Strategy and Evaluation Department',
@@ -105,6 +145,16 @@ export function translateDepartment(deptTh: string | undefined | null): string {
   const trimmed = deptTh.trim();
   if (!trimmed) return '';
 
+  // If already Latin / English characters, keep as-is
+  if (!/[\u0E00-\u0E7F]/.test(trimmed)) {
+    return trimmed;
+  }
+
+  // If this is a project title rather than a department, do not handle here
+  if (trimmed.startsWith('โครงการ') || trimmed.startsWith('จ้างเหมาพัฒนาระบบ')) {
+    return '';
+  }
+
   // Direct lookup in known BMA departments
   if (BMA_DEPARTMENTS[trimmed]) {
     return BMA_DEPARTMENTS[trimmed];
@@ -116,38 +166,68 @@ export function translateDepartment(deptTh: string | undefined | null): string {
   }
 
   // District office pattern: สำนักงานเขต[ชื่อเขต]
-  const districtMatch = trimmed.match(/^สำนักงานเขต\s*([ก-๙a-zA-Z]+)/);
+  const districtMatch = trimmed.match(/สำนักงานเขต\s*([ก-๙a-zA-Z]+)/);
   if (districtMatch) {
     const rawName = districtMatch[1];
     const englishName = BMA_DISTRICTS[rawName] || rawName;
     return `${englishName} District Office`;
   }
 
-  // Department pattern: สำนัก[ชื่อ]
+  // Direct district name match, e.g. "คลองเตย"
+  if (BMA_DISTRICTS[trimmed]) {
+    return `${BMA_DISTRICTS[trimmed]} District Office`;
+  }
+
+  // "เขต[ชื่อเขต]" pattern
+  const subDistrictMatch = trimmed.match(/เขต\s*([ก-๙]+)/);
+  if (subDistrictMatch && BMA_DISTRICTS[subDistrictMatch[1]]) {
+    return `${BMA_DISTRICTS[subDistrictMatch[1]]} District Office`;
+  }
+
+  // Department pattern: contains known department name
   for (const [th, en] of Object.entries(BMA_DEPARTMENTS)) {
     if (trimmed.includes(th)) {
       return en;
     }
   }
 
+  // State agency pattern: contains known state agency name
+  for (const [th, en] of Object.entries(STATE_AGENCIES)) {
+    if (trimmed.includes(th)) {
+      return en;
+    }
+  }
+
   // Hospital pattern: โรงพยาบาล[ชื่อ]
-  if (trimmed.startsWith('โรงพยาบาล')) {
-    const hospName = trimmed.replace(/^โรงพยาบาล\s*/, '');
-    return `${hospName} Hospital`;
+  if (trimmed.includes('โรงพยาบาล')) {
+    const hospName = trimmed.replace(/.*โรงพยาบาล\s*/, '').trim();
+    return `${hospName || 'BMA'} Hospital`;
   }
 
   // College / University: มหาวิทยาลัย / วิทยาลัย
-  if (trimmed.startsWith('มหาวิทยาลัย')) {
-    const uniName = trimmed.replace(/^มหาวิทยาลัย\s*/, '');
-    return `${uniName} University`;
+  if (trimmed.includes('มหาวิทยาลัย')) {
+    const uniName = trimmed.replace(/.*มหาวิทยาลัย\s*/, '').trim();
+    return `${uniName || 'BMA'} University`;
   }
 
-  // If already Latin characters, keep as-is
-  if (!/[\u0E00-\u0E7F]/.test(trimmed)) {
-    return trimmed;
+  if (trimmed.startsWith('สำนักงาน')) {
+    return 'BMA Administrative Office';
+  }
+  if (trimmed.startsWith('สำนัก')) {
+    return 'BMA Department';
+  }
+  if (trimmed.startsWith('กอง')) {
+    return 'BMA Division';
+  }
+  if (trimmed.startsWith('ฝ่าย')) {
+    return 'BMA Section';
   }
 
-  return trimmed;
+  if (trimmed.includes('กรุงเทพมหานคร') || trimmed.includes('กทม')) {
+    return 'Bangkok Metropolitan Administration';
+  }
+
+  return '';
 }
 
 /**
@@ -170,15 +250,15 @@ export function translateProjectTitle(titleTh: string | undefined | null): strin
 
   // Detect project type keywords
   let action = 'Project';
-  if (trimmed.includes('พัฒนาระบบ') || trimmed.includes('พัฒนาโปรแกรม') || trimmed.includes('พัฒนาซอฟต์แวร์')) {
+  if (trimmed.includes('พัฒนาระบบ') || trimmed.includes('พัฒนาโปรแกรม') || trimmed.includes('พัฒนาซอฟต์แวร์') || trimmed.includes('พัฒนาแอป')) {
     action = 'System Development Project';
-  } else if (trimmed.includes('ปรับปรุงระบบ') || trimmed.includes('ยกระดับระบบ')) {
+  } else if (trimmed.includes('ปรับปรุงระบบ') || trimmed.includes('ยกระดับระบบ') || trimmed.includes('ปรับปรุง')) {
     action = 'System Upgrade & Enhancement Project';
   } else if (trimmed.includes('บำรุงรักษา') || trimmed.includes('ซ่อมบำรุง')) {
     action = 'Maintenance and Support Project';
-  } else if (trimmed.includes('จัดซื้อ') || trimmed.includes('จัดหา')) {
+  } else if (trimmed.includes('จัดซื้อ') || trimmed.includes('จัดหา') || trimmed.includes('ซื้อ')) {
     action = 'Procurement Project';
-  } else if (trimmed.includes('จ้างเหมา') || trimmed.includes('จ้างบริการ')) {
+  } else if (trimmed.includes('จ้างเหมา') || trimmed.includes('จ้างบริการ') || trimmed.includes('จ้าง')) {
     action = 'Services Procurement Project';
   } else if (trimmed.includes('เช่า')) {
     action = 'Leasing and Service Project';
@@ -196,21 +276,28 @@ export function translateProjectTitle(titleTh: string | undefined | null): strin
 
   // Common IT topics in Thai procurement
   const topicMap: Array<[RegExp, string]> = [
-    [/ศูนย์สื่อการเรียนรู้ออนไลน์|ห้องเรียนออนไลน์|lms/i, 'BMA Online Learning Management System (LMS)'],
-    [/แอปพลิเคชันบริการประชาชน|mobile app|แอปพลิเคชันบนมือถือ/i, 'BMA Citizen Mobile Application'],
-    [/ห้องสมุดเพื่อการเรียนรู้/i, 'BMA Digital Learning Library System'],
-    [/การจัดการขยะ|คัดแยกขยะ|ขยะมูลฝอย/i, 'Smart Waste Management and Tracking System'],
+    [/ศูนย์สื่อการเรียนรู้ออนไลน์|ห้องเรียนออนไลน์|lms|การศึกษา|โรงเรียน/i, 'BMA Online Learning Management System (LMS)'],
+    [/แอปพลิเคชันบริการประชาชน|mobile app|แอปพลิเคชันบนมือถือ|แอปพลิเคชัน/i, 'BMA Citizen Mobile Application'],
+    [/ห้องสมุดเพื่อการเรียนรู้|ห้องสมุด/i, 'BMA Digital Learning Library System'],
+    [/การจัดการขยะ|คัดแยกขยะ|ขยะมูลฝอย|ขยะ/i, 'Smart Waste Management and Tracking System'],
     [/การแพทย์ทางไกล|telemedicine|สุขภาพ/i, 'Telemedicine and Public Health Intelligence System'],
-    [/สวัสดิการผู้สูงอายุ|ผู้สูงอายุ/i, 'Senior Citizen Welfare & Subsidy Management System'],
-    [/คำนวณเงินบำเหน็จบำนาญ|บำเหน็จบำนาญ|การเงิน/i, 'BMA Pension & Financial Benefits Calculation System'],
-    [/สัญญาณไฟจราจรอัจฉริยะ|จราจร/i, 'Smart Traffic Light Control & Surveillance System'],
-    [/กล้องโทรทัศน์วงจรปิด|cctv/i, 'CCTV Video Analytics & Security Surveillance System'],
-    [/ทะเบียนราษฎร|บัตรประชาชน/i, 'Civil Registration & Citizen Identity Verification System'],
-    [/สารบรรณอิเล็กทรอนิกส์|e-document/i, 'Electronic Document Management System (e-Saraban)'],
-    [/ภาษีที่ดินและสิ่งปลูกสร้าง|ภาษี/i, 'Land and Building Tax Assessment & Collection System'],
-    [/ฐานข้อมูลรวมศูนย์|data warehouse|คลังข้อมูล/i, 'Centralized Data Warehouse and Analytics Platform'],
-    [/คลาวด์|cloud/i, 'Government Cloud Infrastructure & SaaS Platform'],
-    [/ปัญญาประดิษฐ์|ai/i, 'Artificial Intelligence Platform'],
+    [/เวชระเบียน|ผู้ป่วย|emr|his|โรงพยาบาล/i, 'Hospital Electronic Medical Record (EMR) System'],
+    [/สวัสดิการผู้สูงอายุ|ผู้สูงอายุ|คนพิการ|สวัสดิการ/i, 'Senior Citizen & Social Welfare Services System'],
+    [/คำนวณเงินบำเหน็จบำนาญ|บำเหน็จบำนาญ|เงินบำนาญ/i, 'BMA Pension & Financial Benefits Calculation System'],
+    [/สัญญาณไฟจราจรอัจฉริยะ|สัญญาณไฟจราจร|จราจร/i, 'Smart Traffic Light Control & Surveillance System'],
+    [/กล้องโทรทัศน์วงจรปิด|cctv|กล้องวงจรปิด/i, 'CCTV Video Analytics & Security Surveillance System'],
+    [/ทะเบียนราษฎร|บัตรประชาชน|thaid/i, 'Civil Registration & Citizen Identity Verification System'],
+    [/สารบรรณอิเล็กทรอนิกส์|e-document|e-saraban/i, 'Electronic Document Management System (e-Saraban)'],
+    [/ภาษีที่ดินและสิ่งปลูกสร้าง|ภาษีที่ดิน|ภาษี/i, 'Land and Building Tax Assessment & Collection System'],
+    [/สารเคมี|วัตถุอันตราย|gis/i, 'BMA Chemical Safety & Hazardous Materials GIS System'],
+    [/คุณภาพอากาศ|ฝุ่น|pm2\.5|aqi/i, 'BMA Air Quality Management & AQI Monitoring System'],
+    [/ฐานข้อมูลรวมศูนย์|data warehouse|คลังข้อมูล|ฐานข้อมูล/i, 'Centralized Data Warehouse and Analytics Platform'],
+    [/คลาวด์|cloud|เซิร์ฟเวอร์|server/i, 'Government Cloud Infrastructure & SaaS Platform'],
+    [/ปัญญาประดิษฐ์|ai|machine learning/i, 'Artificial Intelligence Platform'],
+    [/คอมพิวเตอร์|เครื่องคอมพิวเตอร์|pc|แท็บเล็ต/i, 'Computer Workstation & Hardware Infrastructure'],
+    [/เครือข่าย|network|wifi|อินเทอร์เน็ต/i, 'Enterprise Network & Telecommunication Infrastructure'],
+    [/ความมั่นคงปลอดภัย|ความปลอดภัยไซเบอร์|cybersecurity/i, 'Cybersecurity & Threat Defense System'],
+    [/ลิขสิทธิ์|license|subscription/i, 'Enterprise Software License & Cloud Subscription'],
   ];
 
   for (const [pattern, englishTopic] of topicMap) {
@@ -228,6 +315,9 @@ export function translateProjectTitle(titleTh: string | undefined | null): strin
     .replace(/^โครงการ\s*/, '')
     .replace(/^จ้าง\s*/, '');
 
+  if (/[\u0E00-\u0E7F]/.test(cleaned)) {
+    return `BMA Information Technology ${action}`;
+  }
+
   return `${cleaned} - ${action}`;
 }
-

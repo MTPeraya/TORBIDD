@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ICONS } from '@/components/ui/Icons';
@@ -26,8 +26,7 @@ function getLocaleFromPath(path: string): 'th' | 'en' | null {
 
 export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { language, setLanguage, L } = useLanguage();
+  const { L } = useLanguage();
   const { isAuthenticated, isAdmin } = useAuth();
 
   // Canonical path (without locale prefix) for active state detection
@@ -41,23 +40,12 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
   const isSaved = canonicalPath === '/saved';
   const isAdminRoute = canonicalPath === '/admin' || canonicalPath.startsWith('/admin/');
 
-  /** Navigate to the same page in the given locale using URL-based routing */
-  const switchLocale = (newLocale: 'th' | 'en') => {
-    setLanguage(newLocale);
-    // Navigate to /<locale>/<canonical-path> so the URL reflects the language
-    const target = `/${newLocale}${canonicalPath === '/' ? '' : canonicalPath}`;
-    router.push(target);
-  };
-
   // Locale-aware hrefs — if currently on a locale-prefixed URL, preserve the prefix
   const localePrefix = urlLocale ? `/${urlLocale}` : '';
 
   const toggleTooltip = collapsed
     ? (L('expandSidebar') || 'Expand sidebar')
     : (L('collapseSidebar') || 'Collapse sidebar');
-
-  // Active locale for language toggle button UI
-  const activeLang = language;
 
   return (
     <aside
@@ -185,52 +173,6 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
       </nav>
 
       <div className="sidebar-footer">
-        {/* Language Switcher — switches URL locale prefix + LanguageContext */}
-        <div
-          className="sidebar-lang-switch"
-          style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.5rem' }}
-          data-tooltip={collapsed ? (activeLang === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย') : undefined}
-          aria-label="Language switcher"
-        >
-          <button
-            type="button"
-            onClick={() => switchLocale('th')}
-            aria-pressed={activeLang === 'th'}
-            style={{
-              flex: 1,
-              padding: '0.25rem 0.4rem',
-              borderRadius: '0.4rem',
-              border: `1px solid ${activeLang === 'th' ? 'var(--color-primary, #6366f1)' : 'rgba(255,255,255,0.12)'}`,
-              background: activeLang === 'th' ? 'var(--color-primary, #6366f1)' : 'transparent',
-              color: activeLang === 'th' ? '#fff' : 'var(--color-text-secondary, rgba(255,255,255,0.5))',
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            {collapsed ? 'ไทย' : 'ไทย'}
-          </button>
-          <button
-            type="button"
-            onClick={() => switchLocale('en')}
-            aria-pressed={activeLang === 'en'}
-            style={{
-              flex: 1,
-              padding: '0.25rem 0.4rem',
-              borderRadius: '0.4rem',
-              border: `1px solid ${activeLang === 'en' ? 'var(--color-primary, #6366f1)' : 'rgba(255,255,255,0.12)'}`,
-              background: activeLang === 'en' ? 'var(--color-primary, #6366f1)' : 'transparent',
-              color: activeLang === 'en' ? '#fff' : 'var(--color-text-secondary, rgba(255,255,255,0.5))',
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            {collapsed ? 'EN' : 'EN'}
-          </button>
-        </div>
         <span className="sidebar-link-label">© 2026 TORBIDD Systems</span>
       </div>
     </aside>
