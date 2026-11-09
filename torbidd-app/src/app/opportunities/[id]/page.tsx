@@ -701,6 +701,42 @@ export default function ProjectDetailPage({
             </ul>
           </div>
 
+          {/* Expected Deliverables */}
+          {project.deliverables && (
+            <div className="detail-card deliverables-card" data-testid="detail-deliverables-card">
+              <h2 className="detail-card-title">
+                {ICONS.check}
+                <span>{language === 'th' ? 'ผลลัพธ์และสิ่งที่ต้องส่งมอบ' : 'Expected Deliverables'}</span>
+              </h2>
+              <ul className="deliverables-list" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {Array.isArray(project.deliverables)
+                  ? project.deliverables.map((item, idx) => {
+                      const text = typeof item === 'string' ? item : item.name || item.description || `Deliverable ${idx + 1}`;
+                      const dateStr = typeof item === 'object' && item.date ? formatDate(item.date, language) : null;
+                      return (
+                        <li key={idx} className="deliverable-item" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14 }}>
+                          <span className="deliverable-bullet" style={{ color: '#059669', fontWeight: 700 }}>✓</span>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ color: 'var(--gray-800)', fontWeight: 500 }}>{text}</span>
+                            {dateStr && (
+                              <span style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 2 }}>
+                                {language === 'th' ? `กำหนดส่งมอบ: ${dateStr}` : `Due: ${dateStr}`}
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })
+                  : ((getLocalized(project.deliverables) as string[]) || []).map((item, idx) => (
+                      <li key={idx} className="deliverable-item" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14 }}>
+                        <span className="deliverable-bullet" style={{ color: '#059669', fontWeight: 700 }}>✓</span>
+                        <span style={{ color: 'var(--gray-800)', fontWeight: 500 }}>{item}</span>
+                      </li>
+                    ))}
+              </ul>
+            </div>
+          )}
+
           {/* Timeline Milestones */}
           <ProcurementTimeline
             timeline={project.timeline}

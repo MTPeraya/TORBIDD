@@ -209,6 +209,8 @@ export function procurementToProject(
       : Array.isArray(p.scope) && p.scope.length > 0
         ? { th: p.scope, en: p.scope }
         : undefined,
+    deliverables: p.deliverables,
+    contactInfo: p.contactInfo,
     qualifications: p.qualifications && Array.isArray(p.qualifications?.th) && p.qualifications.th.length > 0 ? p.qualifications : undefined,
     // Only show technologies if actually extracted from TOR documents (no hardcoded fallbacks)
     requiredTechnologies: p.requiredTechnologies?.length ? p.requiredTechnologies : [],
