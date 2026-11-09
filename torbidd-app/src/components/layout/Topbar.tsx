@@ -39,6 +39,10 @@ function getProfileServerSnapshot(): string {
   return '';
 }
 
+function stripLocale(path: string): string {
+  return path.replace(/^\/(th|en)(\/|$)/, '/').replace(/\/$/, '') || '/';
+}
+
 export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -49,6 +53,8 @@ export function Topbar() {
   const [prevPathname, setPrevPathname] = useState(pathname);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const canonicalPath = stripLocale(pathname);
 
   // Sync unread notification count on navigation
   useEffect(() => {
@@ -129,15 +135,15 @@ export function Topbar() {
   }, [dropdownOpen]);
 
   const getPageCrumb = () => {
-    if (pathname === '/') return null;
-    if (pathname.startsWith('/opportunities/')) return L('projectDetail');
-    if (pathname === '/opportunities') return L('navDashboard');
-    if (pathname === '/historical') return L('navHistorical');
-    if (pathname === '/saved') return L('navSaved');
-    if (pathname === '/notifications') return L('tabNotifications');
-    if (pathname === '/settings') return L('navProfile');
-    if (pathname === '/login') return L('navLogin');
-    if (pathname === '/admin' || pathname.startsWith('/admin')) return L('navAdmin');
+    if (canonicalPath === '/') return null;
+    if (canonicalPath.startsWith('/opportunities/')) return L('projectDetail');
+    if (canonicalPath === '/opportunities') return L('navDashboard');
+    if (canonicalPath === '/historical') return L('navHistorical');
+    if (canonicalPath === '/saved') return L('navSaved');
+    if (canonicalPath === '/notifications') return L('tabNotifications');
+    if (canonicalPath === '/settings') return L('navProfile');
+    if (canonicalPath === '/login') return L('navLogin');
+    if (canonicalPath === '/admin' || canonicalPath.startsWith('/admin')) return L('navAdmin');
     return null;
   };
 

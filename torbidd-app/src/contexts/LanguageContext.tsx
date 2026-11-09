@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language } from '@/types/settings';
 import { LABELS, LabelKey } from '@/lib/labels';
+import { translateDepartment, translateProjectTitle } from '@/services/translation/dictionary';
 
 interface LanguageContextValue {
   language: Language;
@@ -26,10 +27,17 @@ function getLocaleCookie(): Language | null {
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
-    // Priority: 1) URL-based locale cookie (set by middleware for /th/* /en/* routes)
-    //           2) localStorage preference
-    //           3) default 'th'
+    // Priority: 1) Browser URL pathname prefix (/th/... or /en/...)
+    //           2) URL-based locale cookie (set by middleware)
+    //           3) localStorage preference
+    //           4) default 'th'
     if (typeof window !== 'undefined') {
+      const pathMatch = window.location.pathname.match(/^\/(th|en)(\/|$)/);
+      if (pathMatch) {
+        const urlLang = pathMatch[1] as Language;
+        document.documentElement.lang = urlLang;
+        return urlLang;
+      }
       const localeCookie = getLocaleCookie();
       if (localeCookie) {
         document.documentElement.lang = localeCookie;
@@ -44,10 +52,36 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return 'th';
   });
 
+  // Sync state if browser back/forward button is pressed
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathMatch = window.location.pathname.match(/^\/(th|en)(\/|$)/);
+      if (pathMatch) {
+        const urlLang = pathMatch[1] as Language;
+        setLanguageState(urlLang);
+        document.documentElement.lang = urlLang;
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('torbidd_lang', lang);
-    document.documentElement.lang = lang;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('torbidd_lang', lang);
+      document.cookie = `torbidd_locale=${lang}; path=/; max-age=31536000; SameSite=Lax`;
+      document.documentElement.lang = lang;
+
+      // Update URL to match new locale: e.g. /th/historical -> /en/historical
+      const currentPath = window.location.pathname;
+      const currentSearch = window.location.search;
+      const stripped = currentPath.replace(/^\/(th|en)(\/|$)/, '/').replace(/\/$/, '') || '/';
+      const newPath = `/${lang}${stripped === '/' ? '' : stripped}${currentSearch}`;
+      if (window.location.pathname !== newPath) {
+        window.history.pushState(null, '', newPath);
+      }
+    }
   };
 
   const toggleLanguage = (lang: Language) => {
@@ -65,7 +99,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     if (!obj) return '';
     if (typeof obj === 'string') return obj;
     if (Array.isArray(obj)) return obj;
-    if (language === 'en' && obj.en) return obj.en;
+    if (language === 'en') {
+      if (typeof obj === 'object') {
+        if ('en' in obj && obj.en && (!Array.isArray(obj.en) ? obj.en.trim() !== '' : obj.en.length > 0)) {
+          // If en is not identical to th, or if th is not Thai
+          return obj.en;
+        }
+        if ('th' in obj && typeof obj.th === 'string') {
+          // Automatic translation fallback for Thai text missing English translation
+          return translateDepartment(obj.th) || translateProjectTitle(obj.th) || obj.th;
+        }
+      }
+    }
     if (obj.th) return obj.th;
     return '';
   };

@@ -16,8 +16,7 @@ import { SESSION_COOKIE } from '@/lib/session';
 import { AUTH_COOKIE_NAME, decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
 
 /** Supported locale prefixes */
-const SUPPORTED_LOCALES = ['th', 'en'] as const;
-type Locale = (typeof SUPPORTED_LOCALES)[number];
+type Locale = 'th' | 'en';
 
 /** Locale cookie name — readable by client JS (not httpOnly) */
 const LOCALE_COOKIE = 'torbidd_locale';
@@ -31,19 +30,14 @@ const ADMIN_ROUTES = ['/admin'];
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ── Locale Prefix Handling (/th/... and /en/...) ───────────────────────────
-  // Match /th/<rest> or /en/<rest> (including bare /th and /en)
+  // ── 1. Locale-Prefixed Routes (/th/... and /en/...) ───────────────────────
   const localeMatch = pathname.match(/^\/(th|en)(\/.*)?$/);
   if (localeMatch) {
     const locale = localeMatch[1] as Locale;
     // The rest of the path after the locale prefix (e.g. "/historical")
     const rest = localeMatch[2] || '/';
 
-    // Build the internal rewrite URL (strip locale prefix, keep the rest)
-    const rewriteUrl = req.nextUrl.clone();
-    rewriteUrl.pathname = rest;
-
-    // ── Auth checks on the canonical path before rewriting ─────────────────
+    // ── Auth checks on the canonical path ─────────────────────────────────
     const isAdminRoute = ADMIN_ROUTES.some(
       (route) => rest === route || rest.startsWith(`${route}/`),
     );
@@ -75,12 +69,16 @@ export function middleware(req: NextRequest) {
       }
     }
 
-    // Rewrite to the existing canonical page (no route restructuring needed)
+    // Build the internal rewrite URL (strip locale prefix, keep the rest)
+    const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.pathname = rest;
+
+    // Rewrite to the canonical page
     const rewriteResponse = NextResponse.rewrite(rewriteUrl);
 
     // Set locale cookie (readable by client for LanguageContext)
     rewriteResponse.cookies.set(LOCALE_COOKIE, locale, {
-      httpOnly: false, // Must be client-readable for LanguageContext
+      httpOnly: false,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 365, // 1 year
       path: '/',
@@ -99,28 +97,7 @@ export function middleware(req: NextRequest) {
     return rewriteResponse;
   }
 
-  // ── Admin Page Protection (/admin) ─────────────────────────────────────────
-  const isAdminRoute = ADMIN_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-
-  if (isAdminRoute) {
-    const authCookie = req.cookies.get(AUTH_COOKIE_NAME)?.value;
-    if (!authCookie) {
-      const loginUrl = new URL('/login', req.url);
-      loginUrl.searchParams.set('from', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    const session = decodeSessionPayload(authCookie);
-    if (!session || !isAdminUser(session.user)) {
-      const homeUrl = new URL('/', req.url);
-      homeUrl.searchParams.set('auth_error', 'admin_required');
-      return NextResponse.redirect(homeUrl);
-    }
-  }
-
-  // ── Admin API Protection (/api/admin/*) ────────────────────────────────────
+  // ── 2. Admin API Protection (/api/admin/*) ────────────────────────────────
   if (pathname.startsWith('/api/admin/')) {
     const authCookie = req.cookies.get(AUTH_COOKIE_NAME)?.value;
     if (!authCookie) {
@@ -133,34 +110,38 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // ── Standard Protected Routes ─────────────────────────────────────────────
-  const isProtected = PROTECTED_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
+  // ── 3. Bypass API, docs, static assets ────────────────────────────────────
+  const isApiOrStatic =
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/docs/') ||
+    pathname.includes('.') ||
+    pathname.startsWith('/_next/');
 
-  if (isProtected) {
-    const authCookie = req.cookies.get(AUTH_COOKIE_NAME)?.value;
-    if (!authCookie) {
-      const loginUrl = new URL('/login', req.url);
-      loginUrl.searchParams.set('from', pathname);
-      return NextResponse.redirect(loginUrl);
+  if (isApiOrStatic) {
+    const response = NextResponse.next();
+    if (!req.cookies.get(SESSION_COOKIE)) {
+      response.cookies.set(SESSION_COOKIE, uuidv4(), {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 365,
+        path: '/',
+      });
     }
+    return response;
   }
 
-  // ── Session Cookie Initialization ─────────────────────────────────────────
-  const response = NextResponse.next();
+  // ── 4. Redirect bare page routes to locale-prefixed routes ─────────────────
+  // e.g. /historical -> /th/historical or /en/historical
+  const savedLocale = req.cookies.get(LOCALE_COOKIE)?.value;
+  const preferredLocale: Locale =
+    savedLocale === 'en' || savedLocale === 'th' ? savedLocale : 'th';
 
-  if (!req.cookies.get(SESSION_COOKIE)) {
-    const sessionId = uuidv4();
-    response.cookies.set(SESSION_COOKIE, sessionId, {
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 365, // 1 year
-      path: '/',
-    });
-  }
-
-  return response;
+  const targetUrl = new URL(
+    `/${preferredLocale}${pathname === '/' ? '' : pathname}`,
+    req.url,
+  );
+  targetUrl.search = req.nextUrl.search;
+  return NextResponse.redirect(targetUrl);
 }
 
 export const config = {

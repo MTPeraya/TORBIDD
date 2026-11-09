@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "npx tsx scripts/seed.ts",
+    "translate:projects": "npx tsx scripts/translate-projects.ts",
     "sync:all": "npx tsx scripts/sync-all.ts",
     "sync:bma": "npx tsx scripts/sync-bma.ts",
     "update:all": "npx tsx scripts/update-all-projects.ts",
