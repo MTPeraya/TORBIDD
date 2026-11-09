@@ -3,7 +3,12 @@
 // OpenRouter Multi-Model Classifier Adapter (UC-10)
 // =============================================================================
 
-import { AiClassifierAdapter, ClassificationResult } from './types';
+import {
+  AiClassifierAdapter,
+  ClassificationResult,
+  AiRateLimitError,
+  AiProviderError,
+} from './types';
 import { buildClassificationPrompt, parseAndValidateAiResponse } from './prompt';
 import { classifyByKeywords } from './keyword-adapter';
 
@@ -13,12 +18,14 @@ export interface OpenRouterAdapterOptions {
   baseUrl?: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  disableKeywordFallback?: boolean;
 }
 
 export class OpenRouterAdapter implements AiClassifierAdapter {
   public readonly name = 'OpenRouterAdapter';
   public readonly provider = 'openrouter';
   public readonly model: string;
+  public readonly disableKeywordFallback: boolean;
 
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -27,6 +34,7 @@ export class OpenRouterAdapter implements AiClassifierAdapter {
 
   public constructor(options: OpenRouterAdapterOptions = {}) {
     this.apiKey = (options.apiKey ?? process.env.OPENROUTER_API_KEY ?? '').trim();
+    this.disableKeywordFallback = options.disableKeywordFallback ?? false;
     this.model = (
       options.model ??
       process.env.OPENROUTER_MODEL ??
@@ -53,6 +61,9 @@ export class OpenRouterAdapter implements AiClassifierAdapter {
 
   public async classify(title: string, description: string): Promise<ClassificationResult> {
     if (!this.isConfigured()) {
+      if (this.disableKeywordFallback) {
+        throw new AiProviderError(this.provider, 'No OpenRouter API key configured');
+      }
       return classifyByKeywords(title, description);
     }
 
@@ -89,11 +100,23 @@ export class OpenRouterAdapter implements AiClassifierAdapter {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
 
+      if (response.status === 429) {
+        const errorText = await response.text().catch(() => '');
+        console.warn(`[OpenRouterAdapter] Hit rate limit (HTTP 429): ${errorText.slice(0, 200)}`);
+        if (this.disableKeywordFallback) {
+          throw new AiRateLimitError(this.provider, `HTTP 429: ${errorText.slice(0, 200)}`, 60000);
+        }
+        return classifyByKeywords(title, description);
+      }
+
       if (!response.ok) {
         const errorText = await response.text().catch(() => '');
         console.warn(
-          `[OpenRouterAdapter] API returned HTTP ${response.status}: ${errorText.slice(0, 200)} — falling back to keyword classifier.`,
+          `[OpenRouterAdapter] API returned HTTP ${response.status}: ${errorText.slice(0, 200)}`,
         );
+        if (this.disableKeywordFallback) {
+          throw new AiProviderError(this.provider, errorText.slice(0, 200), response.status);
+        }
         return classifyByKeywords(title, description);
       }
 
@@ -102,14 +125,28 @@ export class OpenRouterAdapter implements AiClassifierAdapter {
 
       return parseAndValidateAiResponse(
         rawText,
-        () => classifyByKeywords(title, description),
+        () => {
+          if (this.disableKeywordFallback) {
+            throw new AiProviderError(this.provider, 'Invalid JSON returned by OpenRouter API');
+          }
+          return classifyByKeywords(title, description);
+        },
         { provider: this.provider, model: this.model },
       );
     } catch (err) {
+      if (err instanceof AiRateLimitError || err instanceof AiProviderError) {
+        throw err;
+      }
       console.warn(
-        '[OpenRouterAdapter] Request failed — falling back to keyword classifier:',
+        '[OpenRouterAdapter] Request failed:',
         err instanceof Error ? err.message : String(err),
       );
+      if (this.disableKeywordFallback) {
+        throw new AiProviderError(
+          this.provider,
+          err instanceof Error ? err.message : String(err),
+        );
+      }
       return classifyByKeywords(title, description);
     }
   }

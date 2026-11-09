@@ -10,7 +10,6 @@ import {
   getProjectByExternalId,
 } from '@/services/database/projects';
 import { getProjectWithDocuments } from '@/services/database/procurement';
-import { INITIAL_PROJECTS } from '@/lib/initialData';
 import { enrichProjectDetail } from '@/lib/projectDetailHelper';
 import { Project } from '@/types/project';
 import {
@@ -69,13 +68,6 @@ export async function GET(
             projectObj = enrichProjectDetail(raw as unknown as Project);
           }
         } catch {}
-
-        if (!projectObj) {
-          const fallback = INITIAL_PROJECTS.find((p) => p.externalId === numId);
-          if (fallback) {
-            projectObj = enrichProjectDetail(fallback);
-          }
-        }
       }
     }
 
@@ -89,16 +81,6 @@ export async function GET(
           projectObj = enrichProjectDetail(raw as unknown as Project);
         }
       } catch {}
-    }
-
-    // 4. Try matching INITIAL_PROJECTS by string id or externalId
-    if (!projectObj) {
-      const fallback = INITIAL_PROJECTS.find(
-        (p) => String(p.externalId) === cleanId || p._id === cleanId,
-      );
-      if (fallback) {
-        projectObj = enrichProjectDetail(fallback);
-      }
     }
 
     if (!projectObj) {

@@ -57,6 +57,19 @@ export interface BudgetReasonablenessResult {
   };
 }
 
+export interface AgencyTopProject {
+  _id?: string;
+  title: BilingualText;
+  budget: number;
+  year: number;
+  department?: Department;
+  category?: ProjectCategory;
+  procurementType?: string;
+  awardedVendor?: BilingualText;
+  description?: BilingualText;
+  scope?: { th: string[]; en: string[] };
+}
+
 export interface AgencyComparisonMetrics {
   departmentKey: string;
   department: Department;
@@ -68,11 +81,7 @@ export interface AgencyComparisonMetrics {
   minBudget: number;
   categories: Record<string, number>;
   primaryCategory: ProjectCategory;
-  topProject: {
-    title: BilingualText;
-    budget: number;
-    year: number;
-  };
+  topProject: AgencyTopProject;
 }
 
 export interface SimilarProcurementItem {

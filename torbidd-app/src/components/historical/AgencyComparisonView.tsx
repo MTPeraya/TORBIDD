@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { AgencyComparisonMetrics } from '@/types/historical';
+import { AgencyComparisonMetrics, AgencyTopProject } from '@/types/historical';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatBudget, formatBudgetFull } from '@/lib/utils';
 import { AgencyBudgetChart, AgencyCategoryChart } from '@/components/charts/HistoricalCharts';
@@ -16,6 +16,7 @@ export function AgencyComparisonView({ agencyMetrics }: AgencyComparisonViewProp
 
   const [sortField, setSortField] = useState<'totalBudget' | 'avgBudget' | 'projectCount'>('totalBudget');
   const [sortAsc, setSortAsc] = useState(false);
+  const [modalProject, setModalProject] = useState<AgencyTopProject | null>(null);
 
   // Side-by-side agency comparator selection
   const [agencyKey1, setAgencyKey1] = useState<string>(agencyMetrics[0]?.departmentKey || '');
@@ -158,13 +159,28 @@ export function AgencyComparisonView({ agencyMetrics }: AgencyComparisonViewProp
 
               <div className="metric-row top-project-row">
                 <span className="m-label">{L('largestProject')}</span>
-                <div className="top-proj-box">
+                <div
+                  className="top-proj-box clickable"
+                  onClick={() => setModalProject(agency1.topProject)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setModalProject(agency1.topProject);
+                    }
+                  }}
+                  title={language === 'th' ? 'คลิกเพื่อดูรายละเอียดโครงการ' : 'Click to view tender details'}
+                >
                   <span className="top-proj-title">
                     {getLocalized(agency1.topProject.title) as string}
                   </span>
                   <span className="top-proj-cost">
                     {formatBudget(agency1.topProject.budget, language)} (
                     {agency1.topProject.year + (language === 'th' ? 543 : 0)})
+                  </span>
+                  <span className="top-proj-view-badge">
+                    👁️ {language === 'th' ? 'ดูรายละเอียดโครงการ' : 'View Tender Details'}
                   </span>
                 </div>
               </div>
@@ -200,13 +216,28 @@ export function AgencyComparisonView({ agencyMetrics }: AgencyComparisonViewProp
 
               <div className="metric-row top-project-row">
                 <span className="m-label">{L('largestProject')}</span>
-                <div className="top-proj-box">
+                <div
+                  className="top-proj-box clickable"
+                  onClick={() => setModalProject(agency2.topProject)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setModalProject(agency2.topProject);
+                    }
+                  }}
+                  title={language === 'th' ? 'คลิกเพื่อดูรายละเอียดโครงการ' : 'Click to view tender details'}
+                >
                   <span className="top-proj-title">
                     {getLocalized(agency2.topProject.title) as string}
                   </span>
                   <span className="top-proj-cost">
                     {formatBudget(agency2.topProject.budget, language)} (
                     {agency2.topProject.year + (language === 'th' ? 543 : 0)})
+                  </span>
+                  <span className="top-proj-view-badge">
+                    👁️ {language === 'th' ? 'ดูรายละเอียดโครงการ' : 'View Tender Details'}
                   </span>
                 </div>
               </div>
@@ -280,13 +311,30 @@ export function AgencyComparisonView({ agencyMetrics }: AgencyComparisonViewProp
                         {CATEGORY_LABELS[language][agency.primaryCategory]}
                       </span>
                     </td>
-                    <td className="top-proj-cell">
+                    <td
+                      className="top-proj-cell clickable"
+                      onClick={() => setModalProject(agency.topProject)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setModalProject(agency.topProject);
+                        }
+                      }}
+                      title={language === 'th' ? 'คลิกเพื่อดูรายละเอียดโครงการมูลค่าสูงสุด' : 'Click to view largest tender details'}
+                    >
                       <div className="top-cell-title">
                         {getLocalized(agency.topProject.title) as string}
                       </div>
-                      <span className="top-cell-budget">
-                        {formatBudget(agency.topProject.budget, language)}
-                      </span>
+                      <div className="top-cell-meta-row">
+                        <span className="top-cell-budget">
+                          {formatBudget(agency.topProject.budget, language)}
+                        </span>
+                        <span className="top-cell-view-link">
+                          👁️ {language === 'th' ? 'ดูข้อมูล' : 'View'}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -295,6 +343,104 @@ export function AgencyComparisonView({ agencyMetrics }: AgencyComparisonViewProp
           </table>
         </div>
       </div>
+
+      {/* Largest Tender Inspector Modal */}
+      {modalProject && (
+        <div className="modal-backdrop" onClick={() => setModalProject(null)}>
+          <div className="modal-content-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <span className="modal-category">
+                  {modalProject.category
+                    ? CATEGORY_LABELS[language][modalProject.category]
+                    : L('largestProject')}{' '}
+                  · {modalProject.year + (language === 'th' ? 543 : 0)}
+                </span>
+                <h3 className="modal-title">{getLocalized(modalProject.title) as string}</h3>
+                <span className="modal-dept">
+                  {modalProject.department ? (getLocalized(modalProject.department) as string) : ''}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setModalProject(null)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="modal-meta-grid">
+                <div className="meta-card">
+                  <span className="meta-label">{L('budget')}</span>
+                  <strong className="meta-value text-primary">
+                    {formatBudgetFull(modalProject.budget, language)}
+                  </strong>
+                </div>
+                <div className="meta-card">
+                  <span className="meta-label">
+                    {language === 'th' ? 'วิธีการจัดหา' : 'Procurement Type'}
+                  </span>
+                  <strong className="meta-value">
+                    {modalProject.procurementType || 'e-Bidding'}
+                  </strong>
+                </div>
+                {modalProject.awardedVendor && (
+                  <div className="meta-card">
+                    <span className="meta-label">{L('awardedVendor')}</span>
+                    <strong className="meta-value">
+                      {getLocalized(modalProject.awardedVendor) as string}
+                    </strong>
+                  </div>
+                )}
+              </div>
+
+              {modalProject.description && (
+                <div className="modal-section">
+                  <h4 className="section-subtitle">{L('projectDesc')}</h4>
+                  <p className="modal-desc-text">
+                    {getLocalized(modalProject.description) as string}
+                  </p>
+                </div>
+              )}
+
+              <div className="modal-section">
+                <h4 className="section-subtitle">{L('scopeOfWork')}</h4>
+                <ul className="modal-scope-list">
+                  {modalProject.scope &&
+                  ((modalProject.scope[language] && modalProject.scope[language].length > 0) ||
+                    (modalProject.scope.th && modalProject.scope.th.length > 0)) ? (
+                    (modalProject.scope[language] || modalProject.scope.th || []).map((item, idx) => (
+                      <li key={idx} className="modal-scope-item">
+                        <span className="bullet-check">✓</span>
+                        <span>{item}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li>
+                      {language === 'th'
+                        ? 'ไม่มีข้อมูลขอบเขตงานโดยละเอียดสำหรับโครงการนี้'
+                        : 'No detailed scope records available for this project'}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-close-modal"
+                onClick={() => setModalProject(null)}
+              >
+                {L('closeModal')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

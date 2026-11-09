@@ -6727,12 +6727,18 @@ body.dark-mode .admin-form-input {
   border-radius: var(--border-radius-sm);
   padding: 16px;
   margin-bottom: 20px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .control-label {
@@ -6742,6 +6748,10 @@ body.dark-mode .admin-form-input {
 }
 
 .control-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 10px 14px;
   border: 1px solid var(--gray-300);
   border-radius: var(--border-radius-sm);
@@ -6752,6 +6762,13 @@ body.dark-mode .admin-form-input {
   transition: border-color 0.2s ease;
 }
 
+select.control-input {
+  cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 .control-input:focus {
   outline: none;
   border-color: var(--primary-600);
@@ -6760,8 +6777,10 @@ body.dark-mode .admin-form-input {
 
 .custom-input-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.5fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.5fr);
   gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .preset-budget-buttons {
@@ -7054,19 +7073,25 @@ body.dark-mode .admin-form-input {
 
 .estimator-toolbar {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.5fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.3fr);
   gap: 14px;
   background: var(--white);
   border: 1px solid var(--gray-300);
   border-radius: var(--border-radius);
   padding: 18px;
   box-shadow: var(--shadow-sm);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .toolbar-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Pricing Estimate Card */
@@ -7800,6 +7825,29 @@ body.dark-mode .admin-form-input {
   width: 100%;
 }
 
+.top-proj-box.clickable {
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.top-proj-box.clickable:hover {
+  background: var(--primary-50);
+  border-color: var(--primary-500);
+  box-shadow: 0 2px 8px rgba(39, 115, 165, 0.14);
+  transform: translateY(-1px);
+}
+
+.top-proj-view-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--primary-600);
+  margin-top: 4px;
+}
+
 .top-proj-title {
   font-size: 0.82rem;
   font-weight: 600;
@@ -7908,6 +7956,20 @@ body.dark-mode .admin-form-input {
   color: var(--primary-600);
 }
 
+.top-proj-cell.clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.top-proj-cell.clickable:hover {
+  background-color: var(--primary-50);
+}
+
+.top-proj-cell.clickable:hover .top-cell-title {
+  color: var(--primary-700);
+  text-decoration: underline;
+}
+
 .top-cell-title {
   font-size: 0.8rem;
   color: var(--gray-800);
@@ -7917,10 +7979,35 @@ body.dark-mode .admin-form-input {
   white-space: nowrap;
 }
 
+.top-cell-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
 .top-cell-budget {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--gray-600);
+}
+
+.top-cell-view-link {
+  font-size: 0.72rem;
+  color: var(--primary-600);
+  font-weight: 600;
+}
+
+.kpi-card.clickable {
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.kpi-card.clickable:hover {
+  border-color: var(--primary-500);
+  box-shadow: 0 4px 12px rgba(39, 115, 165, 0.15);
+  transform: translateY(-2px);
 }
 
 /* Historical Explorer Enhancements */
@@ -8020,6 +8107,13 @@ body.dark-mode .admin-form-input {
     grid-template-columns: repeat(2, 1fr);
   }
   .agency-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .custom-input-grid,
+  .estimator-toolbar {
     grid-template-columns: 1fr;
   }
 }

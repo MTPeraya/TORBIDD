@@ -17,9 +17,20 @@ import {
   classifyByKeywords,
   getAiClassifierAdapter,
   GetAdapterOptions,
+  switchActiveAiProvider,
+  getAiDiagnostics,
+  resetProviderCooldowns,
+  buildFallbackChain,
 } from './adapters';
 
-export { SOFTWARE_CATEGORIES, classifyByKeywords };
+export {
+  SOFTWARE_CATEGORIES,
+  classifyByKeywords,
+  switchActiveAiProvider,
+  getAiDiagnostics,
+  resetProviderCooldowns,
+  buildFallbackChain,
+};
 export type { ClassificationResult };
 
 /**

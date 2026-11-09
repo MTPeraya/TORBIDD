@@ -21,35 +21,39 @@ export function BudgetReasonablenessChecker({
   const { language, L, getLocalized } = useLanguage();
 
   const [mode, setMode] = useState<'select' | 'custom'>('select');
-  const [selectedProjectId, setSelectedProjectId] = useState<number | string>(
-    projects[0]?.externalId || 1,
-  );
+  const [selectedProjectId, setSelectedProjectId] = useState<number | string>('');
+
+  const activeProjectId =
+    selectedProjectId ||
+    (projects[0]?.externalId ?? projects[0]?._id ?? '');
 
   // Custom input state
-  const [customTitle, setCustomTitle] = useState('โครงการพัฒนาระบบคลาวด์ กทม.');
+  const [customTitle, setCustomTitle] = useState('');
   const [customCategory, setCustomCategory] = useState<ProjectCategory>('Website');
-  const [customBudget, setCustomBudget] = useState<number>(15_000_000);
+  const [customBudget, setCustomBudget] = useState<number>(0);
 
   // Active evaluation parameters
   const { evalTitle, evalCategory, evalBudget } = useMemo(() => {
     if (mode === 'select') {
       const p = projects.find(
-        (proj) => proj.externalId === Number(selectedProjectId) || proj._id === selectedProjectId,
+        (proj) =>
+          (proj.externalId && String(proj.externalId) === String(activeProjectId)) ||
+          (proj._id && String(proj._id) === String(activeProjectId)),
       ) || projects[0];
 
       return {
         evalTitle: p ? (getLocalized(p.title) as string) : '',
         evalCategory: p?.category || 'Website',
-        evalBudget: p?.budget || 10_000_000,
+        evalBudget: p?.budget ?? 0,
       };
     } else {
       return {
-        evalTitle: customTitle || 'Custom Project',
+        evalTitle: customTitle || (language === 'th' ? 'โครงการกำหนดเอง' : 'Custom Project'),
         evalCategory: customCategory,
-        evalBudget: customBudget > 0 ? customBudget : 1_000_000,
+        evalBudget: customBudget > 0 ? customBudget : 0,
       };
     }
-  }, [mode, selectedProjectId, projects, customTitle, customCategory, customBudget, getLocalized]);
+  }, [mode, activeProjectId, projects, customTitle, customCategory, customBudget, getLocalized, language]);
 
   const evaluation = useMemo(() => {
     return evaluateBudgetReasonableness(evalBudget, evalCategory, historicalData);
@@ -114,16 +118,30 @@ export function BudgetReasonablenessChecker({
             <select
               id="projectSelector"
               className="control-input"
-              value={selectedProjectId}
+              value={activeProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
+              disabled={projects.length === 0}
             >
-              {projects.map((p) => (
-                <option key={p.externalId || p._id} value={p.externalId}>
-                  #{p.externalId} {getLocalized(p.title) as string} —{' '}
-                  {formatBudget(p.budget, language)} (
-                  {CATEGORY_LABELS[language][p.category]})
+              {projects.length === 0 ? (
+                <option value="">
+                  {language === 'th' ? 'ไม่มีโครงการที่เปิดรับข้อเสนอ' : 'No active projects available'}
                 </option>
-              ))}
+              ) : (
+                projects.map((p) => {
+                  const titleStr = (getLocalized(p.title) as string) || '';
+                  const maxLen = 70;
+                  const displayTitle = titleStr.length > maxLen ? `${titleStr.slice(0, maxLen - 2)}...` : titleStr;
+                  return (
+                    <option
+                      key={p.externalId || p._id}
+                      value={p.externalId || p._id}
+                      title={`#${p.externalId} ${titleStr}`}
+                    >
+                      #{p.externalId} {displayTitle} — {formatBudget(p.budget, language)} ({CATEGORY_LABELS[language][p.category]})
+                    </option>
+                  );
+                })
+              )}
             </select>
           </div>
         ) : (

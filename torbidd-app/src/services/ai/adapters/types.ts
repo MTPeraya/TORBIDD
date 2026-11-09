@@ -5,7 +5,32 @@
 
 import { ProjectCategory } from '@/types/project';
 
-export type AiProvider = 'google-ai-studio' | 'vertexai' | 'openrouter' | 'keyword';
+export type AiProvider = 'google-ai-studio' | 'vertexai' | 'openrouter' | 'keyword' | 'fallback';
+
+export class AiRateLimitError extends Error {
+  public readonly status = 429;
+  public readonly provider: string;
+  public readonly retryAfterMs?: number;
+
+  public constructor(provider: string, message: string = 'Rate limit exceeded', retryAfterMs?: number) {
+    super(`[${provider}] 429 Rate limit exceeded: ${message}`);
+    this.name = 'AiRateLimitError';
+    this.provider = provider;
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+export class AiProviderError extends Error {
+  public readonly status?: number;
+  public readonly provider: string;
+
+  public constructor(provider: string, message: string, status?: number) {
+    super(`[${provider}] ${status ? `HTTP ${status}: ` : ''}${message}`);
+    this.name = 'AiProviderError';
+    this.provider = provider;
+    this.status = status;
+  }
+}
 
 export interface ClassificationResult {
   category: ProjectCategory;
@@ -14,6 +39,8 @@ export interface ClassificationResult {
   reasoning: string;
   provider?: string;
   model?: string;
+  fallbackUsed?: boolean;
+  primaryProviderFailed?: string;
 }
 
 export interface AiClassifierAdapter {

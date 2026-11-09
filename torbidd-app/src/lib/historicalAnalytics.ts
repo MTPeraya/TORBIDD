@@ -5,6 +5,7 @@
 import { BilingualText, Department, Project, ProjectCategory } from '@/types/project';
 import {
   AgencyComparisonMetrics,
+  AgencyTopProject,
   BudgetReasonablenessResult,
   CategoryBenchmarkStats,
   HistoricalProject,
@@ -321,7 +322,7 @@ export function aggregateAgencyMetrics(
     department: Department;
     budgets: number[];
     categories: Record<string, number>;
-    projects: { title: BilingualText; budget: number; year: number }[];
+    projects: AgencyTopProject[];
   };
 
   const agencyMap = new Map<string, DeptAggregate>();
@@ -333,6 +334,7 @@ export function aggregateAgencyMetrics(
     category: ProjectCategory,
     title: BilingualText,
     year: number,
+    extra?: Partial<AgencyTopProject>,
   ) => {
     const key = dept.th || dept.en;
     if (!agencyMap.has(key)) {
@@ -347,18 +349,41 @@ export function aggregateAgencyMetrics(
     const entry = agencyMap.get(key)!;
     entry.budgets.push(budget);
     entry.categories[category] = (entry.categories[category] || 0) + 1;
-    entry.projects.push({ title, budget, year });
+    entry.projects.push({
+      _id: extra?._id,
+      title,
+      budget,
+      year,
+      department: dept,
+      category,
+      procurementType: extra?.procurementType,
+      awardedVendor: extra?.awardedVendor,
+      description: extra?.description,
+      scope: extra?.scope,
+    });
   };
 
   // Ingest historical
   historicalData.forEach((h) => {
-    ingest(h.department, h.budget, h.category, h.title, h.year);
+    ingest(h.department, h.budget, h.category, h.title, h.year, {
+      _id: h._id,
+      procurementType: h.procurementType,
+      awardedVendor: h.awardedVendor,
+      description: h.description,
+      scope: h.scope,
+    });
   });
 
   // Ingest active projects (converting publish date to year)
   activeProjects.forEach((p) => {
     const year = new Date(p.publishDate).getFullYear() || 2026;
-    ingest(p.department, p.budget, p.category, p.title, year);
+    ingest(p.department, p.budget, p.category, p.title, year, {
+      _id: String(p.externalId || p._id || ''),
+      procurementType: p.procurementType,
+      awardedVendor: p.winnerName ? { th: p.winnerName, en: p.winnerName } : undefined,
+      description: p.description,
+      scope: p.scope,
+    });
   });
 
   // Calculate metrics per agency
