@@ -22,7 +22,7 @@ jest.mock('@google-cloud/translate', () => {
       };
     }),
   };
-});
+}, { virtual: true });
 
 describe('AutoTranslationService', () => {
   let service: AutoTranslationService;

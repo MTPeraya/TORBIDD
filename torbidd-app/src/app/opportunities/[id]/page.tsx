@@ -14,6 +14,7 @@ import { BudgetBreakdownCard } from '@/components/ui/BudgetBreakdownCard';
 import { TorDocumentViewer } from '@/components/ui/TorDocumentViewer';
 import { SetAlertModal } from '@/components/ui/SetAlertModal';
 import { TechStackRequirements } from '@/components/ui/TechStackRequirements';
+import { AuthPromptModal, AuthFeatureType } from '@/components/ui/AuthPromptModal';
 import {
   formatBudgetFull,
   formatDate,
@@ -34,7 +35,10 @@ export default function ProjectDetailPage({
   const router = useRouter();
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
-  const { isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalFeature, setAuthModalFeature] = useState<AuthFeatureType>('bookmark');
 
   const [project, setProject] = useState<Project | null>(null);
   const [checkedIndices, setCheckedIndices] = useState<number[]>([]);
@@ -526,7 +530,15 @@ export default function ProjectDetailPage({
 
               <button
                 className={`btn btn-bookmark ${bookmarked ? 'active' : ''}`}
-                onClick={() => toggleBookmark(projDetailId)}
+                data-testid="detail-bookmark-btn"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setAuthModalFeature('bookmark');
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  toggleBookmark(projDetailId);
+                }}
               >
                 {bookmarked ? ICONS.bookmarkFilled : ICONS.bookmark}
                 <span>{bookmarked ? L('saved') : L('saveBookmark')}</span>
@@ -534,10 +546,34 @@ export default function ProjectDetailPage({
 
               <button
                 className="btn btn-secondary"
-                onClick={() => setIsAlertModalOpen(true)}
+                data-testid="detail-alert-btn"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setAuthModalFeature('alert');
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  setIsAlertModalOpen(true);
+                }}
               >
                 {ICONS.bell}
                 <span>{L('setAlert')}</span>
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                data-testid="detail-compare-btn"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setAuthModalFeature('comparison');
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  router.push(`/historical?project=${projDetailId}`);
+                }}
+              >
+                {ICONS.chart}
+                <span>{language === 'th' ? 'เปรียบเทียบ' : 'Compare'}</span>
               </button>
 
               <button className="btn btn-icon" onClick={handleShare} title={L('share')}>
@@ -665,6 +701,42 @@ export default function ProjectDetailPage({
               ))}
             </ul>
           </div>
+
+          {/* Expected Deliverables */}
+          {project.deliverables && (
+            <div className="detail-card deliverables-card" data-testid="detail-deliverables-card">
+              <h2 className="detail-card-title">
+                {ICONS.check}
+                <span>{language === 'th' ? 'ผลลัพธ์และสิ่งที่ต้องส่งมอบ' : 'Expected Deliverables'}</span>
+              </h2>
+              <ul className="deliverables-list" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {Array.isArray(project.deliverables)
+                  ? project.deliverables.map((item, idx) => {
+                      const text = typeof item === 'string' ? item : item.name || item.description || `Deliverable ${idx + 1}`;
+                      const dateStr = typeof item === 'object' && item.date ? formatDate(item.date, language) : null;
+                      return (
+                        <li key={idx} className="deliverable-item" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14 }}>
+                          <span className="deliverable-bullet" style={{ color: '#059669', fontWeight: 700 }}>✓</span>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ color: 'var(--gray-800)', fontWeight: 500 }}>{text}</span>
+                            {dateStr && (
+                              <span style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 2 }}>
+                                {language === 'th' ? `กำหนดส่งมอบ: ${dateStr}` : `Due: ${dateStr}`}
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })
+                  : ((getLocalized(project.deliverables) as string[]) || []).map((item, idx) => (
+                      <li key={idx} className="deliverable-item" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14 }}>
+                        <span className="deliverable-bullet" style={{ color: '#059669', fontWeight: 700 }}>✓</span>
+                        <span style={{ color: 'var(--gray-800)', fontWeight: 500 }}>{item}</span>
+                      </li>
+                    ))}
+              </ul>
+            </div>
+          )}
 
           {/* Timeline Milestones */}
           <ProcurementTimeline
@@ -1033,6 +1105,14 @@ export default function ProjectDetailPage({
           </div>
         </div>
       )}
+
+      {/* Sign-in Prompt Modal for Gated Features */}
+      <AuthPromptModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        feature={authModalFeature}
+        returnUrl={`/opportunities/${id}`}
+      />
     </div>
   );
 }

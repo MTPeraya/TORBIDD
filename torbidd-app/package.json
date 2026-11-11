@@ -18,7 +18,8 @@
     "docker:run": "docker run -p 3000:3000 --env-file .env.local torbidd-app",
     "docker:compose": "docker compose -f ../docker-compose.yml up --build",
     "docker:compose:down": "docker compose -f ../docker-compose.yml down",
-    "test": "jest"
+    "test": "jest",
+    "test:e2e": "jest tests/e2e"
   },
   "dependencies": {
     "@google-cloud/translate": "10.3.0",
