@@ -165,7 +165,7 @@ export function SetAlertModal({ project, isOpen, onClose }: SetAlertModalProps) 
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         feature="alert"
-        returnUrl={`/opportunities/${project.externalId || (project as any).externalProjectId || project._id}`}
+        returnUrl={`/opportunities/${project.externalId || (project as { externalProjectId?: string | number }).externalProjectId || project._id}`}
       />
     </div>
   );

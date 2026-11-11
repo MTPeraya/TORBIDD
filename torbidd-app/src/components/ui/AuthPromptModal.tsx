@@ -25,12 +25,8 @@ export function AuthPromptModal({
   feature = 'general',
   returnUrl,
 }: AuthPromptModalProps) {
-  let pathname = '/';
-  try {
-    if (typeof usePathname === 'function') {
-      pathname = usePathname() || '/';
-    }
-  } catch {}
+  const currentPathname = usePathname();
+  const pathname = currentPathname || '/';
   const { language } = useLanguage();
 
   const targetUrl = returnUrl || pathname || '/';

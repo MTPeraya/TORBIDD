@@ -66,7 +66,7 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-let mockAuthUser = {
+const mockAuthUser = {
   id: 'usr_officer_001',
   email: 'officer@bangkok.go.th',
   name: 'Somchai BMA Officer',

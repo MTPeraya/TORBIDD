@@ -103,7 +103,6 @@ import Project from '@/models/Project';
 import ProcurementProject from '@/models/ProcurementProject';
 
 const mockProjectModel = Project as any;
-const mockProcurementProjectModel = ProcurementProject as any;
 const MockProject = Project as any;
 const MockProcurementProject = ProcurementProject as any;
 
