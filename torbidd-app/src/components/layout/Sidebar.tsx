@@ -13,16 +13,35 @@ interface SidebarProps {
   bookmarkCount: number;
 }
 
+/** Strip /th or /en locale prefix to get the canonical path */
+function stripLocale(path: string): string {
+  return path.replace(/^\/(th|en)(\/|$)/, '/').replace(/\/$/, '') || '/';
+}
+
+/** Get the locale prefix from a path, e.g. '/th/historical' → 'th' */
+function getLocaleFromPath(path: string): 'th' | 'en' | null {
+  const m = path.match(/^\/(th|en)(\/|$)/);
+  return m ? (m[1] as 'th' | 'en') : null;
+}
+
 export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
   const pathname = usePathname();
   const { L } = useLanguage();
   const { isAuthenticated, isAdmin } = useAuth();
 
-  const isHome = pathname === '/';
-  const isDashboard = pathname === '/opportunities' || pathname.startsWith('/opportunities/');
-  const isHistorical = pathname === '/historical';
-  const isSaved = pathname === '/saved';
-  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
+  // Canonical path (without locale prefix) for active state detection
+  const canonicalPath = stripLocale(pathname);
+  // Current locale from URL (may differ from LanguageContext state briefly on first render)
+  const urlLocale = getLocaleFromPath(pathname);
+
+  const isHome = canonicalPath === '/';
+  const isDashboard = canonicalPath === '/opportunities' || canonicalPath.startsWith('/opportunities/');
+  const isHistorical = canonicalPath === '/historical';
+  const isSaved = canonicalPath === '/saved';
+  const isAdminRoute = canonicalPath === '/admin' || canonicalPath.startsWith('/admin/');
+
+  // Locale-aware hrefs — if currently on a locale-prefixed URL, preserve the prefix
+  const localePrefix = urlLocale ? `/${urlLocale}` : '';
 
   const toggleTooltip = collapsed
     ? (L('expandSidebar') || 'Expand sidebar')
@@ -84,7 +103,7 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
         </div>
 
         <Link
-          href="/"
+          href={`${localePrefix}/`}
           className={`sidebar-link ${isHome ? 'active' : ''}`}
           data-tooltip={L('navHome')}
         >
@@ -93,7 +112,7 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
         </Link>
 
         <Link
-          href="/opportunities"
+          href={`${localePrefix}/opportunities`}
           className={`sidebar-link ${isDashboard ? 'active' : ''}`}
           data-tooltip={L('navDashboard')}
         >
@@ -102,7 +121,7 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
         </Link>
 
         <Link
-          href="/historical"
+          href={`${localePrefix}/historical`}
           className={`sidebar-link ${isHistorical ? 'active' : ''}`}
           data-tooltip={L('navHistorical')}
         >
@@ -111,7 +130,7 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
         </Link>
 
         <Link
-          href="/saved"
+          href={`${localePrefix}/saved`}
           className={`sidebar-link ${isSaved ? 'active' : ''}`}
           data-tooltip={L('navSaved')}
         >
@@ -127,7 +146,7 @@ export function Sidebar({ collapsed, onToggle, bookmarkCount }: SidebarProps) {
             </div>
 
             <Link
-              href="/admin"
+              href={`${localePrefix}/admin`}
               className={`sidebar-link ${isAdminRoute ? 'active' : ''}`}
               data-tooltip={L('navAdmin')}
               id="sidebarAdminLink"

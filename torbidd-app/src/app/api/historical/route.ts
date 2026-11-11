@@ -10,6 +10,7 @@ import { HistoricalFiltersSchema } from '@/lib/validation';
 import { calculateCategoryStats, aggregateAgencyMetrics } from '@/lib/historicalAnalytics';
 import { HistoricalProject } from '@/types/historical';
 import { ProjectCategory, Project } from '@/types/project';
+import { translateDepartment, translateProjectTitle } from '@/services/translation/dictionary';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,17 +53,22 @@ export async function GET(req: NextRequest) {
       try {
         const { projects: discProjects } = await getProcurementProjects({ limit: 500 });
         if (discProjects && discProjects.length > 0) {
-          allData = discProjects.map((dp) => ({
-            _id: dp._id || dp.externalProjectId,
-            title: { th: dp.projectName, en: dp.projectName },
-            department: { th: dp.agencyName, en: dp.agencyName },
-            year: dp.fiscalYear ? (dp.fiscalYear > 2500 ? dp.fiscalYear - 543 : dp.fiscalYear) : 2024,
-            category: inferCategory(dp.projectName),
-            budget: dp.budget || dp.contractPrice || dp.medianPrice || 1000000,
-            procurementType: dp.procurementType || 'e-Bidding',
-            awardedVendor: dp.winnerName ? { th: dp.winnerName, en: dp.winnerName } : undefined,
-            description: dp.summary || { th: dp.projectName, en: dp.projectName },
-          })) as HistoricalProject[];
+          allData = discProjects.map((dp) => {
+            const rawProj = dp as unknown as Record<string, unknown>;
+            const titleEn = (rawProj.projectNameEn as string) || translateProjectTitle(dp.projectName);
+            const deptEn = (rawProj.agencyNameEn as string) || translateDepartment(dp.agencyName);
+            return {
+              _id: dp._id || dp.externalProjectId,
+              title: { th: dp.projectName, en: titleEn },
+              department: { th: dp.agencyName, en: deptEn },
+              year: dp.fiscalYear ? (dp.fiscalYear > 2500 ? dp.fiscalYear - 543 : dp.fiscalYear) : 2024,
+              category: inferCategory(dp.projectName),
+              budget: dp.budget || dp.contractPrice || dp.medianPrice || 1000000,
+              procurementType: dp.procurementType || 'e-Bidding',
+              awardedVendor: dp.winnerName ? { th: dp.winnerName, en: dp.winnerName } : undefined,
+              description: dp.summary || { th: dp.projectName, en: titleEn },
+            };
+          }) as HistoricalProject[];
         }
       } catch (procErr) {
         console.warn('[GET /api/historical] Error querying procurement projects from DB:', procErr);
@@ -80,17 +86,21 @@ export async function GET(req: NextRequest) {
           fiscalYear: 2567,
         });
         if (govRes.projects && govRes.projects.length > 0) {
-          allData = govRes.projects.map((p) => ({
-            _id: p.externalProjectId,
-            title: { th: p.projectName, en: p.projectName },
-            department: { th: p.agencyName, en: p.agencyName },
-            year: p.fiscalYear ? (p.fiscalYear > 2500 ? p.fiscalYear - 543 : p.fiscalYear) : 2024,
-            category: inferCategory(p.projectName),
-            budget: p.budget || p.contractPrice || p.medianPrice || 1000000,
-            procurementType: p.procurementType || 'e-Bidding',
-            awardedVendor: p.winnerName ? { th: p.winnerName, en: p.winnerName } : undefined,
-            description: p.summary || { th: p.projectName, en: p.projectName },
-          })) as HistoricalProject[];
+          allData = govRes.projects.map((p) => {
+            const titleEn = translateProjectTitle(p.projectName);
+            const deptEn = translateDepartment(p.agencyName);
+            return {
+              _id: p.externalProjectId,
+              title: { th: p.projectName, en: titleEn },
+              department: { th: p.agencyName, en: deptEn },
+              year: p.fiscalYear ? (p.fiscalYear > 2500 ? p.fiscalYear - 543 : p.fiscalYear) : 2024,
+              category: inferCategory(p.projectName),
+              budget: p.budget || p.contractPrice || p.medianPrice || 1000000,
+              procurementType: p.procurementType || 'e-Bidding',
+              awardedVendor: p.winnerName ? { th: p.winnerName, en: p.winnerName } : undefined,
+              description: p.summary || { th: p.projectName, en: titleEn },
+            };
+          }) as HistoricalProject[];
         }
       } catch (liveErr) {
         console.warn('[GET /api/historical] GovSpending API live fetch error:', liveErr);

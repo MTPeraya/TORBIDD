@@ -7,7 +7,9 @@ import mongoose, { Document, Model, Schema } from 'mongoose';
 export interface IProcurementProject extends Document {
   externalProjectId: string;
   projectName: string;
+  projectNameEn?: string;
   agencyName: string;
+  agencyNameEn?: string;
   fiscalYear: number;
   source: string;
   sourceUrl: string;
@@ -71,11 +73,21 @@ const ProcurementProjectSchema = new Schema<IProcurementProject>(
       required: true,
       trim: true,
     },
+    projectNameEn: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     agencyName: {
       type: String,
       required: true,
       trim: true,
       index: true,
+    },
+    agencyNameEn: {
+      type: String,
+      trim: true,
+      default: '',
     },
     fiscalYear: {
       type: Number,

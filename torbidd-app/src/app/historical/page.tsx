@@ -13,6 +13,7 @@ import { AgencyComparisonView } from '@/components/historical/AgencyComparisonVi
 import { aggregateAgencyMetrics } from '@/lib/historicalAnalytics';
 import { formatBudget, formatBudgetFull, getCategoryAvg, getOutlierStatus } from '@/lib/utils';
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
+import { translateProcurementType } from '@/services/translation/dictionary';
 
 export default function HistoricalPage() {
   const router = useRouter();
@@ -538,7 +539,7 @@ export default function HistoricalPage() {
                                     <span style={{ color: 'var(--success)', fontWeight: 600 }}>
                                       {getLocalized(d.awardedVendor) as string}
                                     </span>{' '}
-                                    ({d.procurementType || 'e-Bidding'})
+                                    ({(language === 'en' ? translateProcurementType(d.procurementType) : d.procurementType) || 'e-Bidding'})
                                   </div>
                                 )}
 
@@ -610,7 +611,7 @@ export default function HistoricalPage() {
                     {language === 'th' ? 'วิธีการจัดหา' : 'Procurement Type'}
                   </span>
                   <strong className="meta-value">
-                    {kpiModalProject.procurementType || 'e-Bidding'}
+                    {(language === 'en' ? translateProcurementType(kpiModalProject.procurementType) : kpiModalProject.procurementType) || 'e-Bidding'}
                   </strong>
                 </div>
                 {kpiModalProject.awardedVendor && (

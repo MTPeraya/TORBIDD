@@ -24,6 +24,7 @@ import {
 } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/labels';
 import { enrichProjectDetail } from '@/lib/projectDetailHelper';
+import { translateProcurementType } from '@/services/translation/dictionary';
 
 export default function ProjectDetailPage({
   params,
@@ -365,7 +366,7 @@ export default function ProjectDetailPage({
               <div className="detail-meta-item">
                 <div className="meta-label">{L('procurementType')}</div>
                 <div className="meta-value" style={{ fontWeight: 700 }}>
-                  {project.procurementType || 'N/A'}
+                  {(language === 'en' ? translateProcurementType(project.procurementType) : project.procurementType) || 'N/A'}
                 </div>
                 <span className="ai-extract-label">{L('aiExtracted')}</span>
               </div>

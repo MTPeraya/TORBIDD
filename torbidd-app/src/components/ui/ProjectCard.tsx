@@ -15,6 +15,7 @@ import {
   getCategoryClass,
 } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/labels';
+import { translateProcurementType } from '@/services/translation/dictionary';
 
 interface ExtendedProject extends Project {
   externalProjectId?: string | number;
@@ -337,7 +338,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
           {/* Procurement Type */}
           <div className="meta-item">
             <span className="meta-label">{L('procurementType')}</span>
-            <span className="meta-value">{project.procurementType || 'N/A'}</span>
+            <span className="meta-value">
+              {(language === 'en' ? translateProcurementType(project.procurementType) : project.procurementType) || 'N/A'}
+            </span>
           </div>
         </div>
 
