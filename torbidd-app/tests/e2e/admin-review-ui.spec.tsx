@@ -114,6 +114,9 @@ const mockSampleProject: Project = {
   aiConfidence: 'Medium',
   isSoftwareRelated: true,
   classificationReviewStatus: 'PENDING_REVIEW',
+  historicalAvg: 20000000,
+  sourceDocument: 'doc_sample.pdf',
+  processedDate: '2026-11-01T00:00:00.000Z',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
