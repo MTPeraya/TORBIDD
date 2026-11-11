@@ -41,6 +41,13 @@ export interface GetNotificationsOptions {
 // In-memory fallback for local dev / tests when MongoDB is disconnected
 const inMemoryNotifications: NotificationItem[] = [];
 
+/**
+ * Resets the in-memory notifications cache (used for testing).
+ */
+export function clearInMemoryNotifications(): void {
+  inMemoryNotifications.length = 0;
+}
+
 function mapDocToItem(doc: Partial<INotification> & { _id?: unknown }): NotificationItem {
   return {
     id: doc._id ? String(doc._id) : (doc as unknown as { id?: string }).id || '',

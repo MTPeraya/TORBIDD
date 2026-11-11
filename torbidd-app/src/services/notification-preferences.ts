@@ -11,6 +11,13 @@ import { NotificationPreferences, NotificationType } from '@/types/notification'
 // In-memory preferences fallback cache for when DB is unavailable or in unit tests
 const inMemoryPreferences: Map<string, NotificationPreferences> = new Map();
 
+/**
+ * Resets the in-memory preferences cache (used for testing).
+ */
+export function resetNotificationPreferencesCache(): void {
+  inMemoryPreferences.clear();
+}
+
 export function getRegisteredRecipientIds(): string[] {
   return Array.from(inMemoryPreferences.keys());
 }
