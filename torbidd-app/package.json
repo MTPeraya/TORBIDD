@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "npx tsx scripts/seed.ts",
+    "translate:projects": "npx tsx scripts/translate-projects.ts",
     "sync:all": "npx tsx scripts/sync-all.ts",
     "sync:bma": "npx tsx scripts/sync-bma.ts",
     "update:all": "npx tsx scripts/update-all-projects.ts",
@@ -15,9 +16,12 @@
     "db:migrate": "npx tsx scripts/db-migrate.ts",
     "docker:build": "docker build -t torbidd-app .",
     "docker:run": "docker run -p 3000:3000 --env-file .env.local torbidd-app",
+    "docker:compose": "docker compose -f ../docker-compose.yml up --build",
+    "docker:compose:down": "docker compose -f ../docker-compose.yml down",
     "test": "jest"
   },
   "dependencies": {
+    "@google-cloud/translate": "10.3.0",
     "@google-cloud/vertexai": "^1.12.0",
     "chart.js": "^4.5.1",
     "dotenv": "^17.4.2",

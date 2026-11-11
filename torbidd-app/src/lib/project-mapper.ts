@@ -8,6 +8,7 @@ import { IProcurementProject } from '@/models/ProcurementProject';
 import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
 import { normalizeCurrency } from '@/services/transformation/normalizers/currency-normalizer';
 import { sanitizeText, sanitizeAgencyName } from '@/services/transformation/normalizers/text-sanitizer';
+import { translateDepartment, translateProjectTitle } from '@/services/translation/dictionary';
 
 export function procurementToProject(
   item: IProcurementProject | DiscoveredProject | Record<string, unknown>,
@@ -174,16 +175,51 @@ export function procurementToProject(
   // clearly label it as "Sync Date" in the UI rather than "Published Date".
   const finalPublishDate = publishDateStr || processedDateStr;
 
+  // ─── Bilingual Title & Department Resolution ──────────────────────────────
+  // If p already has a distinct English title, preserve it; otherwise translate via dictionary/heuristic.
+  const rawTitleEn = p.title?.en || p.projectNameEn || p.titleEn;
+  const isTitleEnDistinct =
+    typeof rawTitleEn === 'string' &&
+    rawTitleEn.trim().length > 0 &&
+    rawTitleEn !== titleText &&
+    !/^[\u0E00-\u0E7F\s\d(),.-]+$/.test(rawTitleEn);
+  const titleEn = isTitleEnDistinct
+    ? sanitizeText(rawTitleEn, titleText)
+    : translateProjectTitle(titleText);
+
+  // If p already has a distinct English department, preserve it; otherwise translate via dictionary.
+  const rawDeptEn = p.department?.en || p.agencyNameEn || p.departmentEn;
+  const isDeptEnDistinct =
+    typeof rawDeptEn === 'string' &&
+    rawDeptEn.trim().length > 0 &&
+    rawDeptEn !== deptText &&
+    !/^[\u0E00-\u0E7F\s\d(),.-]+$/.test(rawDeptEn);
+  const deptEn = isDeptEnDistinct
+    ? sanitizeAgencyName(rawDeptEn)
+    : translateDepartment(deptText);
+
+  // Description
+  const descTh =
+    typeof p.description === 'object' && p.description?.th
+      ? p.description.th
+      : typeof p.description === 'string' && p.description.trim()
+        ? p.description.trim()
+        : titleText;
+  const descEn =
+    typeof p.description === 'object' && p.description?.en && p.description.en !== descTh
+      ? p.description.en
+      : (p.descriptionEn || p.summary?.en || titleEn);
+
   return {
     _id: p._id?.toString() || extId,
     externalId: Number(extId.replace(/\D/g, '')) || 100000,
     title: {
       th: titleText,
-      en: titleText,
+      en: titleEn,
     },
     department: {
       th: deptText,
-      en: deptText,
+      en: deptEn,
     },
     budget: budgetVal,
     contractPrice: contractPriceVal && contractPriceVal > 0 ? contractPriceVal : undefined,
@@ -196,13 +232,15 @@ export function procurementToProject(
       ? 'APPROVED'
       : (p.classificationReviewStatus ?? 'PENDING_REVIEW'),
     procurementType: p.procurementType || 'e-Bidding',
-    description: typeof p.description === 'object' && p.description?.th
-      ? p.description
-      : typeof p.description === 'string' && p.description.trim()
-        ? { th: p.description, en: p.description }
-        : { th: titleText, en: titleText },
+    description: {
+      th: descTh,
+      en: descEn,
+    },
     summary: p.summary?.th
-      ? p.summary
+      ? {
+          th: p.summary.th,
+          en: p.summary.en || titleEn,
+        }
       : undefined, // No fake summary — if no TOR extracted, show nothing
     scope: p.scope && Array.isArray(p.scope?.th) && p.scope.th.length > 0 ? p.scope : undefined,
     qualifications: p.qualifications && Array.isArray(p.qualifications?.th) && p.qualifications.th.length > 0 ? p.qualifications : undefined,

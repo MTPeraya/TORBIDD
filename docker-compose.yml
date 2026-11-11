@@ -20,7 +20,14 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - ./torbidd-app/.env.local      # real secrets — gitignored
+      - path: ./torbidd-app/.env.local
+        required: false
+      - path: ./torbidd-app/.env
+        required: false
+      - path: ./.env.local
+        required: false
+      - path: ./.env
+        required: false
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
@@ -47,7 +54,10 @@ services:
     container_name: torbidd-seed
     command: ["npm", "run", "seed"]
     env_file:
-      - ./torbidd-app/.env.local
+      - path: ./torbidd-app/.env.local
+        required: false
+      - path: ./torbidd-app/.env
+        required: false
     environment:
       NODE_ENV: production
     depends_on:

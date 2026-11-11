@@ -5,8 +5,13 @@ import { Sidebar } from '../Sidebar';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
 const mockUsePathname = jest.fn();
+const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
+  useRouter: () => ({
+    push: mockPush,
+    replace: jest.fn(),
+  }),
 }));
 
 jest.mock('@/contexts/AuthContext', () => ({
