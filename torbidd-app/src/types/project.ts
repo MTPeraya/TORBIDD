@@ -58,6 +58,7 @@ export interface ExtractedQualificationItem {
   category: 'Legal' | 'Financial' | 'Experience' | 'Technical';
   threshold?: string;
   mandatory: boolean;
+  legalReference?: string;
   criteriaType?: QualificationCriteriaType;
   criteriaValue?: QualificationCriteriaValue;
   riskAssessment?: RestrictiveClauseAssessment;
@@ -106,6 +107,7 @@ export interface ContactInfo {
   phone?: string;
   email?: string;
   officer?: BilingualText;
+  address?: string | BilingualText;
 }
 
 export type TorStatus = 'AVAILABLE' | 'NO_TOR' | 'PENDING';
@@ -127,6 +129,7 @@ export interface Project {
   description: BilingualText;
   summary?: BilingualText; // Issue #87: TOR Executive Summary
   scope: { th: string[]; en: string[] };
+  deliverables?: string[] | { th: string[]; en: string[] } | Array<{ id: string; name: string; date?: string; description?: string }>;
   qualifications: { th: string[]; en: string[] };
   requiredTechnologies?: string[]; // Issue #89: Required Tech Stack tags
   technicalRequirements?: { th: string[]; en: string[] }; // Issue #89: Technical Requirements

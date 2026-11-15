@@ -110,7 +110,64 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // ── 3. Bypass API, docs, static assets ────────────────────────────────────
+  // ── 3. Bare Admin Page Protection (/admin) ────────────────────────────────
+  const isAdminRoute = ADMIN_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+
+  if (isAdminRoute) {
+    const authCookie = req.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (!authCookie) {
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const session = decodeSessionPayload(authCookie);
+    if (!session || !isAdminUser(session.user)) {
+      const homeUrl = new URL('/', req.url);
+      homeUrl.searchParams.set('auth_error', 'admin_required');
+      return NextResponse.redirect(homeUrl);
+    }
+
+    const response = NextResponse.next();
+    if (!req.cookies.get(SESSION_COOKIE)) {
+      response.cookies.set(SESSION_COOKIE, uuidv4(), {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 365,
+        path: '/',
+      });
+    }
+    return response;
+  }
+
+  // ── 4. Bare Protected Routes (/historical, /saved, /notifications) ────────
+  const isProtected = PROTECTED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+
+  if (isProtected) {
+    const authCookie = req.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (!authCookie) {
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const response = NextResponse.next();
+    if (!req.cookies.get(SESSION_COOKIE)) {
+      response.cookies.set(SESSION_COOKIE, uuidv4(), {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 365,
+        path: '/',
+      });
+    }
+    return response;
+  }
+
+  // ── 5. Bypass API, docs, static assets ────────────────────────────────────
   const isApiOrStatic =
     pathname.startsWith('/api/') ||
     pathname.startsWith('/docs/') ||
@@ -130,18 +187,32 @@ export function middleware(req: NextRequest) {
     return response;
   }
 
-  // ── 4. Redirect bare page routes to locale-prefixed routes ─────────────────
-  // e.g. /historical -> /th/historical or /en/historical
-  const savedLocale = req.cookies.get(LOCALE_COOKIE)?.value;
-  const preferredLocale: Locale =
-    savedLocale === 'en' || savedLocale === 'th' ? savedLocale : 'th';
+  // ── 6. Redirect bare page routes to locale-prefixed routes when host header present ──
+  // e.g. /opportunities -> /th/opportunities or /en/opportunities
+  if (pathname !== '/' && req.headers.has('host')) {
+    const savedLocale = req.cookies.get(LOCALE_COOKIE)?.value;
+    const preferredLocale: Locale =
+      savedLocale === 'en' || savedLocale === 'th' ? savedLocale : 'th';
 
-  const targetUrl = new URL(
-    `/${preferredLocale}${pathname === '/' ? '' : pathname}`,
-    req.url,
-  );
-  targetUrl.search = req.nextUrl.search;
-  return NextResponse.redirect(targetUrl);
+    const targetUrl = new URL(
+      `/${preferredLocale}${pathname}`,
+      req.url,
+    );
+    targetUrl.search = req.nextUrl.search;
+    return NextResponse.redirect(targetUrl);
+  }
+
+  // ── 7. Session Cookie Initialization for public routes ────────────────────
+  const response = NextResponse.next();
+  if (!req.cookies.get(SESSION_COOKIE)) {
+    response.cookies.set(SESSION_COOKIE, uuidv4(), {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+      path: '/',
+    });
+  }
+  return response;
 }
 
 export const config = {

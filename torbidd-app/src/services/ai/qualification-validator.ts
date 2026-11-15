@@ -25,9 +25,12 @@ export interface QualificationValidationSummary {
 /**
  * Parses numeric currency value from Thai or English string (e.g., "5,000,000 บาท", "5M THB", "ร้อยละ 50")
  */
-export function parseNumericBaht(text: string, budget = 0): number | undefined {
-  if (!text) return undefined;
-  const lower = text.toLowerCase().replace(/,/g, '');
+export function parseNumericBaht(text: string | number | undefined, budget = 0): number | undefined {
+  if (text === undefined || text === null) return undefined;
+  if (typeof text === 'number') return text;
+  const str = String(text);
+  if (!str.trim()) return undefined;
+  const lower = str.toLowerCase().replace(/,/g, '');
 
   // Percentage of budget (e.g. ร้อยละ 50, 50%, 50% ของงบ)
   const pctMatch = lower.match(/(?:ร้อยละ\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*%)/);
@@ -60,7 +63,7 @@ export function extractCriteriaValue(
 ): { criteriaType: QualificationCriteriaType; criteriaValue: QualificationCriteriaValue } {
   const descTh = item.description?.th || '';
   const descEn = item.description?.en || '';
-  const threshold = item.threshold || '';
+  const threshold = typeof item.threshold === 'number' ? String(item.threshold) : (item.threshold || '');
   const combined = `${descTh} ${descEn} ${threshold}`.toLowerCase();
 
   // 1. Past Project Value (ผลงานย้อนหลังสัญญาเดียว)
@@ -169,7 +172,7 @@ export function assessRestrictiveClause(
 ): RestrictiveClauseAssessment {
   const descTh = item.description?.th || '';
   const descEn = item.description?.en || '';
-  const threshold = item.threshold || '';
+  const threshold = typeof item.threshold === 'number' ? String(item.threshold) : (item.threshold || '');
   const combined = `${descTh} ${descEn} ${threshold}`.toLowerCase();
 
   // Rule 1: Single Past Contract Value > 50% of budget (Comptroller General Circular ว 214)

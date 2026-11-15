@@ -15,14 +15,33 @@ export async function getProjects(filters: ProjectFilters = {}): Promise<IProjec
   const query: Record<string, any> = {};
 
   if (filters.search) {
-    const regex = new RegExp(filters.search, 'i');
-    query.$or = [
-      { 'title.th': regex },
-      { 'title.en': regex },
-      { 'department.th': regex },
-      { 'department.en': regex },
-      { category: regex },
-    ];
+    const rawSearch = filters.search.trim();
+    const tokens = rawSearch.split(/\s+/).filter(Boolean);
+
+    const tokenConditions = tokens.map((t) => {
+      const regex = new RegExp(t, 'i');
+      return {
+        $or: [
+          { 'title.th': regex },
+          { 'title.en': regex },
+          { 'scope.th': regex },
+          { 'scope.en': regex },
+          { 'description.th': regex },
+          { 'description.en': regex },
+          { 'summary.th': regex },
+          { 'summary.en': regex },
+          { 'department.th': regex },
+          { 'department.en': regex },
+          { category: regex },
+        ],
+      };
+    });
+
+    if (tokenConditions.length === 1) {
+      query.$or = tokenConditions[0].$or;
+    } else if (tokenConditions.length > 1) {
+      query.$and = tokenConditions;
+    }
   }
 
   // Agency / Department filtering (single or multiple)

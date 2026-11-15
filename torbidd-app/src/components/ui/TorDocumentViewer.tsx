@@ -27,9 +27,6 @@ export function TorDocumentViewer({
   const [zoomLevel, setZoomLevel] = useState<number>(100);
 
   const sections = documentSections || [];
-  const currentSection =
-    sections.find((s) => s.sectionId === activeSectionId) || sections[0];
-
   const filteredSections = searchQuery.trim()
     ? sections.filter((s) => {
         const title = (getLocalized(s.title) as string).toLowerCase();
@@ -38,6 +35,9 @@ export function TorDocumentViewer({
         return title.includes(q) || content.includes(q);
       })
     : sections;
+
+  const currentSection =
+    filteredSections.find((s) => s.sectionId === activeSectionId) || filteredSections[0];
 
   return (
     <div className={`tor-document-viewer ${isSplitView ? 'split-mode' : 'standalone-mode'}`}>
@@ -159,7 +159,7 @@ export function TorDocumentViewer({
 
         {/* Paper Document Canvas */}
         <div className="tor-viewer-canvas">
-          {currentSection ? (
+          {filteredSections.length > 0 && currentSection ? (
             <div
               className="tor-paper-sheet"
               style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
@@ -274,7 +274,7 @@ export function TorDocumentViewer({
             </div>
           ) : (
             <div className="empty-search-state">
-              <p>ไม่พบข้อความที่ค้นหาในเอกสาร</p>
+              <p>{language === 'th' ? 'ไม่พบข้อความที่ค้นหาในเอกสาร' : 'No matching sections found'}</p>
             </div>
           )}
         </div>
