@@ -501,6 +501,8 @@ describe('E2E: Historical Software Procurement Filtering, Comparative Charts & B
 
     localStorage.clear();
     localStorage.setItem('torbidd_lang', 'th');
+    document.cookie = 'torbidd_locale=th; path=/';
+    window.history.pushState(null, '', '/historical');
 
     mockAuthValues = {
       user: { email: 'officer@bangkok.go.th', name: 'BMA Procurement Officer' } as any,

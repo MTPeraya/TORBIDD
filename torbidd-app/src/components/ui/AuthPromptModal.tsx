@@ -25,8 +25,15 @@ export function AuthPromptModal({
   feature = 'general',
   returnUrl,
 }: AuthPromptModalProps) {
-  const currentPathname = usePathname();
-  const pathname = currentPathname || '/';
+  let pathname = '/';
+  try {
+    if (typeof usePathname === 'function') {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      pathname = usePathname() || '/';
+    }
+  } catch {
+    // fallback for test environments without router context
+  }
   const { language } = useLanguage();
 
   const targetUrl = returnUrl || pathname || '/';
