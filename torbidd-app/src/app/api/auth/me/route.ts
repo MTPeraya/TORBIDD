@@ -12,6 +12,7 @@ import {
   validateEmailMutation,
 } from '@/lib/auth';
 import { validateRoleAssignment } from '@/lib/authorization';
+import { rejectUnauthorizedFields, ADMIN_ONLY_USER_FIELDS } from '@/lib/authorization/fields';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
 import {
@@ -65,6 +66,26 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     const { name, org, role, avatar, email } = body;
+
+    // ── SEC-07: Field-level authorization — reject admin-only fields for non-admins ──
+    // Ordinary users (BMA Officer) cannot submit the 'role' field via this endpoint.
+    // This prevents Broken Object Property Level Authorization (BOPLA).
+    // Admins may submit the role field (they can update their own display-role).
+    if (!isAdminUser(user)) {
+      const fieldCheck = rejectUnauthorizedFields(body, user.role, ADMIN_ONLY_USER_FIELDS);
+      if (fieldCheck.rejected) {
+        console.warn(
+          `[SEC-07] Field-level violation: user=${user.email} attempted to set fields: ${fieldCheck.fields.join(', ')}`,
+        );
+        return NextResponse.json(
+          {
+            error: `Field not allowed: ${fieldCheck.fields.join(', ')}. Only administrators may modify these fields.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ── SEC-03: Email mutation restriction (ASVS V6.3.6) ──────────────────────
     // Email is an identifier bound to Google OAuth; direct mutation is blocked
