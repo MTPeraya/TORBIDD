@@ -5,8 +5,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { OAUTH_STATE_COOKIE, signOAuthState } from '@/lib/auth';
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+  AUTH_INITIATE_LIMITER,
+} from '@/lib/rate-limiter';
+
+const LIMITER_ID = 'auth-google-initiate';
 
 export async function GET(req: NextRequest) {
+  // ── SEC-01: Rate limiting ─────────────────────────────────────────────────
+  const clientIp = getClientIp(req);
+  const rl = checkRateLimit(LIMITER_ID, clientIp, AUTH_INITIATE_LIMITER);
+  const rlHeaders = rateLimitHeaders(rl, AUTH_INITIATE_LIMITER.max);
+
+  if (!rl.allowed) {
+    console.warn(
+      `[Auth Rate Limit] Initiate blocked for IP ${clientIp} – retryAfter=${rl.retryAfter}s`,
+    );
+    return NextResponse.json(
+      {
+        error: 'Too many authentication requests. Please wait before trying again.',
+        retryAfter: rl.retryAfter,
+      },
+      { status: 429, headers: rlHeaders },
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const { searchParams } = new URL(req.url);
   const returnUrl = searchParams.get('returnUrl') || '/';
   const isMock = searchParams.get('mock') === 'true';
@@ -63,6 +90,9 @@ export async function GET(req: NextRequest) {
     maxAge: 600,
     path: '/',
   });
+
+  // Attach rate-limit informational headers
+  Object.entries(rlHeaders).forEach(([k, v]) => response.headers.set(k, v));
 
   return response;
 }

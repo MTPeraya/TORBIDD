@@ -6,6 +6,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSessionFromRequest, signSession, AUTH_COOKIE_NAME, AuthSessionUser, isAdminUser } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+  AUTH_ME_WRITE_LIMITER,
+} from '@/lib/rate-limiter';
+
+const LIMITER_ID = 'auth-me-write';
 
 export async function GET(req: NextRequest) {
   const user = getAuthSessionFromRequest(req);
@@ -27,6 +35,19 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  // ── SEC-01: Rate limiting on profile update ───────────────────────────────
+  const clientIp = getClientIp(req);
+  const rl = checkRateLimit(LIMITER_ID, clientIp, AUTH_ME_WRITE_LIMITER);
+  const rlHeaders = rateLimitHeaders(rl, AUTH_ME_WRITE_LIMITER.max);
+
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many profile update requests. Please wait before trying again.', retryAfter: rl.retryAfter },
+      { status: 429, headers: rlHeaders },
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const user = getAuthSessionFromRequest(req);
 
   if (!user) {
@@ -79,7 +100,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const sessionToken = signSession(updatedUser);
-    const res = NextResponse.json({ success: true, user: updatedUser });
+    const res = NextResponse.json({ success: true, user: updatedUser }, { headers: rlHeaders });
 
     res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
       httpOnly: true,
