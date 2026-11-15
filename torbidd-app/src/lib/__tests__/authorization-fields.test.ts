@@ -15,17 +15,18 @@ describe('SEC-07 field-level authorization', () => {
   // stripUnauthorizedFields
   // ---------------------------------------------------------------------------
   describe('stripUnauthorizedFields', () => {
-    it('strips role field from BMA Officer profile update', () => {
-      const body = { name: 'Alice', role: 'admin' };
+    it('strips administrative fields from BMA Officer profile update', () => {
+      const body = { name: 'Alice', isAdmin: true, permissions: ['all'] };
       const stripped = stripUnauthorizedFields(body, 'BMA Officer', ADMIN_ONLY_USER_FIELDS);
-      expect(stripped).not.toHaveProperty('role');
+      expect(stripped).not.toHaveProperty('isAdmin');
+      expect(stripped).not.toHaveProperty('permissions');
       expect(stripped).toHaveProperty('name', 'Alice');
     });
 
-    it('allows admin to submit role field', () => {
-      const body = { name: 'Alice', role: 'admin' };
+    it('allows admin to submit administrative fields', () => {
+      const body = { name: 'Alice', isAdmin: true };
       const stripped = stripUnauthorizedFields(body, 'admin', ADMIN_ONLY_USER_FIELDS);
-      expect(stripped).toHaveProperty('role', 'admin');
+      expect(stripped).toHaveProperty('isAdmin', true);
     });
 
     it('strips all ADMIN_ONLY_PROJECT_FIELDS for BMA Officer', () => {
@@ -64,10 +65,10 @@ describe('SEC-07 field-level authorization', () => {
   // rejectUnauthorizedFields
   // ---------------------------------------------------------------------------
   describe('rejectUnauthorizedFields', () => {
-    it('detects blocked field for BMA Officer', () => {
-      const result = rejectUnauthorizedFields({ role: 'admin' }, 'BMA Officer', ADMIN_ONLY_USER_FIELDS);
+    it('detects blocked administrative field for BMA Officer', () => {
+      const result = rejectUnauthorizedFields({ isAdmin: true }, 'BMA Officer', ADMIN_ONLY_USER_FIELDS);
       expect(result.rejected).toBe(true);
-      expect(result.fields).toContain('role');
+      expect(result.fields).toContain('isAdmin');
     });
 
     it('passes clean body for BMA Officer', () => {
@@ -76,19 +77,19 @@ describe('SEC-07 field-level authorization', () => {
       expect(result.fields).toHaveLength(0);
     });
 
-    it('does not reject role field for admin', () => {
-      const result = rejectUnauthorizedFields({ role: 'admin' }, 'admin', ADMIN_ONLY_USER_FIELDS);
+    it('does not reject administrative field for admin', () => {
+      const result = rejectUnauthorizedFields({ isAdmin: true }, 'admin', ADMIN_ONLY_USER_FIELDS);
       expect(result.rejected).toBe(false);
     });
 
     it('detects multiple blocked fields', () => {
       const result = rejectUnauthorizedFields(
-        { role: 'admin', name: 'Alice', category: 'AI', isSoftwareRelated: true },
+        { isAdmin: true, permissions: ['write:all'], name: 'Alice', category: 'AI', isSoftwareRelated: true },
         'BMA Officer',
         [...ADMIN_ONLY_USER_FIELDS, ...ADMIN_ONLY_PROJECT_FIELDS],
       );
       expect(result.rejected).toBe(true);
-      expect(result.fields).toContain('role');
+      expect(result.fields).toContain('isAdmin');
       expect(result.fields).toContain('category');
       expect(result.fields).toContain('isSoftwareRelated');
       expect(result.fields).not.toContain('name'); // allowed field
@@ -99,8 +100,10 @@ describe('SEC-07 field-level authorization', () => {
   // ASVS V8.1.2 — documented field-level restrictions
   // ---------------------------------------------------------------------------
   describe('ADMIN_ONLY_USER_FIELDS', () => {
-    it('contains role', () => {
-      expect(ADMIN_ONLY_USER_FIELDS).toContain('role');
+    it('contains administrative privilege flags', () => {
+      expect(ADMIN_ONLY_USER_FIELDS).toContain('isAdmin');
+      expect(ADMIN_ONLY_USER_FIELDS).toContain('permissions');
+      expect(ADMIN_ONLY_USER_FIELDS).toContain('isSuperuser');
     });
   });
 

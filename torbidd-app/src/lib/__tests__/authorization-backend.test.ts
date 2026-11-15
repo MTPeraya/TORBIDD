@@ -60,11 +60,11 @@ describe('SEC-08 backend authorization helpers', () => {
       expect(result.ok).toBe(true);
     });
 
-    it('returns ok: false with 401 when user is not authenticated', () => {
+    it('returns ok: false with 403 when user is not authenticated', () => {
       const result = requireAdmin(null);
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.response.status).toBe(401);
+        expect(result.response.status).toBe(403);
       }
     });
 

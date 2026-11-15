@@ -12,10 +12,18 @@
 /**
  * User profile fields that only administrators may write.
  * Ordinary users (BMA Officer) cannot modify these fields via API.
+ * Prevents mass-assignment / BOPLA of administrative flags.
  *
  * ASVS V8.1.2: Field-level access restrictions are documented here.
  */
-export const ADMIN_ONLY_USER_FIELDS: readonly string[] = ['role'] as const;
+export const ADMIN_ONLY_USER_FIELDS: readonly string[] = [
+  'isAdmin',
+  'permissions',
+  'isSuperuser',
+  'verified',
+  'active',
+  'systemRole',
+] as const;
 
 /**
  * Project / procurement record fields that only administrators may write.

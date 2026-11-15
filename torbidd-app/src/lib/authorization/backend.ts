@@ -44,16 +44,12 @@ export function requireAuth(user: AuthSessionUser | null | undefined): AuthResul
 }
 
 /**
- * Verifies that the authenticated user holds the 'admin' role.
- * Returns 401 when unauthenticated, 403 when authenticated but not admin.
- *
- * ASVS V8.2.1: Restricts function-level access to consumers with explicit permissions.
+ * Verifies that the authenticated user holds administrative privileges.
+ * Returns 403 Forbidden when unauthenticated or not an admin, matching
+ * the application-wide admin endpoint convention (ASVS V8.2.1, V8.3.1).
  */
 export function requireAdmin(user: AuthSessionUser | null | undefined): AuthResult {
-  const authCheck = requireAuth(user);
-  if (!authCheck.ok) return authCheck;
-
-  if (!isAdminUser(user!)) {
+  if (!user || !isAdminUser(user)) {
     return {
       ok: false,
       response: NextResponse.json(
