@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSessionFromRequest, signSession, AUTH_COOKIE_NAME, AuthSessionUser, isAdminUser } from '@/lib/auth';
+import { validateRoleAssignment } from '@/lib/authorization';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
 import {
@@ -58,19 +59,21 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const { name, org, role, avatar } = body;
 
-    const currentIsAdmin = isAdminUser(user);
+    // ── SEC-02: Centralised role assignment validation ────────────────────────
+    // validateRoleAssignment enforces that only admins can grant admin roles,
+    // and that reserved identifiers cannot hold privileged roles.
     let resolvedRole = user.role;
     if (typeof role === 'string' && role.trim()) {
-      const requestedLower = role.trim().toLowerCase();
-      // Only existing admins can assign the admin role
-      if (requestedLower === 'admin' || requestedLower === 'administrator') {
-        if (currentIsAdmin) {
-          resolvedRole = role.trim();
-        }
-      } else {
-        resolvedRole = role.trim();
+      const assignmentResult = validateRoleAssignment(user, role.trim(), user.email);
+      if (!assignmentResult.allowed) {
+        console.warn(
+          `[SEC-02] Self-escalation blocked for ${user.email}: requested=${role} reason=${assignmentResult.reason}`,
+        );
+        return NextResponse.json({ error: assignmentResult.reason }, { status: 403 });
       }
+      resolvedRole = assignmentResult.resolvedRole;
     }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const updatedUser: AuthSessionUser = {
       ...user,
