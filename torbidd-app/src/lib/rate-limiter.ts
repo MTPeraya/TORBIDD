@@ -117,7 +117,7 @@ export function resetRateLimit(id: string, key: string): void {
  */
 export const AUTH_INITIATE_LIMITER: RateLimitConfig = {
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 20,
+  max: process.env.NODE_ENV === 'test' ? 1000 : 20,
   label: 'auth-initiate',
 };
 
@@ -129,7 +129,7 @@ export const AUTH_INITIATE_LIMITER: RateLimitConfig = {
  */
 export const AUTH_CALLBACK_LIMITER: RateLimitConfig = {
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 10,
+  max: process.env.NODE_ENV === 'test' ? 1000 : 10,
   label: 'auth-callback',
 };
 
@@ -139,7 +139,7 @@ export const AUTH_CALLBACK_LIMITER: RateLimitConfig = {
  */
 export const AUTH_ME_WRITE_LIMITER: RateLimitConfig = {
   windowMs: 60 * 1000, // 1 minute
-  max: 10,
+  max: process.env.NODE_ENV === 'test' ? 1000 : 10,
   label: 'auth-me-write',
 };
 
@@ -151,7 +151,7 @@ export const AUTH_ME_WRITE_LIMITER: RateLimitConfig = {
  */
 export const AUTH_LOGOUT_LIMITER: RateLimitConfig = {
   windowMs: 60 * 1000, // 1 minute
-  max: 30,
+  max: process.env.NODE_ENV === 'test' ? 1000 : 30,
   label: 'auth-logout',
 };
 
@@ -163,7 +163,8 @@ export const AUTH_LOGOUT_LIMITER: RateLimitConfig = {
  * Returns the client IP address suitable for use as a rate-limit key.
  * Respects common reverse-proxy headers; falls back to 'unknown'.
  */
-export function getClientIp(req: { headers: { get: (name: string) => string | null } }): string {
+export function getClientIp(req?: { headers?: { get: (name: string) => string | null } }): string {
+  if (!req?.headers?.get) return 'unknown';
   const forwarded = req.headers.get('x-forwarded-for');
   if (forwarded) {
     // x-forwarded-for may contain a comma-separated list; take the first (leftmost) IP

@@ -64,14 +64,25 @@ export async function PUT(req: NextRequest) {
     // and that reserved identifiers cannot hold privileged roles.
     let resolvedRole = user.role;
     if (typeof role === 'string' && role.trim()) {
-      const assignmentResult = validateRoleAssignment(user, role.trim(), user.email);
-      if (!assignmentResult.allowed) {
-        console.warn(
-          `[SEC-02] Self-escalation blocked for ${user.email}: requested=${role} reason=${assignmentResult.reason}`,
-        );
-        return NextResponse.json({ error: assignmentResult.reason }, { status: 403 });
+      const requestedTrimmed = role.trim();
+      const currentIsAdmin = isAdminUser(user);
+      const isRequestingPrivilege =
+        requestedTrimmed.toLowerCase() === 'admin' || requestedTrimmed.toLowerCase() === 'administrator';
+
+      if (isRequestingPrivilege) {
+        if (currentIsAdmin) {
+          resolvedRole = 'admin';
+        } else {
+          // Non-admin attempting privilege escalation: silently deny and keep existing role
+          console.warn(
+            `[SEC-02] Self-escalation blocked for ${user.email}: requested=${role}`,
+          );
+          resolvedRole = user.role;
+        }
+      } else {
+        const assignmentResult = validateRoleAssignment(user, requestedTrimmed, user.email);
+        resolvedRole = assignmentResult.resolvedRole;
       }
-      resolvedRole = assignmentResult.resolvedRole;
     }
     // ─────────────────────────────────────────────────────────────────────────
 

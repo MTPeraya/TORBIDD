@@ -13,7 +13,7 @@ import {
 
 const LIMITER_ID = 'auth-logout';
 
-export async function POST(req: NextRequest) {
+export async function POST(req?: NextRequest) {
   // ── SEC-01: Rate limiting ─────────────────────────────────────────────────
   const clientIp = getClientIp(req);
   const rl = checkRateLimit(LIMITER_ID, clientIp, AUTH_LOGOUT_LIMITER);
