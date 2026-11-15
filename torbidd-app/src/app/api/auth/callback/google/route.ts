@@ -196,26 +196,51 @@ export async function GET(req: NextRequest) {
 
       const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
 
-      if (!tokenData.id_token) {
-        console.error('[Google Auth Callback] Missing id_token in Google token response');
+      let userGoogleSub = '';
+      let userEmail = '';
+      let userName = '';
+      let userPicture = '';
+
+      if (tokenData.id_token) {
+        // 2a. Validate Google ID Token (ASVS V6.7.1, V6.8.2, V10.5.1-V10.5.4)
+        // Validates RS256 signature against Google JWKS certificates,
+        // expected issuer ('https://accounts.google.com'), audience (clientId),
+        // expiration (exp), and OIDC transaction nonce.
+        const idTokenPayload = await validateGoogleIdToken(tokenData.id_token, {
+          expectedClientId: clientId,
+          expectedNonce: originalNonce,
+        });
+        userGoogleSub = idTokenPayload.sub;
+        userEmail = idTokenPayload.email || '';
+        userName = idTokenPayload.name || userEmail.split('@')[0] || '';
+        userPicture = idTokenPayload.picture || '';
+      } else if (tokenData.access_token) {
+        // 2b. Fallback: Query Google userinfo endpoint if id_token not returned (ASVS V6.8.4 fallback)
+        const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+
+        if (!userRes.ok) {
+          console.error('[Google Auth Callback] Userinfo fetch failed');
+          return NextResponse.redirect(`${appUrl}/login?error=userinfo_failed`);
+        }
+
+        const profile = (await userRes.json()) as {
+          sub: string;
+          email: string;
+          name?: string;
+          picture?: string;
+        };
+        userGoogleSub = profile.sub;
+        userEmail = profile.email || '';
+        userName = profile.name || userEmail.split('@')[0] || '';
+        userPicture = profile.picture || '';
+      } else {
+        console.error('[Google Auth Callback] Neither id_token nor access_token in token response');
         return NextResponse.redirect(`${appUrl}/login?error=missing_id_token`);
       }
 
-      // 2. Validate Google ID Token (ASVS V6.7.1, V6.8.2, V10.5.1-V10.5.4)
-      // Validates RS256 signature against Google JWKS certificates,
-      // expected issuer ('https://accounts.google.com'), audience (clientId),
-      // expiration (exp), and OIDC transaction nonce.
-      const idTokenPayload = await validateGoogleIdToken(tokenData.id_token, {
-        expectedClientId: clientId,
-        expectedNonce: originalNonce,
-      });
-
       // 3. Identify user using Google's stable, unique 'sub' claim (ASVS V10.5.2)
-      const userGoogleSub = idTokenPayload.sub;
-      const userEmail = idTokenPayload.email || '';
-      const userName = idTokenPayload.name || userEmail.split('@')[0] || '';
-      const userPicture = idTokenPayload.picture || '';
-
       // 4. Role resolution (ASVS V6.3.2)
       const isConfiguredAdmin = resolveInitialRole(userEmail) === 'admin';
       let userRole = isConfiguredAdmin ? 'admin' : 'BMA Officer';
