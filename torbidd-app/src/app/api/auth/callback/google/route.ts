@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
       email: mockEmail,
       name: 'BMA Procurement Officer',
       picture: '',
-      role: mockRole,
+      role: mockRole === 'admin' ? 'admin' : 'BMA Procurement Officer',
       org: 'สำนักยุทธศาสตร์และประเมินผล',
     };
 

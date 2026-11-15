@@ -53,9 +53,10 @@ jobs:
 
       # ── Test ──────────────────────────────────────────────────────────────
       - name: Run unit tests (Jest)
-        run: npm test -- --ci --coverage --forceExit
+        run: npm test -- --ci --coverage --maxWorkers=2 --forceExit
         env:
           NODE_ENV: test
+          NODE_OPTIONS: '--max_old_space_size=4096'
 
       # ── Upload coverage ───────────────────────────────────────────────────
       - name: Upload coverage report

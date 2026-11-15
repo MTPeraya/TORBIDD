@@ -16,6 +16,7 @@ const customJestConfig = {
     '^bson$': require.resolve('bson'),
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  workerIdleMemoryLimit: '512MB',
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
