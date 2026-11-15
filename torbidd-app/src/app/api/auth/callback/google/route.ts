@@ -6,6 +6,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE, signSession, verifyOAuthState, AuthSessionUser } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
+import {
+  checkRateLimit,
+  resetRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+  AUTH_CALLBACK_LIMITER,
+} from '@/lib/rate-limiter';
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -22,7 +29,30 @@ interface GoogleUserInfo {
   picture?: string;
 }
 
+const LIMITER_ID = 'auth-callback-google';
+
 export async function GET(req: NextRequest) {
+  // ── SEC-01: Rate limiting on the callback endpoint ────────────────────────
+  const clientIp = getClientIp(req);
+  const rl = checkRateLimit(LIMITER_ID, clientIp, AUTH_CALLBACK_LIMITER);
+  const rlHeaders = rateLimitHeaders(rl, AUTH_CALLBACK_LIMITER.max);
+
+  if (!rl.allowed) {
+    console.warn(
+      `[Auth Rate Limit] Callback blocked for IP ${clientIp} – retryAfter=${rl.retryAfter}s`,
+    );
+    // Redirect to login with a throttle error rather than exposing a JSON 429
+    // so the user sees a friendly error message in the UI.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+    const loginUrl = new URL(`${appUrl}/login`);
+    loginUrl.searchParams.set('error', 'rate_limited');
+    loginUrl.searchParams.set('retryAfter', String(rl.retryAfter));
+    const redirectRes = NextResponse.redirect(loginUrl.toString());
+    Object.entries(rlHeaders).forEach(([k, v]) => redirectRes.headers.set(k, v));
+    return redirectRes;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
@@ -216,6 +246,10 @@ export async function GET(req: NextRequest) {
 
   // 4. Create signed session token and set secure HTTP-only cookie
   const sessionToken = signSession(sessionUser);
+
+  // ── SEC-01: Successful auth – reset the callback rate-limit counter ──────
+  resetRateLimit(LIMITER_ID, clientIp);
+  // ─────────────────────────────────────────────────────────────────────────
 
   const response = NextResponse.redirect(`${appUrl}${returnUrl}`);
 
