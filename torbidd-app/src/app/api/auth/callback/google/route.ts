@@ -13,6 +13,7 @@ import {
   rateLimitHeaders,
   AUTH_CALLBACK_LIMITER,
 } from '@/lib/rate-limiter';
+import { resolveInitialRole } from '@/lib/authorization';
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -105,13 +106,21 @@ export async function GET(req: NextRequest) {
   let sessionUser: AuthSessionUser;
 
   if (isMock || code === 'mock_dev_code') {
+    // ── SEC-02: Mock developer session ───────────────────────────────────────
+    // The mock account uses a real non-reserved email and receives BMA Officer
+    // role by default. It can only be promoted to admin if its email appears in
+    // ADMIN_EMAILS (same policy as real accounts – no special mock bypass).
+    const mockEmail = 'officer.bma@bangkok.go.th';
+    const mockRole = resolveInitialRole(mockEmail); // 'admin' only if in ADMIN_EMAILS
+    // ────────────────────────────────────────────────────────────────────────
+
     // Local developer fallback mode
     sessionUser = {
       id: 'mock_user_bma_123',
-      email: 'officer.bma@bangkok.go.th',
+      email: mockEmail,
       name: 'BMA Procurement Officer',
       picture: '',
-      role: 'BMA Procurement Officer',
+      role: mockRole,
       org: 'สำนักยุทธศาสตร์และประเมินผล',
     };
 
@@ -186,11 +195,10 @@ export async function GET(req: NextRequest) {
 
       // 3. Connect to MongoDB and upsert User
       let userId = profile.sub;
-      const adminEmails = (process.env.ADMIN_EMAILS || '')
-        .split(',')
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
-      const isConfiguredAdmin = adminEmails.includes(profile.email.toLowerCase().trim());
+      // ── SEC-02: Use centralised role resolution (ASVS V6.3.2) ──────────────
+      // Admin role is ONLY assigned when email is in ADMIN_EMAILS env var.
+      // resolveInitialRole encapsulates this logic so it cannot be bypassed.
+      const isConfiguredAdmin = resolveInitialRole(profile.email) === 'admin';
 
       let userRole = isConfiguredAdmin ? 'admin' : 'BMA Officer';
       let userOrg = 'กรุงเทพมหานคร';
@@ -205,6 +213,7 @@ export async function GET(req: NextRequest) {
             lastLoginAt: new Date(),
           };
           if (isConfiguredAdmin) {
+            // Only set admin role in DB when operator explicitly configured it
             updateFields.role = 'admin';
           }
 
@@ -213,6 +222,8 @@ export async function GET(req: NextRequest) {
             {
               $set: updateFields,
               $setOnInsert: {
+                // SEC-02: Default role for new users is always BMA Officer.
+                // Admin is set above via $set only for configured emails.
                 role: isConfiguredAdmin ? 'admin' : 'BMA Officer',
                 org: 'กรุงเทพมหานคร',
               },
@@ -229,6 +240,7 @@ export async function GET(req: NextRequest) {
           console.warn('[Google Auth Callback] MongoDB sync failed, falling back to Google profile session:', dbErr);
         }
       }
+      // ────────────────────────────────────────────────────────────────────────
 
       sessionUser = {
         id: userId,
