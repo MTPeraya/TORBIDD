@@ -21,6 +21,10 @@ export {
 };
 export type { AuthSessionUser, AuthSessionPayload };
 
+// Export SEC-03 and SEC-04 utilities
+export * from './auth/restrictions';
+export * from './auth/google';
+
 // 7 days session duration
 const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 7;
 
@@ -76,26 +80,35 @@ export function verifySession(token: string): AuthSessionPayload | null {
   }
 }
 
+export interface OAuthStatePayload {
+  nonce: string;
+  returnUrl: string;
+  codeVerifier?: string;
+  exp: number;
+}
+
 /**
- * Signs an OAuth state token containing random nonce and returnUrl with HMAC to prevent tampering.
+ * Signs an OAuth state token containing random nonce, returnUrl, and PKCE codeVerifier
+ * with HMAC to prevent tampering and state substitution (ASVS V10.2.1, V10.1.2).
  */
-export function signOAuthState(nonce: string, returnUrl = '/'): string {
+export function signOAuthState(nonce: string, returnUrl = '/', codeVerifier?: string): string {
   const secret = getSecretKey();
-  const payloadStr = Buffer.from(
-    JSON.stringify({
-      nonce,
-      returnUrl,
-      exp: Math.floor(Date.now() / 1000) + 600, // 10 minutes
-    }),
-  ).toString('base64url');
+  const payload: OAuthStatePayload = {
+    nonce,
+    returnUrl,
+    codeVerifier,
+    exp: Math.floor(Date.now() / 1000) + 600, // 10 minutes
+  };
+  const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto.createHmac('sha256', secret).update(payloadStr).digest('base64url');
   return `${payloadStr}.${signature}`;
 }
 
 /**
- * Verifies HMAC-signed OAuth state token. Returns decoded nonce and returnUrl or null if tampered/expired.
+ * Verifies HMAC-signed OAuth state token. Returns decoded nonce, returnUrl, and codeVerifier
+ * or null if tampered/expired.
  */
-export function verifyOAuthState(token: string): { nonce: string; returnUrl: string } | null {
+export function verifyOAuthState(token: string): { nonce: string; returnUrl: string; codeVerifier?: string } | null {
   try {
     if (!token || !token.includes('.')) return null;
     const [payloadStr, signature] = token.split('.');
@@ -119,6 +132,7 @@ export function verifyOAuthState(token: string): { nonce: string; returnUrl: str
     return {
       nonce: data.nonce,
       returnUrl: typeof data.returnUrl === 'string' && data.returnUrl.startsWith('/') ? data.returnUrl : '/',
+      codeVerifier: typeof data.codeVerifier === 'string' ? data.codeVerifier : undefined,
     };
   } catch {
     return null;
