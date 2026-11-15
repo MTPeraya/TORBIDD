@@ -31,16 +31,54 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ authenticated: false, user: null, isAdmin: false });
   }
 
-  const isAdmin = isAdminUser(user);
+  // ── SEC-08: Immediate permission freshness (ASVS V8.3.2) ──────────────────
+  // Re-read user role from database if available, ensuring role revocations
+  // or promotions apply immediately without waiting for session expiry.
+  let freshUser = user;
+  let roleChanged = false;
+  if (process.env.MONGODB_URI) {
+    try {
+      await connectToDatabase();
+      const dbUser = await User.findOne({
+        $or: [{ googleId: user.id }, { email: user.email }],
+      }).select('role name org picture').lean();
 
-  return NextResponse.json({
+      if (dbUser && dbUser.role && dbUser.role !== user.role) {
+        freshUser = {
+          ...user,
+          role: dbUser.role,
+        };
+        roleChanged = true;
+      }
+    } catch {
+      // Fallback to session token user if DB connection fails
+    }
+  }
+
+  const isAdmin = isAdminUser(freshUser);
+
+  const res = NextResponse.json({
     authenticated: true,
     user: {
-      ...user,
+      ...freshUser,
       isAdmin,
     },
     isAdmin,
   });
+
+  // Re-issue signed cookie when role changes dynamically
+  if (roleChanged) {
+    const sessionToken = signSession(freshUser);
+    res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+  }
+
+  return res;
 }
 
 export async function PUT(req: NextRequest) {
