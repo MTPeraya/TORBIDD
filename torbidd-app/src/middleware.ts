@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { SESSION_COOKIE } from '@/lib/session';
 import { AUTH_COOKIE_NAME, decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
+import { applySecurityHeaders } from '@/lib/security-headers';
 
 /** Supported locale prefixes */
 type Locale = 'th' | 'en';
@@ -27,7 +28,7 @@ const PROTECTED_ROUTES = ['/historical', '/saved', '/notifications'];
 /** Routes that strictly require administrator privileges */
 const ADMIN_ROUTES = ['/admin'];
 
-export function middleware(req: NextRequest) {
+function handleMiddleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // ── 1. Locale-Prefixed Routes (/th/... and /en/...) ───────────────────────
@@ -213,6 +214,11 @@ export function middleware(req: NextRequest) {
     });
   }
   return response;
+}
+
+export function middleware(req: NextRequest) {
+  const response = handleMiddleware(req);
+  return applySecurityHeaders(response);
 }
 
 export const config = {

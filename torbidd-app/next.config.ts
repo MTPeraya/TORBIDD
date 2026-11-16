@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { SECURITY_HEADERS } from './src/lib/security-headers';
 
 const nextConfig: NextConfig = {
   // Standalone output bundles only what's needed to run the server.
@@ -11,6 +12,16 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+  },
+
+  // Security Headers (ASVS 3.4.1 & 3.4.3)
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: SECURITY_HEADERS,
+      },
+    ];
   },
 };
 
