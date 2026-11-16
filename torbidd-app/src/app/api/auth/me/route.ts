@@ -12,6 +12,7 @@ import {
   validateEmailMutation,
 } from '@/lib/auth';
 import { validateRoleAssignment } from '@/lib/authorization';
+import { rejectUnauthorizedFields, ADMIN_ONLY_USER_FIELDS } from '@/lib/authorization/fields';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
 import {
@@ -30,16 +31,54 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ authenticated: false, user: null, isAdmin: false });
   }
 
-  const isAdmin = isAdminUser(user);
+  // ── SEC-08: Immediate permission freshness (ASVS V8.3.2) ──────────────────
+  // Re-read user role from database if available, ensuring role revocations
+  // or promotions apply immediately without waiting for session expiry.
+  let freshUser = user;
+  let roleChanged = false;
+  if (process.env.MONGODB_URI) {
+    try {
+      await connectToDatabase();
+      const dbUser = await User.findOne({
+        $or: [{ googleId: user.id }, { email: user.email }],
+      }).select('role name org picture').lean();
 
-  return NextResponse.json({
+      if (dbUser && dbUser.role && dbUser.role !== user.role) {
+        freshUser = {
+          ...user,
+          role: dbUser.role,
+        };
+        roleChanged = true;
+      }
+    } catch {
+      // Fallback to session token user if DB connection fails
+    }
+  }
+
+  const isAdmin = isAdminUser(freshUser);
+
+  const res = NextResponse.json({
     authenticated: true,
     user: {
-      ...user,
+      ...freshUser,
       isAdmin,
     },
     isAdmin,
   });
+
+  // Re-issue signed cookie when role changes dynamically
+  if (roleChanged) {
+    const sessionToken = signSession(freshUser);
+    res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+  }
+
+  return res;
 }
 
 export async function PUT(req: NextRequest) {
@@ -65,6 +104,26 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     const { name, org, role, avatar, email } = body;
+
+    // ── SEC-07: Field-level authorization — reject admin-only fields for non-admins ──
+    // Ordinary users (BMA Officer) cannot submit the 'role' field via this endpoint.
+    // This prevents Broken Object Property Level Authorization (BOPLA).
+    // Admins may submit the role field (they can update their own display-role).
+    if (!isAdminUser(user)) {
+      const fieldCheck = rejectUnauthorizedFields(body, user.role, ADMIN_ONLY_USER_FIELDS);
+      if (fieldCheck.rejected) {
+        console.warn(
+          `[SEC-07] Field-level violation: user=${user.email} attempted to set fields: ${fieldCheck.fields.join(', ')}`,
+        );
+        return NextResponse.json(
+          {
+            error: `Field not allowed: ${fieldCheck.fields.join(', ')}. Only administrators may modify these fields.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ── SEC-03: Email mutation restriction (ASVS V6.3.6) ──────────────────────
     // Email is an identifier bound to Google OAuth; direct mutation is blocked

@@ -1,19 +1,28 @@
 // =============================================================================
 // app/api/bookmarks/route.ts - GET /api/bookmarks, POST /api/bookmarks
+// SEC-06: Resource Ownership and Object-Level Authorization — ASVS V8.2.2
+// =============================================================================
+// When the user is authenticated, bookmarks are scoped by userId.
+// Anonymous users continue to use sessionId scoping (unchanged).
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getBookmarks, addBookmark } from '@/services/database/bookmarks';
 import { BookmarkCreateSchema } from '@/lib/validation';
 import { getSessionId } from '@/lib/session';
+import { getAuthSessionFromRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
     const sessionId = getSessionId(req);
+    // SEC-06: Resolve authenticated user ID for ownership scoping
+    const authUser = getAuthSessionFromRequest(req);
+    const userId = authUser?.id ?? null;
+
     try {
-      const bookmarks = await getBookmarks(sessionId);
+      const bookmarks = await getBookmarks(sessionId, userId);
       return NextResponse.json({ data: bookmarks });
     } catch {
       return NextResponse.json({ data: [] });
@@ -27,6 +36,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const sessionId = getSessionId(req);
+    // SEC-06: Resolve authenticated user ID for ownership scoping
+    const authUser = getAuthSessionFromRequest(req);
+    const userId = authUser?.id ?? null;
+
     const body = await req.json();
     const parsed = BookmarkCreateSchema.safeParse(body);
 
@@ -38,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      await addBookmark(sessionId, parsed.data.projectId);
+      await addBookmark(sessionId, parsed.data.projectId, userId);
     } catch {}
 
     return NextResponse.json({ success: true }, { status: 201 });

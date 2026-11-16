@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthSessionFromRequest } from '@/lib/auth';
+import { requireAdmin } from '@/lib/authorization/backend';
 import { connectToDatabase } from '@/lib/mongodb';
 import Project from '@/models/Project';
 import { classifyProject } from '@/services/ai/classifier';
@@ -18,10 +19,11 @@ const BulkClassifySchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // ── Auth guard: admins only ─────────────────────────────────────────────
+    // ── SEC-08: Backend authorization enforcement (defence-in-depth) ─────────
     const authUser = getAuthSessionFromRequest(req);
-    if (!authUser || authUser.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const authCheck = requireAdmin(authUser);
+    if (!authCheck.ok) {
+      return authCheck.response;
     }
 
     const body = await req.json().catch(() => ({}));
