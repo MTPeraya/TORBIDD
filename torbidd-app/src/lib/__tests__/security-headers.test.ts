@@ -8,7 +8,7 @@ import {
 } from '../security-headers';
 import nextConfig from '../../../next.config';
 
-describe('Security Headers (ASVS 3.4.1 & 3.4.3)', () => {
+describe('Security Headers (ASVS 3.4.1, 3.4.3, 3.4.4, 3.4.5)', () => {
   describe('req_id 3.4.1 - Strict-Transport-Security (HSTS)', () => {
     it('should include Strict-Transport-Security with max-age >= 31536000, includeSubDomains, and preload', () => {
       const hstsHeader = SECURITY_HEADERS.find(
@@ -79,20 +79,107 @@ describe('Security Headers (ASVS 3.4.1 & 3.4.3)', () => {
     });
   });
 
-  describe('Companion Security Headers (Defense in Depth)', () => {
-    it('should include X-Content-Type-Options: nosniff', () => {
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ASVS req_id 3.4.4 — X-Content-Type-Options
+  // Verify that all HTTP responses contain X-Content-Type-Options: nosniff so
+  // the browser cannot MIME-sniff a response away from the declared Content-Type.
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('req_id 3.4.4 - X-Content-Type-Options', () => {
+    it('should include X-Content-Type-Options header in SECURITY_HEADERS', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'X-Content-Type-Options');
+      expect(header).toBeDefined();
+    });
+
+    it('should set X-Content-Type-Options to nosniff', () => {
       const header = SECURITY_HEADERS.find((h) => h.key === 'X-Content-Type-Options');
       expect(header?.value).toBe('nosniff');
     });
 
+    it('should apply X-Content-Type-Options: nosniff via applySecurityHeaders helper', () => {
+      const mockHeaders = new Map<string, string>();
+      const mockResponse = {
+        headers: {
+          set: (key: string, value: string) => { mockHeaders.set(key, value); },
+          get: (key: string) => mockHeaders.get(key),
+        } as unknown as Headers,
+      };
+
+      applySecurityHeaders(mockResponse);
+
+      expect(mockHeaders.get('X-Content-Type-Options')).toBe('nosniff');
+    });
+
+    it('should include X-Content-Type-Options in next.config.ts headers for all routes', async () => {
+      const configuredHeaders = await nextConfig.headers!();
+      const routeHeaders = configuredHeaders.find((r) => r.source === '/:path*')?.headers ?? [];
+      const header = routeHeaders.find((h) => h.key === 'X-Content-Type-Options');
+      expect(header?.value).toBe('nosniff');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ASVS req_id 3.4.5 — Referrer-Policy
+  // Verify that the application sets a Referrer-Policy header to prevent leaking
+  // sensitive URL paths and query parameters to third-party services.
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('req_id 3.4.5 - Referrer-Policy', () => {
+    // Allowlisted values per MDN / ASVS guidance that do not leak full URLs to cross-origin
+    const SAFE_REFERRER_POLICIES = new Set([
+      'no-referrer',
+      'no-referrer-when-downgrade',
+      'same-origin',
+      'origin',
+      'strict-origin',
+      'origin-when-cross-origin',
+      'strict-origin-when-cross-origin',
+    ]);
+
+    it('should include Referrer-Policy header in SECURITY_HEADERS', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Referrer-Policy');
+      expect(header).toBeDefined();
+    });
+
+    it('should use a privacy-preserving Referrer-Policy that does not expose full URLs to third parties', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Referrer-Policy');
+      expect(header?.value).toBeTruthy();
+      // The policy must be a known safe value (not 'unsafe-url' which leaks full URLs)
+      expect(SAFE_REFERRER_POLICIES.has(header!.value)).toBe(true);
+      expect(header?.value).not.toBe('unsafe-url');
+    });
+
+    it('should use strict-origin-when-cross-origin as the configured policy', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Referrer-Policy');
+      // strict-origin-when-cross-origin: sends full Referer on same-origin, only
+      // the origin (no path/query) on cross-origin HTTPS, and nothing on HTTP.
+      expect(header?.value).toBe('strict-origin-when-cross-origin');
+    });
+
+    it('should apply Referrer-Policy via applySecurityHeaders helper', () => {
+      const mockHeaders = new Map<string, string>();
+      const mockResponse = {
+        headers: {
+          set: (key: string, value: string) => { mockHeaders.set(key, value); },
+          get: (key: string) => mockHeaders.get(key),
+        } as unknown as Headers,
+      };
+
+      applySecurityHeaders(mockResponse);
+
+      expect(mockHeaders.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin');
+    });
+
+    it('should include Referrer-Policy in next.config.ts headers for all routes', async () => {
+      const configuredHeaders = await nextConfig.headers!();
+      const routeHeaders = configuredHeaders.find((r) => r.source === '/:path*')?.headers ?? [];
+      const header = routeHeaders.find((h) => h.key === 'Referrer-Policy');
+      expect(header?.value).toBe('strict-origin-when-cross-origin');
+    });
+  });
+
+  describe('Defense-in-Depth Companion Headers', () => {
     it('should include X-Frame-Options: DENY', () => {
       const header = SECURITY_HEADERS.find((h) => h.key === 'X-Frame-Options');
       expect(header?.value).toBe('DENY');
-    });
-
-    it('should include Referrer-Policy: strict-origin-when-cross-origin', () => {
-      const header = SECURITY_HEADERS.find((h) => h.key === 'Referrer-Policy');
-      expect(header?.value).toBe('strict-origin-when-cross-origin');
     });
 
     it('should include Permissions-Policy restricting sensitive devices', () => {
@@ -101,14 +188,12 @@ describe('Security Headers (ASVS 3.4.1 & 3.4.3)', () => {
     });
   });
 
-  describe('applySecurityHeaders helper', () => {
+  describe('applySecurityHeaders helper — full coverage', () => {
     it('should set all security headers on a response object', () => {
       const mockHeaders = new Map<string, string>();
       const mockResponse = {
         headers: {
-          set: (key: string, value: string) => {
-            mockHeaders.set(key, value);
-          },
+          set: (key: string, value: string) => { mockHeaders.set(key, value); },
           get: (key: string) => mockHeaders.get(key),
         } as unknown as Headers,
       };
@@ -137,3 +222,4 @@ describe('Security Headers (ASVS 3.4.1 & 3.4.3)', () => {
     });
   });
 });
+
