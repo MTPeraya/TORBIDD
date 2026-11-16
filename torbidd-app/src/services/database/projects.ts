@@ -3,8 +3,12 @@
 // =============================================================================
 
 import connectToDatabase from '@/lib/mongodb';
+import { withTransaction } from '@/lib/transactions';
 import Project, { IProject } from '@/models/Project';
 import ProcurementProject, { IProcurementProject } from '@/models/ProcurementProject';
+import Bookmark from '@/models/Bookmark';
+import ProcurementDocument from '@/models/ProcurementDocument';
+import mongoose from 'mongoose';
 import { Project as ProjectType, ProjectFilters } from '@/types/project';
 import { daysUntil } from '@/lib/utils';
 
@@ -328,30 +332,76 @@ export async function updateProject(
   return null;
 }
 
+/**
+ * Delete a project and all its associated documents and bookmarks within an atomic transaction.
+ * ASVS V2.3.3: Either the business logic operation succeeds in its entirety or it is rolled back.
+ */
 export async function deleteProject(idOrExternalId: string | number): Promise<boolean> {
-  await connectToDatabase();
-  const idStr = String(idOrExternalId).trim();
-  const isNumeric = !isNaN(Number(idOrExternalId)) && typeof idOrExternalId !== 'string' ? true : /^\d+$/.test(idStr);
+  return withTransaction(async (session) => {
+    const idStr = String(idOrExternalId).trim();
+    const isNumeric = !isNaN(Number(idOrExternalId)) && typeof idOrExternalId !== 'string' ? true : /^\d+$/.test(idStr);
 
-  let deleted = false;
-  if (isNumeric) {
-    const res = await Project.deleteOne({ externalId: Number(idOrExternalId) });
-    if (res.deletedCount > 0) deleted = true;
-  } else if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
-    const res = await Project.findByIdAndDelete(idOrExternalId);
-    if (res) deleted = true;
-  }
+    let deleted = false;
+    let targetObjectId: string | null = null;
+    let targetExternalProjectId: string | null = null;
 
-  // Also check and delete from ProcurementProject
-  const queryOr: Array<Record<string, unknown>> = [{ externalProjectId: idStr }];
-  if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
-    queryOr.push({ _id: idStr });
-  }
+    // 1. Resolve and delete Project record
+    if (isNumeric) {
+      const proj = await Project.findOne({ externalId: Number(idOrExternalId) }, null, { session: session || undefined }).lean();
+      if (proj) {
+        targetObjectId = proj._id.toString();
+        targetExternalProjectId = (proj as unknown as { externalProjectId?: string }).externalProjectId || null;
+      }
+      const res = await Project.deleteOne({ externalId: Number(idOrExternalId) }, { session: session || undefined });
+      if (res.deletedCount > 0) deleted = true;
+    } else if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
+      targetObjectId = idStr;
+      const proj = await Project.findById(idOrExternalId, null, { session: session || undefined }).lean();
+      if (proj) {
+        targetExternalProjectId = (proj as unknown as { externalProjectId?: string }).externalProjectId || null;
+      }
+      const res = await Project.findByIdAndDelete(idOrExternalId, { session: session || undefined });
+      if (res) deleted = true;
+    }
 
-  const procRes = await ProcurementProject.deleteOne({ $or: queryOr });
-  if (procRes.deletedCount > 0) deleted = true;
+    // 2. Resolve and delete ProcurementProject record
+    const queryOr: Array<Record<string, unknown>> = [{ externalProjectId: idStr }];
+    if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
+      queryOr.push({ _id: idStr });
+    }
+    const proc = await ProcurementProject.findOne({ $or: queryOr }, null, { session: session || undefined }).lean();
+    if (proc) {
+      targetExternalProjectId = proc.externalProjectId || targetExternalProjectId;
+      if (!targetObjectId && proc._id) targetObjectId = proc._id.toString();
+    }
+    const procRes = await ProcurementProject.deleteOne({ $or: queryOr }, { session: session || undefined });
+    if (procRes.deletedCount > 0) deleted = true;
 
-  return deleted;
+    // 3. Atomically remove all user Bookmarks referencing this project
+    const bookmarkConditions: Array<Record<string, unknown>> = [];
+    if (targetObjectId && mongoose.Types.ObjectId.isValid(targetObjectId)) {
+      bookmarkConditions.push({ projectId: new mongoose.Types.ObjectId(targetObjectId) });
+    }
+    if (/^[0-9a-fA-F]{24}$/.test(idStr)) {
+      bookmarkConditions.push({ projectId: new mongoose.Types.ObjectId(idStr) });
+    }
+    if (bookmarkConditions.length > 0) {
+      await Bookmark.deleteMany({ $or: bookmarkConditions }, { session: session || undefined });
+    }
+
+    // 4. Atomically remove any associated ProcurementDocument records
+    const docConditions: Array<Record<string, unknown>> = [];
+    if (targetExternalProjectId) {
+      docConditions.push({ externalProjectId: targetExternalProjectId });
+    }
+    docConditions.push({ externalProjectId: idStr });
+    if (targetObjectId && mongoose.Types.ObjectId.isValid(targetObjectId)) {
+      docConditions.push({ projectId: new mongoose.Types.ObjectId(targetObjectId) });
+    }
+    await ProcurementDocument.deleteMany({ $or: docConditions }, { session: session || undefined });
+
+    return deleted;
+  });
 }
 
 export async function getAdminProjectStats(): Promise<{
