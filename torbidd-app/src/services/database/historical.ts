@@ -3,6 +3,7 @@
 // =============================================================================
 
 import connectToDatabase from '@/lib/mongodb';
+import { escapeRegex } from '@/lib/safe-regex';
 import HistoricalProject, { IHistoricalProject } from '@/models/HistoricalProject';
 import { HistoricalFilters } from '@/types/historical';
 
@@ -17,7 +18,7 @@ export async function getHistoricalProjects(filters: HistoricalFilters = {}): Pr
   if (filters.year) query.year = filters.year;
 
   if (filters.search) {
-    const term = filters.search.trim();
+    const term = escapeRegex(filters.search.trim());
     query.$or = [
       { 'title.th': { $regex: term, $options: 'i' } },
       { 'title.en': { $regex: term, $options: 'i' } },

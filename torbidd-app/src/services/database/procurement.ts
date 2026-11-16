@@ -3,6 +3,7 @@
 // =============================================================================
 
 import connectToDatabase from '@/lib/mongodb';
+import { createSafeRegex, escapeRegex } from '@/lib/safe-regex';
 import ProcurementProject, { IProcurementProject } from '@/models/ProcurementProject';
 import ProcurementDocument, { IProcurementDocument } from '@/models/ProcurementDocument';
 import { DeduplicationCheckResult, DiscoveredProject, ProcurementDocumentRecord } from '@/types/procurement';
@@ -297,7 +298,7 @@ export async function getProcurementProjects(params: {
       const rawSearch = params.search.trim();
       const tokens = rawSearch.split(/\s+/).filter(Boolean);
       const tokenConditions = tokens.map((t) => {
-        const regex = new RegExp(t, 'i');
+        const regex = createSafeRegex(t, 'i');
         return {
           $or: [
             { projectName: regex },
@@ -619,7 +620,7 @@ export async function getProjectWithDocuments(
       project = await ProcurementProject.findOne({
         $or: [
           { externalProjectId: projectIdOrExternalId },
-          { externalProjectId: { $regex: `^${projectIdOrExternalId}` } },
+          { externalProjectId: { $regex: `^${escapeRegex(projectIdOrExternalId)}` } },
         ],
       }).lean() as unknown as IProcurementProject | null;
     }

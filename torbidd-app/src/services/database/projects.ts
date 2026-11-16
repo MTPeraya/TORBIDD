@@ -4,6 +4,7 @@
 
 import connectToDatabase from '@/lib/mongodb';
 import { withTransaction } from '@/lib/transactions';
+import { createSafeRegex } from '@/lib/safe-regex';
 import Project, { IProject } from '@/models/Project';
 import ProcurementProject, { IProcurementProject } from '@/models/ProcurementProject';
 import Bookmark from '@/models/Bookmark';
@@ -23,7 +24,7 @@ export async function getProjects(filters: ProjectFilters = {}): Promise<IProjec
     const tokens = rawSearch.split(/\s+/).filter(Boolean);
 
     const tokenConditions = tokens.map((t) => {
-      const regex = new RegExp(t, 'i');
+      const regex = createSafeRegex(t, 'i');
       return {
         $or: [
           { 'title.th': regex },
