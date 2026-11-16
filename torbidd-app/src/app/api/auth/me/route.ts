@@ -3,7 +3,14 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthSessionFromRequest, signSession, AUTH_COOKIE_NAME, AuthSessionUser, isAdminUser } from '@/lib/auth';
+import {
+  getAuthSessionFromRequest,
+  signSession,
+  AUTH_COOKIE_NAME,
+  AuthSessionUser,
+  isAdminUser,
+  validateEmailMutation,
+} from '@/lib/auth';
 import { validateRoleAssignment } from '@/lib/authorization';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
@@ -57,7 +64,16 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { name, org, role, avatar } = body;
+    const { name, org, role, avatar, email } = body;
+
+    // ── SEC-03: Email mutation restriction (ASVS V6.3.6) ──────────────────────
+    // Email is an identifier bound to Google OAuth; direct mutation is blocked
+    // to prevent account takeover without identity provider re-authentication.
+    const emailCheck = validateEmailMutation(user.email, email);
+    if (!emailCheck.allowed) {
+      return NextResponse.json({ error: emailCheck.reason }, { status: 400 });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ── SEC-02: Centralised role assignment validation ────────────────────────
     // validateRoleAssignment enforces that only admins can grant admin roles,
