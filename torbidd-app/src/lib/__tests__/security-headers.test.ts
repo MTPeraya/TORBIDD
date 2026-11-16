@@ -3,12 +3,14 @@ import {
   HSTS_HEADER_VALUE,
   CSP_HEADER_VALUE,
   CSP_DIRECTIVES,
+  CSP_REPORT_PATH,
+  CSP_REPORT_GROUP,
   buildCspHeader,
   applySecurityHeaders,
 } from '../security-headers';
 import nextConfig from '../../../next.config';
 
-describe('Security Headers (ASVS 3.4.1, 3.4.3, 3.4.4, 3.4.5)', () => {
+describe('Security Headers (ASVS 3.4.1, 3.4.3, 3.4.4, 3.4.5, 3.4.6, 3.4.7)', () => {
   describe('req_id 3.4.1 - Strict-Transport-Security (HSTS)', () => {
     it('should include Strict-Transport-Security with max-age >= 31536000, includeSubDomains, and preload', () => {
       const hstsHeader = SECURITY_HEADERS.find(
@@ -185,6 +187,86 @@ describe('Security Headers (ASVS 3.4.1, 3.4.3, 3.4.4, 3.4.5)', () => {
     it('should include Permissions-Policy restricting sensitive devices', () => {
       const header = SECURITY_HEADERS.find((h) => h.key === 'Permissions-Policy');
       expect(header?.value).toBe('camera=(), microphone=(), geolocation=()');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ASVS req_id 3.4.6 — CSP frame-ancestors directive
+  // Verify that the CSP header always carries a frame-ancestors directive so the
+  // application cannot be embedded in a foreign frame (clickjacking / UI-redress).
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('req_id 3.4.6 - CSP frame-ancestors (clickjacking prevention)', () => {
+    it('should include frame-ancestors directive in CSP_DIRECTIVES', () => {
+      expect(CSP_DIRECTIVES['frame-ancestors']).toBeDefined();
+    });
+
+    it('should deny all framing with frame-ancestors none', () => {
+      expect(CSP_DIRECTIVES['frame-ancestors']).toEqual(["'none'"]);
+    });
+
+    it('should include frame-ancestors none in the built CSP header string', () => {
+      expect(CSP_HEADER_VALUE).toContain("frame-ancestors 'none'");
+    });
+
+    it('should carry frame-ancestors in the Content-Security-Policy header in SECURITY_HEADERS', () => {
+      const cspHeader = SECURITY_HEADERS.find((h) => h.key === 'Content-Security-Policy');
+      expect(cspHeader?.value).toContain("frame-ancestors 'none'");
+    });
+
+    it('should include frame-ancestors in next.config.ts headers for all routes', async () => {
+      const configuredHeaders = await nextConfig.headers!();
+      const routeHeaders = configuredHeaders.find((r) => r.source === '/:path*')?.headers ?? [];
+      const cspHeader = routeHeaders.find((h) => h.key === 'Content-Security-Policy');
+      expect(cspHeader?.value).toContain("frame-ancestors 'none'");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ASVS req_id 3.4.7 — CSP violation reporting endpoint
+  // Verify that the CSP header specifies a report-to directive pointing at a
+  // named Reporting-Endpoints group, and that a Reporting-Endpoints header is
+  // present declaring the actual collector URL.
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('req_id 3.4.7 - CSP violation reporting (report-to + Reporting-Endpoints)', () => {
+    it('should include report-to directive in CSP_DIRECTIVES', () => {
+      expect(CSP_DIRECTIVES['report-to']).toBeDefined();
+      expect(CSP_DIRECTIVES['report-to']).toContain(CSP_REPORT_GROUP);
+    });
+
+    it('should include legacy report-uri directive in CSP_DIRECTIVES for older browsers', () => {
+      expect(CSP_DIRECTIVES['report-uri']).toBeDefined();
+      expect(CSP_DIRECTIVES['report-uri']).toContain(CSP_REPORT_PATH);
+    });
+
+    it('should include report-to in the built CSP header string', () => {
+      expect(CSP_HEADER_VALUE).toContain(`report-to ${CSP_REPORT_GROUP}`);
+    });
+
+    it('should include report-uri in the built CSP header string', () => {
+      expect(CSP_HEADER_VALUE).toContain(`report-uri ${CSP_REPORT_PATH}`);
+    });
+
+    it('should include a Reporting-Endpoints header in SECURITY_HEADERS', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Reporting-Endpoints');
+      expect(header).toBeDefined();
+    });
+
+    it('should declare the correct group name and collector URL in Reporting-Endpoints', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Reporting-Endpoints');
+      expect(header?.value).toContain(CSP_REPORT_GROUP);
+      expect(header?.value).toContain(CSP_REPORT_PATH);
+      expect(header?.value).toBe(`${CSP_REPORT_GROUP}="${CSP_REPORT_PATH}"`);
+    });
+
+    it('should include Reporting-Endpoints in next.config.ts headers for all routes', async () => {
+      const configuredHeaders = await nextConfig.headers!();
+      const routeHeaders = configuredHeaders.find((r) => r.source === '/:path*')?.headers ?? [];
+      const header = routeHeaders.find((h) => h.key === 'Reporting-Endpoints');
+      expect(header?.value).toContain(CSP_REPORT_PATH);
+    });
+
+    it('CSP_REPORT_PATH should point to the actual collector API route', () => {
+      expect(CSP_REPORT_PATH).toBe('/api/security/csp-report');
     });
   });
 

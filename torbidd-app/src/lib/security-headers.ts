@@ -6,9 +6,22 @@
  * - ASVS req_id 3.4.3: Content-Security-Policy (CSP) restricting resource origins and iframe framing.
  * - ASVS req_id 3.4.4: X-Content-Type-Options: nosniff — prevents MIME-sniffing attacks.
  * - ASVS req_id 3.4.5: Referrer-Policy — prevents sensitive URL data leakage to third parties via Referer header.
+ * - ASVS req_id 3.4.6: CSP frame-ancestors directive — prevents clickjacking / UI-redress attacks.
+ * - ASVS req_id 3.4.7: CSP report-to directive + Reporting-Endpoints header — enables violation telemetry.
  */
 
 export const HSTS_HEADER_VALUE = 'max-age=31536000; includeSubDomains; preload';
+
+/**
+ * ASVS req_id 3.4.7 — The path to which CSP violation reports are POSTed.
+ * This must match the route created at src/app/api/security/csp-report/route.ts.
+ */
+export const CSP_REPORT_PATH = '/api/security/csp-report';
+
+/**
+ * ASVS req_id 3.4.7 — Reporting-Endpoints group name referenced by the CSP report-to directive.
+ */
+export const CSP_REPORT_GROUP = 'csp-violations';
 
 export const CSP_DIRECTIVES: Record<string, string[]> = {
   'default-src': ["'self'"],
@@ -24,8 +37,13 @@ export const CSP_DIRECTIVES: Record<string, string[]> = {
   ],
   'object-src': ["'none'"],
   'base-uri': ["'none'"],
+  // ASVS req_id 3.4.6 — frame-ancestors: explicitly deny all framing (clickjacking prevention)
   'frame-ancestors': ["'none'"],
   'form-action': ["'self'", 'https://accounts.google.com'],
+  // ASVS req_id 3.4.7 — report-to: violations are sent to the named Reporting-Endpoints group
+  'report-to': [CSP_REPORT_GROUP],
+  // Legacy fallback for older browsers that do not support Reporting API v1
+  'report-uri': [CSP_REPORT_PATH],
 };
 
 /**
@@ -43,9 +61,10 @@ export const CSP_HEADER_VALUE = buildCspHeader();
  * All security headers as an array of { key, value } objects for Next.js next.config.ts headers().
  *
  * - Strict-Transport-Security  → ASVS req_id 3.4.1
- * - Content-Security-Policy    → ASVS req_id 3.4.3
+ * - Content-Security-Policy    → ASVS req_id 3.4.3 (frame-ancestors → 3.4.6; report-to → 3.4.7)
  * - X-Content-Type-Options     → ASVS req_id 3.4.4
  * - Referrer-Policy            → ASVS req_id 3.4.5
+ * - Reporting-Endpoints        → ASVS req_id 3.4.7 (Reporting API v1 group declaration)
  */
 export const SECURITY_HEADERS: { key: string; value: string }[] = [
   {
@@ -55,6 +74,8 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
   },
   {
     // ASVS req_id 3.4.3 — CSP: restrict resource origins, block plugins, prevent framing
+    // ASVS req_id 3.4.6 — CSP frame-ancestors 'none': deny all iframe embedding
+    // ASVS req_id 3.4.7 — CSP report-to: send violations to Reporting-Endpoints group
     key: 'Content-Security-Policy',
     value: CSP_HEADER_VALUE,
   },
@@ -67,6 +88,11 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
     // ASVS req_id 3.4.5 — Limit Referer header to prevent leaking internal paths/params to third parties
     key: 'Referrer-Policy',
     value: 'strict-origin-when-cross-origin',
+  },
+  {
+    // ASVS req_id 3.4.7 — Reporting API v1: declares the named endpoint group referenced by CSP report-to
+    key: 'Reporting-Endpoints',
+    value: `${CSP_REPORT_GROUP}="${CSP_REPORT_PATH}"`,
   },
   {
     // Defense in depth: redundant framing protection alongside CSP frame-ancestors
