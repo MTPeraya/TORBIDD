@@ -5,8 +5,9 @@
 
 import { z } from 'zod';
 import { canonicalString, canonicalizeString } from './canonicalize';
+import { validateSafeUrl } from './ssrf';
 
-export { canonicalString, canonicalizeString };
+export { canonicalString, canonicalizeString, validateSafeUrl };
 
 // UC-10: Expanded software categories
 export const VALID_CATEGORIES = [
@@ -213,6 +214,18 @@ export const AiExtractSchema = z
   })
   .refine((d) => d.documentUrl || d.documentBase64, {
     message: 'Either documentUrl or documentBase64 must be provided',
+  })
+  .superRefine((d, ctx) => {
+    if (d.documentUrl) {
+      const check = validateSafeUrl(d.documentUrl);
+      if (!check.valid) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: check.reason || 'Document URL fails SSRF security check',
+          path: ['documentUrl'],
+        });
+      }
+    }
   });
 
 // ─── AI Classify (POST /api/ai/classify) ────────────────────────────────────

@@ -7,6 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { assertSafeUrl } from '@/lib/ssrf';
 import { getVertexAI, VERTEX_MODEL_PRO } from './vertex-ai';
 import { ExtractedQualificationItem } from '@/types/project';
 import { validateAndEnrichQualifications } from './qualification-validator';
@@ -778,6 +779,9 @@ export async function extractTorFromUrl(
   documentUrl: string,
   options: ExtractionOptions = {},
 ): Promise<TorExtractResult> {
+  // ASVS V1.3.6: SSRF Protection - strictly validate external document URL
+  assertSafeUrl(documentUrl);
+
   if (process.env.GOOGLE_CLOUD_PROJECT) {
     try {
       const vertexAI = getVertexAI();
