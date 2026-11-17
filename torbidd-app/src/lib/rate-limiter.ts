@@ -156,6 +156,22 @@ export const AUTH_LOGOUT_LIMITER: RateLimitConfig = {
 };
 
 // ---------------------------------------------------------------------------
+// Pre-configured limiters for Anti-Automation (ASVS req_id 2.4.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * AI_EXTRACT_LIMITER (ASVS req_id 2.4.1) – Anti-automation control for AI TOR Extraction.
+ * Protects against excessive calls that could lead to quota exhaustion,
+ * severe compute overuse (PDF OCR processing), and DoS.
+ *   · 10 requests per minute per IP
+ */
+export const AI_EXTRACT_LIMITER: RateLimitConfig = {
+  windowMs: 60 * 1000, // 1 minute
+  max: process.env.NODE_ENV === 'test' ? 1000 : 10,
+  label: 'ai-extract',
+};
+
+// ---------------------------------------------------------------------------
 // Helper: extract best-effort client IP from a Next.js request
 // ---------------------------------------------------------------------------
 
