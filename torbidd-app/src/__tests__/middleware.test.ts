@@ -123,7 +123,7 @@ describe('Middleware Locale Routing and Route Protection', () => {
 
     it('allows HTTP only while running the local development server', () => {
       const originalNodeEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'development';
 
       try {
         const req = new NextRequest('http://192.168.1.50:3000/api/projects', {
@@ -137,7 +137,7 @@ describe('Middleware Locale Routing and Route Protection', () => {
         expect(res.status).toBe(200);
         expect(res.headers.get('location')).toBeNull();
       } finally {
-        process.env.NODE_ENV = originalNodeEnv;
+        (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
       }
     });
   });

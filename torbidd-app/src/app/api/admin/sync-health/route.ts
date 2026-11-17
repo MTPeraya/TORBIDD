@@ -35,7 +35,15 @@ export async function GET(req: NextRequest) {
     try {
       const { IngestionService } = await import('@/services/ingestion/ingestion.service');
       const ingestionService = new IngestionService();
-      externalSources = await ingestionService.checkAllSourcesHealth();
+      const isTestEnv = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+      const timeoutMs = isTestEnv ? 200 : 3000;
+      externalSources = await Promise.race([
+        ingestionService.checkAllSourcesHealth(),
+        new Promise<null>((resolve) => {
+          const timer = setTimeout(() => resolve(null), timeoutMs);
+          timer.unref?.();
+        }),
+      ]);
     } catch (sourceErr) {
       console.warn('[SyncHealth] Could not check external sources:', sourceErr);
     }
