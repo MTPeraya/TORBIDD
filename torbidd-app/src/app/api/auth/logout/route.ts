@@ -5,6 +5,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME } from '@/lib/auth';
 import {
+  LEGACY_AUTH_COOKIE_NAME,
+  buildSecureCookieOptions,
+} from '@/lib/cookie-security';
+import {
   checkRateLimit,
   getClientIp,
   rateLimitHeaders,
@@ -29,13 +33,10 @@ export async function POST(req?: NextRequest) {
 
   const res = NextResponse.json({ success: true, message: 'Logged out successfully' }, { headers: rlHeaders });
 
-  res.cookies.set(AUTH_COOKIE_NAME, '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0,
-    path: '/',
-  });
+  // Clear both __Host- prefixed and legacy auth session cookies (ASVS 3.3.1 & 3.3.3)
+  const clearOptions = buildSecureCookieOptions({ maxAge: 0 });
+  res.cookies.set(AUTH_COOKIE_NAME, '', clearOptions);
+  res.cookies.set(LEGACY_AUTH_COOKIE_NAME, '', clearOptions);
 
   return res;
 }

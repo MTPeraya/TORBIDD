@@ -19,6 +19,11 @@ import {
   validateGoogleIdToken,
   AuthSessionUser,
 } from '@/lib/auth';
+import {
+  readCookieWithFallback,
+  buildSecureCookieOptions,
+  LEGACY_OAUTH_STATE_COOKIE,
+} from '@/lib/cookie-security';
 import { resolveInitialRole } from '@/lib/authorization';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
@@ -66,11 +71,10 @@ export async function GET(req: NextRequest) {
   const isMock = searchParams.get('mock') === 'true';
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
-  const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
 
   // ── SEC-04 & ASVS V10.2.1: Transaction state & Nonce verification ─────────
   // Validate state to prevent CSRF attacks and retrieve transaction nonce & PKCE verifier
-  const stateCookieRaw = req.cookies.get(OAUTH_STATE_COOKIE)?.value;
+  const stateCookieRaw = readCookieWithFallback(req.cookies, OAUTH_STATE_COOKIE, LEGACY_OAUTH_STATE_COOKIE);
   let returnUrl = '/';
   let stateIsValid = false;
   let originalNonce: string | undefined;
@@ -307,17 +311,16 @@ export async function GET(req: NextRequest) {
 
   const response = NextResponse.redirect(`${appUrl}${returnUrl}`);
 
-  // Set auth session cookie (7 days)
-  response.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
-    httpOnly: true,
-    secure: isHttps,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-  });
+  // Set auth session cookie (7 days) with __Host- prefix and Secure attribute (ASVS 3.3.1 & 3.3.3)
+  response.cookies.set(
+    AUTH_COOKIE_NAME,
+    sessionToken,
+    buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 7 }),
+  );
 
   // Clear OAuth transaction state cookie
   response.cookies.delete(OAUTH_STATE_COOKIE);
+  response.cookies.delete(LEGACY_OAUTH_STATE_COOKIE);
 
   return response;
 }
