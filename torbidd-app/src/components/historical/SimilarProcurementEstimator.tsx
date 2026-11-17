@@ -10,6 +10,7 @@ import {
 } from '@/lib/historicalAnalytics';
 import { formatBudget, formatBudgetFull } from '@/lib/utils';
 import { CATEGORY_LABELS, CATEGORIES } from '@/lib/labels';
+import { translateProcurementType } from '@/services/translation/dictionary';
 
 interface SimilarProcurementEstimatorProps {
   projects: Project[];
@@ -385,7 +386,9 @@ export function SimilarProcurementEstimator({
                 </div>
                 <div className="meta-box">
                   <span className="meta-label">{L('procurementType')}</span>
-                  <strong className="meta-value">{modalProject.procurementType || 'e-Bidding'}</strong>
+                  <strong className="meta-value">
+                    {(language === 'en' ? translateProcurementType(modalProject.procurementType) : modalProject.procurementType) || 'e-Bidding'}
+                  </strong>
                 </div>
                 {modalProject.awardedVendor && (
                   <div className="meta-box full-width">

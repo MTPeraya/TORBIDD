@@ -14,6 +14,7 @@ export interface TechStackRequirementsProps {
 
 export function TechStackRequirements({
   projectId,
+  rawTechnologies,
   rawRequirements,
 }: TechStackRequirementsProps) {
   const { language } = useLanguage();
@@ -106,6 +107,49 @@ export function TechStackRequirements({
           </span>
         </h2>
       </div>
+
+      {/* Required Technologies Badges */}
+      {rawTechnologies && rawTechnologies.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: 12.5,
+              fontWeight: 700,
+              color: 'var(--gray-700)',
+              marginBottom: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span>💻</span>
+            <span>
+              {language === 'th'
+                ? 'เทคโนโลยีที่ระบุใน TOR (Technologies)'
+                : 'Technologies in TOR'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {rawTechnologies.map((tech, idx) => (
+              <span
+                key={idx}
+                className="tech-tag"
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 16,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  color: '#2563eb',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                }}
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {parsedRequirements.length === 0 ? (
         <div

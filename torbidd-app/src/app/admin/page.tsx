@@ -11,6 +11,7 @@ import { ProjectFormModal } from '@/components/admin/ProjectFormModal';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
 import { ClassificationReviewPanel } from '@/components/admin/ClassificationReviewPanel';
 import { ConfirmNonSoftwareModal } from '@/components/admin/ConfirmNonSoftwareModal';
+import { translateProcurementType } from '@/services/translation/dictionary';
 
 interface AdminStats {
   totalProjects: number;
@@ -1240,7 +1241,7 @@ export default function AdminPage() {
                             {title}
                           </Link>
                           <div className="admin-cell-meta" style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
-                            <span>{project.procurementType}</span>
+                            <span>{language === 'en' ? translateProcurementType(project.procurementType) : project.procurementType}</span>
                             {project.fiscalYear && (
                               <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
                                 • ปี {project.fiscalYear}

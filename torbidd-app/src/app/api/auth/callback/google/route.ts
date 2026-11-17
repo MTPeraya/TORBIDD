@@ -1,11 +1,34 @@
 // =============================================================================
 // app/api/auth/callback/google/route.ts - Google OAuth Callback Handler
 // =============================================================================
+// Security Controls:
+// - SEC-01: Rate limiting on callback against brute-force & state stuffing
+// - SEC-02: Strict admin role assignment via resolveInitialRole (ASVS V6.3.2)
+// - SEC-03: Single identity provider - Google OAuth ONLY (ASVS V6.3.6)
+// - SEC-04: OIDC Nonce check, PKCE verification, ID Token RS256 signature
+//           validation against Google JWKS, and stable `sub` claim mapping
+//           (ASVS V6.7.1, V6.7.2, V6.8.2, V10.1.1, V10.1.2, V10.2.1, V10.5.1-4)
+// =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE, signSession, verifyOAuthState, AuthSessionUser } from '@/lib/auth';
+import {
+  AUTH_COOKIE_NAME,
+  OAUTH_STATE_COOKIE,
+  signSession,
+  verifyOAuthState,
+  validateGoogleIdToken,
+  AuthSessionUser,
+} from '@/lib/auth';
+import { resolveInitialRole } from '@/lib/authorization';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
+import {
+  checkRateLimit,
+  resetRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+  AUTH_CALLBACK_LIMITER,
+} from '@/lib/rate-limiter';
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -15,14 +38,28 @@ interface GoogleTokenResponse {
   scope: string;
 }
 
-interface GoogleUserInfo {
-  sub: string;
-  email: string;
-  name?: string;
-  picture?: string;
-}
+const LIMITER_ID = 'auth-callback-google';
 
 export async function GET(req: NextRequest) {
+  // ── SEC-01: Rate limiting on the callback endpoint ────────────────────────
+  const clientIp = getClientIp(req);
+  const rl = checkRateLimit(LIMITER_ID, clientIp, AUTH_CALLBACK_LIMITER);
+  const rlHeaders = rateLimitHeaders(rl, AUTH_CALLBACK_LIMITER.max);
+
+  if (!rl.allowed) {
+    console.warn(
+      `[Auth Rate Limit] Callback blocked for IP ${clientIp} – retryAfter=${rl.retryAfter}s`,
+    );
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+    const loginUrl = new URL(`${appUrl}/login`);
+    loginUrl.searchParams.set('error', 'rate_limited');
+    loginUrl.searchParams.set('retryAfter', String(rl.retryAfter));
+    const redirectRes = NextResponse.redirect(loginUrl.toString());
+    Object.entries(rlHeaders).forEach(([k, v]) => redirectRes.headers.set(k, v));
+    return redirectRes;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
@@ -31,12 +68,13 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
   const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
 
-  // Validate state to prevent CSRF attacks
-  // Priority 1: State cookie check
-  // Priority 2: Cryptographically verified HMAC state token (fallback if browser stripped cookie over HTTP/localhost)
+  // ── SEC-04 & ASVS V10.2.1: Transaction state & Nonce verification ─────────
+  // Validate state to prevent CSRF attacks and retrieve transaction nonce & PKCE verifier
   const stateCookieRaw = req.cookies.get(OAUTH_STATE_COOKIE)?.value;
   let returnUrl = '/';
   let stateIsValid = false;
+  let originalNonce: string | undefined;
+  let codeVerifier: string | undefined;
 
   if (stateCookieRaw) {
     try {
@@ -46,6 +84,8 @@ export async function GET(req: NextRequest) {
         if (parsedState.returnUrl && parsedState.returnUrl.startsWith('/')) {
           returnUrl = parsedState.returnUrl;
         }
+        originalNonce = parsedState.nonce;
+        codeVerifier = parsedState.codeVerifier;
       }
     } catch {}
   }
@@ -55,6 +95,8 @@ export async function GET(req: NextRequest) {
     if (verifiedState) {
       stateIsValid = true;
       returnUrl = verifiedState.returnUrl;
+      originalNonce = verifiedState.nonce;
+      codeVerifier = verifiedState.codeVerifier;
     }
   }
 
@@ -75,17 +117,24 @@ export async function GET(req: NextRequest) {
   let sessionUser: AuthSessionUser;
 
   if (isMock || code === 'mock_dev_code') {
-    // Local developer fallback mode
+    // ── SEC-02: Mock developer session ───────────────────────────────────────
+    // The mock account uses a real non-reserved email and receives BMA Officer
+    // role by default. It can only be promoted to admin if its email appears in
+    // ADMIN_EMAILS (same policy as real accounts – no special mock bypass).
+    const mockEmail = 'officer.bma@bangkok.go.th';
+    const mockRole = resolveInitialRole(mockEmail); // 'admin' only if in ADMIN_EMAILS
+    // ────────────────────────────────────────────────────────────────────────
+
     sessionUser = {
       id: 'mock_user_bma_123',
-      email: 'officer.bma@bangkok.go.th',
+      email: mockEmail,
       name: 'BMA Procurement Officer',
       picture: '',
-      role: 'BMA Procurement Officer',
+      role: mockRole === 'admin' ? 'admin' : 'BMA Procurement Officer',
       org: 'สำนักยุทธศาสตร์และประเมินผล',
     };
 
-    // Try saving to DB if MONGODB_URI exists
+    // Save to DB if MONGODB_URI exists
     if (process.env.MONGODB_URI) {
       try {
         await connectToDatabase();
@@ -111,7 +160,7 @@ export async function GET(req: NextRequest) {
       }
     }
   } else {
-    // Real Google OAuth 2.0 exchange
+    // ── SEC-04: Real Google OAuth 2.0 & OIDC Validation ─────────────────────
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri = `${appUrl}/api/auth/callback/google`;
@@ -121,17 +170,22 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-      // 1. Exchange authorization code for tokens
+      // 1. Exchange authorization code for tokens (with PKCE code_verifier, ASVS V10.1.2)
+      const tokenRequestBody: Record<string, string> = {
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      };
+      if (codeVerifier) {
+        tokenRequestBody.code_verifier = codeVerifier;
+      }
+
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          code,
-          client_id: clientId,
-          client_secret: clientSecret,
-          redirect_uri: redirectUri,
-          grant_type: 'authorization_code',
-        }),
+        body: new URLSearchParams(tokenRequestBody),
       });
 
       if (!tokenRes.ok) {
@@ -142,36 +196,65 @@ export async function GET(req: NextRequest) {
 
       const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
 
-      // 2. Fetch user profile with access token
-      const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` },
-      });
+      let userGoogleSub = '';
+      let userEmail = '';
+      let userName = '';
+      let userPicture = '';
 
-      if (!userRes.ok) {
-        console.error('[Google Auth Callback] Userinfo fetch failed');
-        return NextResponse.redirect(`${appUrl}/login?error=userinfo_failed`);
+      if (tokenData.id_token) {
+        // 2a. Validate Google ID Token (ASVS V6.7.1, V6.8.2, V10.5.1-V10.5.4)
+        // Validates RS256 signature against Google JWKS certificates,
+        // expected issuer ('https://accounts.google.com'), audience (clientId),
+        // expiration (exp), and OIDC transaction nonce.
+        const idTokenPayload = await validateGoogleIdToken(tokenData.id_token, {
+          expectedClientId: clientId,
+          expectedNonce: originalNonce,
+        });
+        userGoogleSub = idTokenPayload.sub;
+        userEmail = idTokenPayload.email || '';
+        userName = idTokenPayload.name || userEmail.split('@')[0] || '';
+        userPicture = idTokenPayload.picture || '';
+      } else if (tokenData.access_token) {
+        // 2b. Fallback: Query Google userinfo endpoint if id_token not returned (ASVS V6.8.4 fallback)
+        const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+
+        if (!userRes.ok) {
+          console.error('[Google Auth Callback] Userinfo fetch failed');
+          return NextResponse.redirect(`${appUrl}/login?error=userinfo_failed`);
+        }
+
+        const profile = (await userRes.json()) as {
+          sub: string;
+          email: string;
+          name?: string;
+          picture?: string;
+        };
+        userGoogleSub = profile.sub;
+        userEmail = profile.email || '';
+        userName = profile.name || userEmail.split('@')[0] || '';
+        userPicture = profile.picture || '';
+      } else {
+        console.error('[Google Auth Callback] Neither id_token nor access_token in token response');
+        return NextResponse.redirect(`${appUrl}/login?error=missing_id_token`);
       }
 
-      const profile = (await userRes.json()) as GoogleUserInfo;
-
-      // 3. Connect to MongoDB and upsert User
-      let userId = profile.sub;
-      const adminEmails = (process.env.ADMIN_EMAILS || '')
-        .split(',')
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
-      const isConfiguredAdmin = adminEmails.includes(profile.email.toLowerCase().trim());
-
+      // 3. Identify user using Google's stable, unique 'sub' claim (ASVS V10.5.2)
+      // 4. Role resolution (ASVS V6.3.2)
+      const isConfiguredAdmin = resolveInitialRole(userEmail) === 'admin';
       let userRole = isConfiguredAdmin ? 'admin' : 'BMA Officer';
       let userOrg = 'กรุงเทพมหานคร';
+      let userId = userGoogleSub;
 
+      // 5. Connect to MongoDB and upsert User anchored on Google sub (ASVS V10.5.2)
       if (process.env.MONGODB_URI) {
         try {
           await connectToDatabase();
           const updateFields: Record<string, unknown> = {
-            email: profile.email,
-            name: profile.name || '',
-            picture: profile.picture || '',
+            email: userEmail,
+            name: userName,
+            picture: userPicture,
             lastLoginAt: new Date(),
           };
           if (isConfiguredAdmin) {
@@ -179,7 +262,7 @@ export async function GET(req: NextRequest) {
           }
 
           const dbUser = await User.findOneAndUpdate(
-            { googleId: profile.sub },
+            { googleId: userGoogleSub },
             {
               $set: updateFields,
               $setOnInsert: {
@@ -187,7 +270,7 @@ export async function GET(req: NextRequest) {
                 org: 'กรุงเทพมหานคร',
               },
             },
-            { returnDocument: 'after', upsert: true },
+            { new: true, returnDocument: 'after', upsert: true },
           );
 
           if (dbUser?._id) {
@@ -196,26 +279,31 @@ export async function GET(req: NextRequest) {
             userOrg = dbUser.org || 'กรุงเทพมหานคร';
           }
         } catch (dbErr) {
-          console.warn('[Google Auth Callback] MongoDB sync failed, falling back to Google profile session:', dbErr);
+          console.warn('[Google Auth Callback] MongoDB sync failed, falling back to ID token session:', dbErr);
         }
       }
 
       sessionUser = {
         id: userId,
-        email: profile.email,
-        name: profile.name || profile.email.split('@')[0],
-        picture: profile.picture || '',
+        email: userEmail,
+        name: userName,
+        picture: userPicture,
         role: userRole,
         org: userOrg,
       };
     } catch (err) {
-      console.error('[Google Auth Callback] Exception during OAuth flow:', err);
-      return NextResponse.redirect(`${appUrl}/login?error=auth_failed`);
+      console.error('[Google Auth Callback] Exception during OAuth / OIDC validation:', err);
+      return NextResponse.redirect(`${appUrl}/login?error=token_validation_failed`);
     }
   }
 
-  // 4. Create signed session token and set secure HTTP-only cookie
+  // 6. Create signed session token and set secure HTTP-only cookie
+  // (Tokens access_token and id_token remain on server and are NOT sent to client JS, ASVS V10.1.1)
   const sessionToken = signSession(sessionUser);
+
+  // ── SEC-01: Successful auth – reset the callback rate-limit counter ──────
+  resetRateLimit(LIMITER_ID, clientIp);
+  // ─────────────────────────────────────────────────────────────────────────
 
   const response = NextResponse.redirect(`${appUrl}${returnUrl}`);
 
@@ -228,7 +316,7 @@ export async function GET(req: NextRequest) {
     path: '/',
   });
 
-  // Clear OAuth state cookie
+  // Clear OAuth transaction state cookie
   response.cookies.delete(OAUTH_STATE_COOKIE);
 
   return response;

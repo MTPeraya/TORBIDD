@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { formatBudget, formatBudgetFull } from '@/lib/utils';
 import { AgencyBudgetChart, AgencyCategoryChart } from '@/components/charts/HistoricalCharts';
 import { CATEGORY_LABELS } from '@/lib/labels';
+import { translateProcurementType } from '@/services/translation/dictionary';
 
 interface AgencyComparisonViewProps {
   agencyMetrics: AgencyComparisonMetrics[];
@@ -384,7 +385,7 @@ export function AgencyComparisonView({ agencyMetrics }: AgencyComparisonViewProp
                     {language === 'th' ? 'วิธีการจัดหา' : 'Procurement Type'}
                   </span>
                   <strong className="meta-value">
-                    {modalProject.procurementType || 'e-Bidding'}
+                    {(language === 'en' ? translateProcurementType(modalProject.procurementType) : modalProject.procurementType) || 'e-Bidding'}
                   </strong>
                 </div>
                 {modalProject.awardedVendor && (

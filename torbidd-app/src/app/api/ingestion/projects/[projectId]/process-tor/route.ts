@@ -182,7 +182,7 @@ export async function POST(
 
     const finalResult = {
       ...result,
-      agencyName: announResult?.agencyName || projectContext.agencyName,
+      agencyName: announResult?.agencyName || result.department || projectContext.agencyName,
       fiscalYear: announResult?.fiscalYear || projectContext.fiscalYear,
       budget: announResult?.budget || result.budget || projectContext.budget,
       medianPrice: announResult?.medianPrice || result.medianPrice,

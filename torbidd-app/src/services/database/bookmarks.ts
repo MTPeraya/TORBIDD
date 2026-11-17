@@ -1,31 +1,89 @@
 // =============================================================================
 // services/database/bookmarks.ts - Bookmark Repository
+// SEC-06: Resource Ownership and Object-Level Authorization — ASVS V8.2.2
+// ASVS V2.3.3: Business Logic Level Database Transactions
+// =============================================================================
+// When an authenticated userId is provided, bookmarks are scoped to that user.
+// Anonymous callers fall back to sessionId scoping (unchanged behaviour).
+// This prevents IDOR: a user cannot read or delete another user's bookmarks.
+// Modifications are executed within transactions to guarantee all-or-nothing atomicity.
 // =============================================================================
 
 import connectToDatabase from '@/lib/mongodb';
+import { withTransaction } from '@/lib/transactions';
 import Bookmark from '@/models/Bookmark';
 import mongoose from 'mongoose';
 
-export async function getBookmarks(sessionId: string): Promise<string[]> {
+/**
+ * Retrieve all bookmarks for a session or authenticated user.
+ *
+ * @param sessionId The anonymous session ID (always present).
+ * @param userId    Optional authenticated user ID. When provided, bookmarks
+ *                  are filtered by userId (SEC-06 ownership scope).
+ */
+export async function getBookmarks(sessionId: string, userId?: string | null): Promise<string[]> {
   await connectToDatabase();
-  const bookmarks = await Bookmark.find({ sessionId }).select('projectId').lean();
+
+  // SEC-06: Prefer user-scoped query when authenticated
+  const query = userId ? { userId } : { sessionId };
+
+  const bookmarks = await Bookmark.find(query).select('projectId').lean();
   return bookmarks.map((b) => b.projectId.toString());
 }
 
-export async function addBookmark(sessionId: string, projectId: string): Promise<void> {
-  await connectToDatabase();
-  await Bookmark.findOneAndUpdate(
-    { sessionId, projectId: new mongoose.Types.ObjectId(projectId) },
-    { sessionId, projectId: new mongoose.Types.ObjectId(projectId) },
-    { upsert: true },
-  );
+/**
+ * Add a bookmark for a session or authenticated user inside a transaction.
+ *
+ * ASVS V2.3.3: Uses business-logic-level database transactions so that either
+ * the bookmark succeeds in its entirety or it is rolled back.
+ *
+ * @param sessionId The anonymous session ID.
+ * @param projectId The project to bookmark.
+ * @param userId    Optional authenticated user ID.
+ */
+export async function addBookmark(
+  sessionId: string,
+  projectId: string,
+  userId?: string | null,
+): Promise<void> {
+  return withTransaction(async (session) => {
+    await Bookmark.findOneAndUpdate(
+      { sessionId, projectId: new mongoose.Types.ObjectId(projectId) },
+      {
+        sessionId,
+        projectId: new mongoose.Types.ObjectId(projectId),
+        // SEC-06: Associate bookmark with authenticated user when available
+        ...(userId ? { userId } : {}),
+      },
+      { upsert: true, session: session || undefined },
+    );
+  });
 }
 
-export async function removeBookmark(sessionId: string, projectId: string): Promise<boolean> {
-  await connectToDatabase();
-  const result = await Bookmark.deleteOne({
-    sessionId,
-    projectId: new mongoose.Types.ObjectId(projectId),
+/**
+ * Remove a bookmark, enforcing ownership when userId is provided inside a transaction.
+ *
+ * ASVS V2.3.3: Wrapped in an atomic transaction.
+ * SEC-06: When userId is provided, deletion is scoped to that user's bookmarks.
+ * If the bookmark exists but belongs to a different user, `removed` will be
+ * false (the caller returns 404 to avoid leaking existence — ASVS V8.2.2).
+ *
+ * @param sessionId The anonymous session ID.
+ * @param projectId The project whose bookmark to remove.
+ * @param userId    Optional authenticated user ID for ownership scoping.
+ */
+export async function removeBookmark(
+  sessionId: string,
+  projectId: string,
+  userId?: string | null,
+): Promise<boolean> {
+  return withTransaction(async (session) => {
+    // SEC-06: Scope deletion by userId when authenticated
+    const filter = userId
+      ? { userId, projectId: new mongoose.Types.ObjectId(projectId) }
+      : { sessionId, projectId: new mongoose.Types.ObjectId(projectId) };
+
+    const result = await Bookmark.deleteOne(filter, { session: session || undefined });
+    return result.deletedCount > 0;
   });
-  return result.deletedCount > 0;
 }
