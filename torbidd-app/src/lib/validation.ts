@@ -210,7 +210,8 @@ export const NotificationPreferencesSchema = z
 export const AiExtractSchema = z
   .object({
     documentUrl: canonicalString(z.string().url()).optional(),
-    documentBase64: z.string().max(20_000_000).optional(), // ~15MB base64
+    // 25 MB decoded, rounded up for base64's 4:3 expansion.
+    documentBase64: z.string().max(34_952_536).optional(),
   })
   .refine((d) => d.documentUrl || d.documentBase64, {
     message: 'Either documentUrl or documentBase64 must be provided',
@@ -224,6 +225,17 @@ export const AiExtractSchema = z
           message: check.reason || 'Document URL fails SSRF security check',
           path: ['documentUrl'],
         });
+      }
+      try {
+        if (!new URL(d.documentUrl).pathname.toLowerCase().endsWith('.pdf')) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Document URL must identify a .pdf file',
+            path: ['documentUrl'],
+          });
+        }
+      } catch {
+        // The URL validator reports malformed URLs.
       }
     }
   });

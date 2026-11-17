@@ -5,9 +5,17 @@
 // SERVER ONLY — do not import in client components.
 // =============================================================================
 
-import fs from 'node:fs';
 import path from 'node:path';
 import { assertSafeUrl } from '@/lib/ssrf';
+import {
+  assertPdfExtension,
+  MAX_PDF_BASE64_LENGTH,
+  MAX_PDF_BYTES,
+  PdfSecurityError,
+  readResponseWithLimit,
+  readValidatedPdfFile,
+  validatePdfBuffer,
+} from '@/lib/secure-pdf';
 import { getVertexAI, VERTEX_MODEL_PRO } from './vertex-ai';
 import { ExtractedQualificationItem } from '@/types/project';
 import { validateAndEnrichQualifications } from './qualification-validator';
@@ -623,6 +631,10 @@ export async function extractTorFromBuffer(
   buffer?: Buffer,
   options: ExtractionOptions = {},
 ): Promise<TorExtractResult> {
+  if (buffer) {
+    validatePdfBuffer(buffer, { fileName: options.fileName });
+  }
+
   const apiKey = (
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_AI_STUDIO_API_KEY ||
@@ -746,14 +758,8 @@ export async function extractTorFromFile(
 ): Promise<TorExtractResult> {
   const safePath = path.resolve(filePath);
   const fileName = options.fileName || path.basename(safePath);
-
-  try {
-    const fileBuffer = await fs.promises.readFile(safePath);
-    return await extractTorFromBuffer(fileBuffer, { ...options, fileName });
-  } catch (err) {
-    console.warn(`[TOR Extractor] Could not read file ${safePath}, generating heuristic extraction:`, err);
-    return extractTorHeuristic(undefined, { ...options, fileName });
-  }
+  const fileBuffer = await readValidatedPdfFile(safePath);
+  return extractTorFromBuffer(fileBuffer, { ...options, fileName });
 }
 
 /**
@@ -763,13 +769,16 @@ export async function extractTorFromBase64(
   base64: string,
   options: ExtractionOptions = {},
 ): Promise<TorExtractResult> {
-  try {
-    const buffer = Buffer.from(base64, 'base64');
-    return await extractTorFromBuffer(buffer, options);
-  } catch (err) {
-    console.error('[TOR Extractor] Base64 decode failed:', err);
-    return extractTorHeuristic(undefined, options);
+  const compact = base64.replaceAll(/\s/g, '');
+  if (compact.length > MAX_PDF_BASE64_LENGTH) {
+    throw new PdfSecurityError('Base64 PDF exceeds the 25 MB decoded payload limit', 'TOO_LARGE');
   }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact) || compact.length % 4 !== 0) {
+    throw new PdfSecurityError('Invalid base64 PDF payload', 'INVALID_MAGIC');
+  }
+  const buffer = Buffer.from(compact, 'base64');
+  validatePdfBuffer(buffer, { fileName: options.fileName });
+  return extractTorFromBuffer(buffer, options);
 }
 
 /**
@@ -781,37 +790,40 @@ export async function extractTorFromUrl(
 ): Promise<TorExtractResult> {
   // ASVS V1.3.6: SSRF Protection - strictly validate external document URL
   assertSafeUrl(documentUrl);
+  const parsedUrl = new URL(documentUrl);
+  assertPdfExtension(path.posix.basename(parsedUrl.pathname));
 
-  if (process.env.GOOGLE_CLOUD_PROJECT) {
-    try {
-      const vertexAI = getVertexAI();
-      const model = vertexAI.getGenerativeModel({ model: VERTEX_MODEL_PRO });
+  let currentUrl = parsedUrl;
+  let response: Response | undefined;
+  for (let redirectCount = 0; redirectCount <= 3; redirectCount += 1) {
+    assertSafeUrl(currentUrl.toString());
+    response = await fetch(currentUrl, {
+      method: 'GET',
+      headers: { Accept: 'application/pdf' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(30000),
+    });
 
-      const result = await model.generateContent({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { fileData: { mimeType: 'application/pdf', fileUri: documentUrl } },
-              { text: EXTRACTION_PROMPT },
-            ],
-          },
-        ],
-      });
-
-      const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned) as TorExtractResult;
-      return {
-        ...parsed,
-        confidence: 'High',
-      };
-    } catch (err) {
-      console.warn('[TOR Extractor] Vertex AI URL extraction failed:', err);
+    if (![301, 302, 303, 307, 308].includes(response.status)) break;
+    const location = response.headers.get('location');
+    if (!location || redirectCount === 3) {
+      throw new Error('TOR PDF download exceeded the safe redirect limit');
     }
+    currentUrl = new URL(location, currentUrl);
+    assertSafeUrl(currentUrl.toString());
+    assertPdfExtension(path.posix.basename(currentUrl.pathname));
   }
 
-  return extractTorHeuristic(undefined, { ...options, fileName: path.basename(documentUrl) });
+  if (!response) throw new Error('TOR PDF download returned no response');
+  if (!response.ok) {
+    throw new Error(`TOR PDF download failed with HTTP ${response.status}`);
+  }
+
+  const buffer = await readResponseWithLimit(response, MAX_PDF_BYTES, 'TOR PDF');
+  return extractTorFromBuffer(buffer, {
+    ...options,
+    fileName: path.posix.basename(parsedUrl.pathname),
+  });
 }
 
 export const ANNOUNCEMENT_PROMPT = `Analyze this Thai Government e-GP Announcement PDF and extract the official project details in JSON:
@@ -840,6 +852,8 @@ export async function extractAnnouncementFromBuffer(
   buffer: Buffer,
   options: ExtractionOptions = {},
 ): Promise<AnnouncementExtractResult | null> {
+  validatePdfBuffer(buffer, { fileName: options.fileName });
+
   const apiKey = (
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_AI_STUDIO_API_KEY ||
@@ -964,12 +978,7 @@ export async function extractAnnouncementFromFile(
   options: ExtractionOptions = {},
 ): Promise<AnnouncementExtractResult | null> {
   const safePath = path.resolve(filePath);
-  try {
-    const fileBuffer = await fs.promises.readFile(safePath);
-    return await extractAnnouncementFromBuffer(fileBuffer, { ...options, fileName: path.basename(safePath) });
-  } catch (err) {
-    console.warn(`[Announcement Extractor] Could not read file ${safePath}:`, err);
-    return null;
-  }
+  const fileBuffer = await readValidatedPdfFile(safePath);
+  return extractAnnouncementFromBuffer(fileBuffer, { ...options, fileName: path.basename(safePath) });
 }
 

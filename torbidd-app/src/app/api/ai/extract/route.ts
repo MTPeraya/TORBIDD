@@ -5,9 +5,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractTorFromUrl, extractTorFromBase64 } from '@/services/ai/tor-extractor';
 import { AiExtractSchema } from '@/lib/validation';
+import { MAX_PDF_BASE64_LENGTH, PdfSecurityError } from '@/lib/secure-pdf';
 
 export async function POST(req: NextRequest) {
   try {
+    const contentLength = Number(req.headers.get('content-length'));
+    if (Number.isFinite(contentLength) && contentLength > MAX_PDF_BASE64_LENGTH + 4096) {
+      return NextResponse.json({ error: 'PDF payload exceeds the 25 MB limit' }, { status: 413 });
+    }
+
     const body = await req.json();
     const parsed = AiExtractSchema.safeParse(body);
 
@@ -28,6 +34,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: result });
   } catch (err) {
     console.error('[POST /api/ai/extract]', err);
+    if (err instanceof PdfSecurityError) {
+      return NextResponse.json(
+        { error: err.message },
+        { status: err.code === 'TOO_LARGE' ? 413 : 400 },
+      );
+    }
     return NextResponse.json({ error: 'TOR extraction failed' }, { status: 500 });
   }
 }

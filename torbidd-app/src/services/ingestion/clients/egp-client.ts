@@ -5,11 +5,12 @@
 import { DiscoveredProject, EgpArchiveMetadata } from '@/types/procurement';
 import { getIngestionConfig } from '@/lib/config';
 import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
+import { MAX_PDF_BYTES, PdfSecurityError, readResponseWithLimit } from '@/lib/secure-pdf';
 
 const METADATA_PATH = '/egp-approval-service/apv-common/infoProcureDocAnnounZipTemp';
 const DOWNLOAD_PATH = '/egp-upload-service/v1/downloadFileTest';
 const PROJECT_ID_PATTERN = /^\d{11}$/;
-const MAX_ARCHIVE_BYTES = 100 * 1024 * 1024; // 100MB download limit
+const MAX_ARCHIVE_BYTES = MAX_PDF_BYTES;
 
 export interface EgpClientOptions {
   baseUrl?: string;
@@ -187,23 +188,13 @@ export class EgpClient {
       throw new Error(`e-GP download failed with status ${response.status} for project ${metadata.projectId}`);
     }
 
-    const headerLength = Number(response.headers.get('content-length'));
-    if (Number.isFinite(headerLength) && headerLength > MAX_ARCHIVE_BYTES) {
-      throw new Error(`e-GP ZIP archive exceeds maximum safe limit of ${MAX_ARCHIVE_BYTES} bytes`);
-    }
-
-    let arrayBuffer: ArrayBuffer;
+    let zipBuffer: Buffer;
     try {
-      arrayBuffer = await response.arrayBuffer();
+      zipBuffer = await readResponseWithLimit(response, MAX_ARCHIVE_BYTES, 'e-GP ZIP archive');
     } catch (err: unknown) {
+      if (err instanceof PdfSecurityError) throw err;
       const msg = err instanceof Error ? err.message : String(err);
       throw new Error(`Failed reading e-GP ZIP payload: ${msg}`);
-    }
-
-    const zipBuffer = Buffer.from(arrayBuffer);
-
-    if (zipBuffer.length > MAX_ARCHIVE_BYTES) {
-      throw new Error(`e-GP ZIP archive is too large: ${zipBuffer.length} bytes`);
     }
 
     // Validate ZIP magic header: PK\x03\x04 or PK\x05\x06 (empty) or starts with 'PK' (0x50, 0x4b)
