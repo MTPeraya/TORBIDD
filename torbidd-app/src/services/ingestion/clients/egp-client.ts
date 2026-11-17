@@ -5,6 +5,7 @@
 import { DiscoveredProject, EgpArchiveMetadata } from '@/types/procurement';
 import { getIngestionConfig } from '@/lib/config';
 import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
+import { assertHttpsUrl } from '@/lib/tls';
 
 const METADATA_PATH = '/egp-approval-service/apv-common/infoProcureDocAnnounZipTemp';
 const DOWNLOAD_PATH = '/egp-upload-service/v1/downloadFileTest';
@@ -53,6 +54,9 @@ export class EgpClient {
       process.env.EGP_RSS_BASE_URL ??
       'https://process3.gprocurement.go.th/EPROCRssFeedWeb/egpannouncerss.xml'
     ).trim();
+    assertHttpsUrl(this.baseUrl, 'e-GP API URL');
+    assertHttpsUrl(this.portalUrl, 'e-GP portal URL');
+    assertHttpsUrl(this.rssBaseUrl, 'e-GP RSS URL');
     this.fetchImpl =
       options.fetchImpl ??
       (typeof fetch !== 'undefined'

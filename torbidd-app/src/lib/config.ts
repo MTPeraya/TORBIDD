@@ -5,29 +5,30 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { assertHttpsUrl } from './tls';
+
+const httpsUrl = z.string().url().superRefine((value, ctx) => {
+  try {
+    assertHttpsUrl(value);
+  } catch (error) {
+    ctx.addIssue({
+      code: 'custom',
+      message: error instanceof Error ? error.message : 'URL must use HTTPS',
+    });
+  }
+});
 
 export const IngestionConfigSchema = z.object({
   govspendingApiKey: z.string().trim().default(''),
-  govspendingBaseUrl: z
-    .string()
-    .url()
+  govspendingBaseUrl: httpsUrl
     .default('https://opend.data.go.th/govspending/service/egp-contract'),
-  dataGoThBaseUrl: z
-    .string()
-    .url()
+  dataGoThBaseUrl: httpsUrl
     .default('https://data.go.th'),
-  egpBaseUrl: z
-    .string()
-    .url()
+  egpBaseUrl: httpsUrl
     .default('https://process5.gprocurement.go.th'),
-  egpRssBaseUrl: z
-    .string()
-    .url()
+  egpRssBaseUrl: httpsUrl
     .default('https://process3.gprocurement.go.th/EPROCRssFeedWeb/egpannouncerss.xml'),
-  bmaBaseUrl: z
-    .string()
-    .url()
-    .default('http://egp2.bangkok.go.th'),
+  bmaBaseUrl: httpsUrl.default('https://egp2.bangkok.go.th'),
   requestTimeoutMs: z.coerce.number().int().positive().default(15000),
   documentStoragePath: z.string().default('./storage/documents'),
 
@@ -38,7 +39,7 @@ export const IngestionConfigSchema = z.object({
   geminiModel: z.string().trim().default('gemini-2.0-flash'),
   openrouterApiKey: z.string().trim().default(''),
   openrouterModel: z.string().trim().default('qwen/qwen3.5-flash-02-23'),
-  openrouterBaseUrl: z.string().url().default('https://openrouter.ai/api/v1'),
+  openrouterBaseUrl: httpsUrl.default('https://openrouter.ai/api/v1'),
 });
 
 export type IngestionConfig = z.infer<typeof IngestionConfigSchema> & {
@@ -81,7 +82,7 @@ export function getIngestionConfig(
     egpRssBaseUrl:
       env.EGP_RSS_BASE_URL ||
       'https://process3.gprocurement.go.th/EPROCRssFeedWeb/egpannouncerss.xml',
-    bmaBaseUrl: env.BMA_BASE_URL || 'http://egp2.bangkok.go.th',
+    bmaBaseUrl: env.BMA_BASE_URL || 'https://egp2.bangkok.go.th',
     requestTimeoutMs: env.REQUEST_TIMEOUT_MS ? Number(env.REQUEST_TIMEOUT_MS) : 15000,
     documentStoragePath: env.DOCUMENT_STORAGE_PATH || './storage/documents',
 

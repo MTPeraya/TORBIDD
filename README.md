@@ -24,15 +24,15 @@ The platform aggregates and continuously polls procurement notices, Terms of Ref
 > In our initial **Project Proposal**, 5 external data sources were tentatively proposed for integration. Following technical feasibility evaluations, API accessibility audits, and schema consolidation conducted for the **Software Requirements Specification (SRS)**, the active data ingestion pipeline was refined to focus on **3 authoritative public government sources**:
 
 1. **Bangkok Metropolitan Administration e-Procurement**  
-   🔗 [egp2.bangkok.go.th](http://egp2.bangkok.go.th/)  
+   🔗 [egp2.bangkok.go.th](https://egp2.bangkok.go.th/)
    *Municipal procurement notices, electronic tender announcements, and downloadable TOR specifications from BMA departments and 50 district offices.*
 
 2. **Electronic Government Procurement (e-GP)**  
-   🔗 [www.gprocurement.go.th](http://www.gprocurement.go.th/)  
+   🔗 [www.gprocurement.go.th](https://www.gprocurement.go.th/)
    *Thailand's central national e-procurement portal operated by the Comptroller General's Department (CGD), Ministry of Finance, covering nationwide ministry and state agency software tenders.*
 
 3. **Open Government Data of Thailand**  
-   🔗 [data.go.th](http://data.go.th/)  
+   🔗 [data.go.th](https://data.go.th/)
    *The national open government data clearinghouse managed by the Digital Government Development Agency (DGA), providing structured historical procurement datasets, agency catalogs, and awarded contract analytics.*
 
 ---
@@ -79,10 +79,53 @@ TORBIDD/
 
 ## ⚙️ Prerequisites
 
-- **Node.js**: v18.18.0 or higher (v20+ recommended)
+- **Node.js**: v22 LTS (matches CI and the production image)
 - **npm**: v9.0.0 or higher
 - **MongoDB Atlas account** (or local MongoDB instance)
 - **Google Cloud Project** with Vertex AI API enabled (optional for local testing with fallbacks)
+
+---
+
+## 🚀 Quick Start — Development
+
+From the repository root, run:
+
+```bash
+cd torbidd-app
+
+# First run only; do not overwrite an existing configured .env.local
+test -f .env.local || cp .env.example .env.local
+
+# Install the locked dependencies
+npm ci --legacy-peer-deps
+
+# Start the browser UI and API server
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+TORBIDD is a full-stack Next.js application, so this single command starts both
+the client UI and server API. MongoDB Atlas and Vertex AI credentials can be
+added to `.env.local`; without them, development uses the available offline/mock
+fallbacks.
+
+Stop the server with `Ctrl+C`.
+
+Useful checks before opening a pull request:
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+> Windows PowerShell: use `if (!(Test-Path .env.local)) { Copy-Item .env.example .env.local }`
+> instead of the `test ... || cp ...` command.
 
 ---
 
@@ -96,7 +139,7 @@ TORBIDD/
 2. Open `.env.local` and configure your credentials:
    ```ini
    # MongoDB Atlas Connection
-   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?tls=true
    MONGODB_DB=torbidd
 
    # Google Cloud / Vertex AI (Server-side only)
@@ -108,6 +151,11 @@ TORBIDD/
 
    # App URL
    NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+   # SEC-18 transport policy
+   NODE_TLS_REJECT_UNAUTHORIZED=1
+   NODE_OPTIONS=--tls-min-v1.2
+   BMA_BASE_URL=https://egp2.bangkok.go.th
    ```
 
 > [!NOTE]
@@ -143,16 +191,52 @@ Output:
 
 ## 💻 Local Development
 
+TORBIDD is a single full-stack Next.js application. The browser UI and `/api/*`
+routes are served by the same process; there is no separate client-side command.
+
 ```bash
-# 1. Install dependencies
+# 1. Enter the application directory
 cd torbidd-app
-npm install
 
-# 2. Run the Next.js development server
+# 2. Create local configuration once, then fill in the required values
+cp .env.example .env.local
+
+# 3. Install exactly the locked dependencies
+npm ci --legacy-peer-deps
+
+# 4. Run the UI and API development server
 npm run dev
+```
 
-# 3. Open in browser
-open http://localhost:3000
+Open the client UI:
+
+```text
+http://localhost:3000
+```
+
+To test from another browser or device on the same network, use the development
+machine's LAN address displayed by Next.js:
+
+```text
+http://<development-machine-ip>:3000
+```
+
+Development mode permits HTTP because `next dev` has no TLS listener. This
+exception is disabled in production, where HTTP is permanently redirected to
+HTTPS. You may need to allow port 3000 through the development machine's local
+firewall for LAN testing.
+
+### Local verification
+
+```bash
+# Code quality
+npm run lint
+
+# Unit and integration tests
+npm test
+
+# Production compilation/type check (does not start the server)
+npm run build
 ```
 
 ---
@@ -267,34 +351,55 @@ npm run build
 
 ## 🐳 Docker
 
+Docker is the supported production/staging runtime. Unlike `npm run dev`, it is
+HTTPS-only and fails closed when its certificates are missing.
+
 ### Build Image
 ```bash
-# From torbidd-app/ directory
+# From the repository root
+docker build --target runner -t torbidd-app:latest ./torbidd-app
+
+# Equivalent package script from torbidd-app/
+cd torbidd-app
 npm run docker:build
-# or directly:
-docker build -t torbidd-app ./torbidd-app
 ```
 
-### Run Container
+### Run the secure stack
 ```bash
-npm run docker:run
-# or directly:
-docker run -p 3000:3000 --env-file .env.local torbidd-app
-```
-
-### Docker Compose (recommended for local staging)
-```bash
-# Copy and fill in .env.local first
+# 1. From the repository root, create and fill in runtime configuration
 cp torbidd-app/.env.example torbidd-app/.env.local
 
-# Start the app (uses MongoDB Atlas via MONGODB_URI)
+# 2. Provision certificates as described in infra/tls/README.md
+#    Production requires a publicly trusted certificate for the public endpoint.
+
+# 3. Start Nginx and the application
 docker compose up --build
 
-# One-time seeding (run separately after app is healthy)
+# 4. Optional: seed MongoDB Atlas after the app is healthy
 docker compose --profile seed run seed
 ```
 
-> **Note**: There is no local MongoDB container — TORBIDD always connects to **MongoDB Atlas**. Set `MONGODB_URI` in `.env.local` to your Atlas connection string.
+The client opens at `https://<deployed-hostname>/`. Requests to
+`http://<deployed-hostname>/` receive a permanent `308` HTTPS redirect. The
+public certificate must match that hostname.
+
+From `torbidd-app/`, `npm run docker:compose` and `npm run docker:run` both use
+the secure Compose stack. Directly publishing the app's internal port is no
+longer supported because it would bypass SEC-18.
+
+> **Note**: There is no local MongoDB container. Set `MONGODB_URI` to an Atlas
+> `mongodb+srv://` URI containing `tls=true`. See
+> [`infra/tls/README.md`](./infra/tls/README.md) for public and internal
+> certificate requirements.
+
+### Run-mode summary
+
+| Purpose | Start command | Client/browser URL | TLS behavior |
+|---|---|---|---|
+| Local development | `cd torbidd-app && npm run dev` | `http://localhost:3000` | HTTP allowed only in `NODE_ENV=development` |
+| LAN browser testing | Same development command | `http://<dev-machine-ip>:3000` | Development-only HTTP |
+| Build verification | `cd torbidd-app && npm run build` | None; build only | Validates production compilation |
+| Secure staging/production | `docker compose up --build` | `https://<deployed-hostname>` | TLS 1.2/1.3; HTTP redirects with 308 |
 
 The multi-stage Dockerfile produces a minimal production image using Next.js `standalone` output:
 

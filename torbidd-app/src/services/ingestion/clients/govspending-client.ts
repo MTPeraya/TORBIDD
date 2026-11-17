@@ -8,6 +8,7 @@ import { DiscoveredProject, GovSpendingSearchParams, GovSpendingSearchResult } f
 import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
 
 import { getIngestionConfig } from '@/lib/config';
+import { assertHttpsUrl } from '@/lib/tls';
 
 const PROJECT_ID_PATTERN = /^\d{11}$/;
 const MAX_REQUEST_ATTEMPTS = 3;
@@ -100,6 +101,7 @@ export class GovSpendingClient {
     const key = options.apiKey !== undefined ? options.apiKey : config.govspendingApiKey;
     this.apiKey = key?.trim() ?? '';
     this.baseUrl = options.baseUrl ?? config.govspendingBaseUrl;
+    assertHttpsUrl(this.baseUrl, 'Government spending API URL');
     this.fetchImpl =
       options.fetchImpl ??
       (typeof fetch !== 'undefined'

@@ -39,18 +39,19 @@ COPY . .
 
 # Disable Next.js telemetry in CI/Docker
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=--tls-min-v1.2
+ENV NODE_TLS_REJECT_UNAUTHORIZED=1
 
 # Stub-only env vars required for `next build` type-checking.
 # Real secrets are injected at runtime via --env-file or Docker secrets.
 ENV NODE_ENV=production
-ENV MONGODB_URI=mongodb://localhost:27017/torbidd
+ENV MONGODB_URI=mongodb+srv://placeholder:placeholder@cluster.invalid/torbidd?tls=true
 ENV MONGODB_DB=torbidd
 ENV GOOGLE_CLOUD_PROJECT=placeholder
 ENV GOOGLE_CLOUD_LOCATION=asia-southeast1
 ENV VERTEX_AI_MODEL_PRO=gemini-1.5-pro
 ENV VERTEX_AI_MODEL_FLASH=gemini-1.5-flash
-ENV NEXT_PUBLIC_APP_URL=http://localhost:3000
-ENV SESSION_SECRET=build-time-placeholder-replace-at-runtime
+ENV NEXT_PUBLIC_APP_URL=https://localhost
 
 # Build — next.config.ts output: 'standalone' creates a self-contained bundle
 RUN npm run build
@@ -62,8 +63,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV NODE_OPTIONS=--tls-min-v1.2
+ENV NODE_TLS_REJECT_UNAUTHORIZED=1
+ENV PORT=3443
+ENV INTERNAL_HTTP_PORT=3000
 
 # Security: create a non-root user
 RUN addgroup --system --gid 1001 nodejs && \
@@ -75,14 +78,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 # Copy static assets (public/ and .next/static/)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/secure-server.mjs ./secure-server.mjs
 
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 3443
 
-# Health check — Next.js responds on / once the server is ready
+# Health check validates the internal TLS certificate using its private CA.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3000/ || exit 1
+  CMD node -e "const h=require('https'),f=require('fs');h.get({host:'127.0.0.1',port:3443,servername:'app',ca:f.readFileSync('/run/secrets/internal_tls_ca')},r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"
 
 # Start the standalone server
-CMD ["node", "server.js"]
+CMD ["node", "secure-server.mjs"]

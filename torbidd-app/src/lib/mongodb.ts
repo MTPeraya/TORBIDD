@@ -6,6 +6,7 @@
 // =============================================================================
 
 import mongoose from 'mongoose';
+import { assertSecureMongoUri } from './tls';
 
 interface CachedMongoose {
   conn: typeof mongoose | null;
@@ -27,6 +28,8 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     throw new Error('Please define MONGODB_URI in your .env.local file');
   }
 
+  const tlsPolicy = assertSecureMongoUri(MONGODB_URI);
+
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
@@ -35,6 +38,13 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
         dbName: MONGODB_DB,
         bufferCommands: false,
         serverSelectionTimeoutMS: 5000,
+        ...(tlsPolicy.tls
+          ? {
+              tls: true,
+              tlsAllowInvalidCertificates: false,
+              tlsAllowInvalidHostnames: false,
+            }
+          : {}),
       })
       .then((m) => m)
       .catch((err) => {

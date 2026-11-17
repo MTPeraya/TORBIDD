@@ -1,5 +1,5 @@
 // =============================================================================
-// middleware.ts - Locale URL Routing, Session Cookie Init & Route Protection
+// proxy.ts - Locale URL Routing, Session Cookie Init & Route Protection
 // =============================================================================
 // 1. Handles /th/* and /en/* locale-prefixed URL routing:
 //    - Rewrites /th/historical → /historical (internal), sets torbidd_locale=th
@@ -11,10 +11,10 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
 import { decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
 import { applySecurityHeaders } from '@/lib/security-headers';
 import { sanitizeIntermediaryHeaders } from '@/lib/trusted-proxy';
+import { generateSessionId } from '@/lib/session';
 import {
   LOCALE_COOKIE,
   LEGACY_LOCALE_COOKIE,
@@ -35,38 +35,26 @@ const PROTECTED_ROUTES = ['/historical', '/saved', '/notifications'];
 /** Routes that strictly require administrator privileges */
 const ADMIN_ROUTES = ['/admin'];
 
-function handleMiddleware(req: NextRequest) {
+function handleProxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // ── Intermediary Header Sanitization (ASVS req_id 4.1.3) ──────────────────
   // Prevent end-users from spoofing internal/intermediary headers (e.g. X-User-ID)
   sanitizeIntermediaryHeaders(req.headers);
 
-  // ── 0. Protocol Security & HTTPS Enforcement (ASVS req_id 4.1.2) ──────────
-  // User-facing endpoints redirect from HTTP to HTTPS; machine/API endpoints
-  // MUST NOT transparently redirect (which leaks unencrypted credentials/payloads)
-  // and instead reject cleartext calls with 426 Upgrade Required.
-  const forwardedProto = req.headers.get('x-forwarded-proto');
-  const isCleartextHttp = forwardedProto === 'http';
+  // ── 0. Protocol Security & HTTPS Enforcement (ASVS V12.2.1) ───────────────
+  // The trusted TLS ingress overwrites X-Forwarded-Proto. A 308 preserves the
+  // method and request body while permanently upgrading every route to HTTPS.
+  const forwardedProto = req.headers.get('x-forwarded-proto')
+    ?.split(',')[0]
+    ?.trim()
+    .toLowerCase();
+  // `next dev` does not provide a TLS listener. Permit cleartext only in the
+  // development runtime so localhost and LAN browser testing continue to work.
+  const isDevelopmentRuntime = process.env.NODE_ENV === 'development';
+  const isCleartextHttp = forwardedProto === 'http' && !isDevelopmentRuntime;
 
   if (isCleartextHttp) {
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json(
-        {
-          error: 'HTTPS Required',
-          message: 'Cleartext HTTP is not permitted for API endpoints. Please use HTTPS (ASVS 4.1.2).',
-        },
-        {
-          status: 426,
-          headers: {
-            Upgrade: 'TLS/1.3, HTTP/2',
-            Connection: 'Upgrade',
-          },
-        },
-      );
-    }
-
-    // User-facing browser route: transparently redirect to HTTPS
     const httpsUrl = req.nextUrl.clone();
     httpsUrl.protocol = 'https:';
     return NextResponse.redirect(httpsUrl, 308);
@@ -129,7 +117,7 @@ function handleMiddleware(req: NextRequest) {
     if (!readCookieWithFallback(req.cookies, SESSION_COOKIE, LEGACY_SESSION_COOKIE)) {
       rewriteResponse.cookies.set(
         SESSION_COOKIE,
-        uuidv4(),
+        generateSessionId(),
         buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 365 }),
       );
     }
@@ -142,7 +130,7 @@ function handleMiddleware(req: NextRequest) {
     if (!readCookieWithFallback(req.cookies, SESSION_COOKIE, LEGACY_SESSION_COOKIE)) {
       res.cookies.set(
         SESSION_COOKIE,
-        uuidv4(),
+        generateSessionId(),
         buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 365 }),
       );
     }
@@ -238,8 +226,8 @@ function handleMiddleware(req: NextRequest) {
   return response;
 }
 
-export function middleware(req: NextRequest) {
-  const response = handleMiddleware(req);
+export function proxy(req: NextRequest) {
+  const response = handleProxy(req);
   return applySecurityHeaders(response);
 }
 

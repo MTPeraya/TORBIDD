@@ -6,7 +6,7 @@ jest.mock('uuid', () => ({
 }));
 
 import { NextRequest } from 'next/server';
-import { middleware } from '../middleware';
+import { proxy as middleware } from '../proxy';
 
 describe('Middleware Locale Routing and Route Protection', () => {
   it('rewrites /th/opportunities to /opportunities and sets torbidd_locale=th cookie', () => {
@@ -92,7 +92,7 @@ describe('Middleware Locale Routing and Route Protection', () => {
   });
 
   describe('Protocol Security & HTTPS Enforcement (ASVS 4.1.2)', () => {
-    it('rejects cleartext HTTP API requests with 426 Upgrade Required (NO transparent redirect)', async () => {
+    it('permanently redirects cleartext HTTP API requests to HTTPS', () => {
       const req = new NextRequest('http://localhost:3000/api/projects', {
         headers: {
           host: 'localhost:3000',
@@ -101,12 +101,11 @@ describe('Middleware Locale Routing and Route Protection', () => {
       });
 
       const res = middleware(req);
-      expect(res.status).toBe(426);
-      expect(res.headers.get('location')).toBeNull();
-      expect(res.headers.get('upgrade')).toContain('TLS/1.3');
-
-      const json = await res.json();
-      expect(json.error).toBe('HTTPS Required');
+      expect(res.status).toBe(308);
+      expect(res.headers.get('location')).toBe('https://localhost:3000/api/projects');
+      expect(res.headers.get('strict-transport-security')).toBe(
+        'max-age=31536000; includeSubDomains; preload',
+      );
     });
 
     it('transparently redirects cleartext HTTP requests on user-facing browser routes to HTTPS', () => {
@@ -120,6 +119,26 @@ describe('Middleware Locale Routing and Route Protection', () => {
       const res = middleware(req);
       expect(res.status).toBe(308);
       expect(res.headers.get('location')).toBe('https://localhost:3000/opportunities');
+    });
+
+    it('allows HTTP only while running the local development server', () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      try {
+        const req = new NextRequest('http://192.168.1.50:3000/api/projects', {
+          headers: {
+            host: '192.168.1.50:3000',
+            'x-forwarded-proto': 'http',
+          },
+        });
+
+        const res = middleware(req);
+        expect(res.status).toBe(200);
+        expect(res.headers.get('location')).toBeNull();
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+      }
     });
   });
 

@@ -10,6 +10,31 @@
 #   docker compose run --rm seed
 
 services:
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: torbidd-gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    secrets:
+      - public_tls_cert
+      - public_tls_key
+      - internal_tls_ca
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - frontend
+
   app:
     build:
       context: ./torbidd-app
@@ -17,8 +42,8 @@ services:
       target: runner
     container_name: torbidd-app
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3443"
     env_file:
       - path: ./torbidd-app/.env.local
         required: false
@@ -31,8 +56,19 @@ services:
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: "--tls-min-v1.2"
+      NODE_TLS_REJECT_UNAUTHORIZED: "1"
+      NODE_EXTRA_CA_CERTS: /run/secrets/internal_tls_ca
+      PORT: "3443"
+      INTERNAL_HTTP_PORT: "3000"
+      INTERNAL_TLS_CERT_FILE: /run/secrets/internal_tls_cert
+      INTERNAL_TLS_KEY_FILE: /run/secrets/internal_tls_key
+    secrets:
+      - internal_tls_cert
+      - internal_tls_key
+      - internal_tls_ca
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      test: ["CMD", "node", "-e", "fetch('https://app:3443/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -42,7 +78,8 @@ services:
     # volumes:
     #   - ./secrets/gcp-service-account.json:/secrets/gcp-sa.json:ro
     networks:
-      - torbidd-net
+      - frontend
+      - egress
 
   # Runs `npm run seed` once and exits. Only needed on a fresh Atlas cluster.
   # Usage: docker compose run --rm seed
@@ -60,14 +97,31 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: "--tls-min-v1.2"
+      NODE_TLS_REJECT_UNAUTHORIZED: "1"
     depends_on:
       app:
         condition: service_healthy
     networks:
-      - torbidd-net
+      - egress
     profiles:
       - seed                    # only runs with: docker compose --profile seed run seed
 
 networks:
-  torbidd-net:
+  frontend:
+    internal: true
     driver: bridge
+  egress:
+    driver: bridge
+
+secrets:
+  public_tls_cert:
+    file: ${TLS_CERT_PATH:-./infra/tls/fullchain.pem}
+  public_tls_key:
+    file: ${TLS_KEY_PATH:-./infra/tls/privkey.pem}
+  internal_tls_ca:
+    file: ${INTERNAL_TLS_CA_PATH:-./infra/tls/internal-ca.pem}
+  internal_tls_cert:
+    file: ${INTERNAL_TLS_CERT_PATH:-./infra/tls/internal.crt}
+  internal_tls_key:
+    file: ${INTERNAL_TLS_KEY_PATH:-./infra/tls/internal.key}

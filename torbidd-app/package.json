@@ -15,7 +15,7 @@
     "db:check": "npx tsx scripts/db-check.ts",
     "db:migrate": "npx tsx scripts/db-migrate.ts",
     "docker:build": "docker build -t torbidd-app .",
-    "docker:run": "docker run -p 3000:3000 --env-file .env.local torbidd-app",
+    "docker:run": "docker compose -f ../docker-compose.yml up",
     "docker:compose": "docker compose -f ../docker-compose.yml up --build",
     "docker:compose:down": "docker compose -f ../docker-compose.yml down",
     "test": "jest",
@@ -37,6 +37,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",

@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { VertexAI } from '@google-cloud/vertexai';
+import { assertTlsCertificateValidation } from '@/lib/tls';
 
 const project = process.env.GOOGLE_CLOUD_PROJECT;
 const location = process.env.GOOGLE_CLOUD_LOCATION || 'asia-southeast1';
@@ -20,7 +21,13 @@ let _vertexAI: VertexAI | null = null;
 
 export function getVertexAI(): VertexAI {
   if (!_vertexAI && project) {
-    _vertexAI = new VertexAI({ project, location });
+    assertTlsCertificateValidation();
+    _vertexAI = new VertexAI({
+      project,
+      location,
+      // The SDK prepends https:// to this trusted Google endpoint.
+      apiEndpoint: `${location}-aiplatform.googleapis.com`,
+    });
   }
   if (!_vertexAI) {
     throw new Error('Vertex AI is not configured. Set GOOGLE_CLOUD_PROJECT in .env.local');

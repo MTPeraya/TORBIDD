@@ -30,7 +30,7 @@ describe('Config Module & Environment Validation', () => {
     expect(config.govspendingApiKey).toBe('');
     expect(config.govspendingBaseUrl).toBe('https://opend.data.go.th/govspending/service/egp-contract');
     expect(config.egpBaseUrl).toBe('https://process5.gprocurement.go.th');
-    expect(config.bmaBaseUrl).toBe('http://egp2.bangkok.go.th');
+    expect(config.bmaBaseUrl).toBe('https://egp2.bangkok.go.th');
     expect(config.requestTimeoutMs).toBe(15000);
     expect(config.documentStoragePath).toBe('./storage/documents');
     expect(config.resolvedStoragePath).toBeDefined();
@@ -70,5 +70,11 @@ describe('Config Module & Environment Validation', () => {
     };
 
     expect(() => getIngestionConfig(invalidEnv)).toThrow();
+  });
+
+  it('should reject cleartext HTTP service URLs', () => {
+    expect(() =>
+      getIngestionConfig({ BMA_BASE_URL: 'http://egp2.bangkok.go.th' }),
+    ).toThrow(/HTTPS/i);
   });
 });

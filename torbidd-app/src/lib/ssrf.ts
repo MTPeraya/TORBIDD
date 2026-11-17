@@ -171,6 +171,13 @@ export function validateSafeUrl(
     };
   }
 
+  if (parsed.protocol === 'http:' && options.allowHttp !== true) {
+    return {
+      valid: false,
+      reason: 'Cleartext HTTP is prohibited for outbound requests; HTTPS is required (SSRF prevention).',
+    };
+  }
+
   // 2. Validate Port (Prevent connecting to internal services like 27017, 6379, 22)
   if (!ALLOWED_PORTS.has(parsed.port)) {
     return {

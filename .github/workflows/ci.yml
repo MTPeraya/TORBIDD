@@ -53,10 +53,11 @@ jobs:
 
       # ── Test ──────────────────────────────────────────────────────────────
       - name: Run unit tests (Jest)
-        run: npm test -- --ci --coverage --maxWorkers=2 --forceExit
+        run: npm test -- --ci --coverage --maxWorkers=2
         env:
           NODE_ENV: test
-          NODE_OPTIONS: '--max_old_space_size=4096'
+          NODE_OPTIONS: '--max_old_space_size=4096 --tls-min-v1.2'
+          NODE_TLS_REJECT_UNAUTHORIZED: 1
 
       # ── Upload coverage ───────────────────────────────────────────────────
       - name: Upload coverage report
@@ -76,15 +77,60 @@ jobs:
           NODE_ENV: production
           NEXT_TELEMETRY_DISABLED: 1
           # --- Stub values (build-time only) --------------------------------
-          MONGODB_URI: mongodb://localhost:27017/torbidd
+          MONGODB_URI: mongodb+srv://placeholder:placeholder@cluster.invalid/torbidd?tls=true
           MONGODB_DB: torbidd
           GOOGLE_CLOUD_PROJECT: ci-placeholder
           GOOGLE_CLOUD_LOCATION: asia-southeast1
           VERTEX_AI_MODEL_PRO: gemini-1.5-pro
           VERTEX_AI_MODEL_FLASH: gemini-1.5-flash
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_APP_URL: https://localhost
+          NODE_OPTIONS: '--max_old_space_size=4096 --tls-min-v1.2'
+          NODE_TLS_REJECT_UNAUTHORIZED: 1
           SESSION_SECRET: ci-placeholder-secret-32-chars-long
 
       # ── Build size summary ────────────────────────────────────────────────
       - name: Report .next/standalone size
         run: du -sh .next/standalone 2>/dev/null || echo "standalone output not found"
+
+  docker:
+    name: Docker image and Compose validation
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Validate Nginx TLS configuration
+        run: |
+          cert_dir="$(mktemp -d)"
+          trap 'rm -rf "$cert_dir"' EXIT
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout "$cert_dir/public.key" -out "$cert_dir/public.crt" \
+            -subj /CN=localhost -addext subjectAltName=DNS:localhost
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout "$cert_dir/internal.key" -out "$cert_dir/internal.crt" \
+            -subj /CN=app -addext subjectAltName=DNS:app
+          docker run --rm --add-host app:127.0.0.1 \
+            -v "$PWD/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$cert_dir/public.crt:/run/secrets/public_tls_cert:ro" \
+            -v "$cert_dir/public.key:/run/secrets/public_tls_key:ro" \
+            -v "$cert_dir/internal.crt:/run/secrets/internal_tls_ca:ro" \
+            nginx:1.27-alpine nginx -t
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./torbidd-app
+          file: ./torbidd-app/Dockerfile
+          target: runner
+          push: false
+          tags: torbidd-app:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

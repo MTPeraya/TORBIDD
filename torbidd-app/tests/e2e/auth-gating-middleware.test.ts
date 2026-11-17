@@ -7,7 +7,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { middleware } from '@/middleware';
+import { proxy as middleware } from '@/proxy';
 import { AUTH_COOKIE_NAME, signSession, AuthSessionUser } from '@/lib/auth';
 
 // uuid is required by middleware; mock it so ESM import doesn't fail
