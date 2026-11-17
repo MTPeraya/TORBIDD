@@ -8,6 +8,9 @@ import {
   getClientIp,
   rateLimitHeaders,
   RateLimitConfig,
+  AI_EXTRACT_LIMITER,
+  AI_CLASSIFY_LIMITER,
+  SEARCH_SCRAPE_LIMITER,
 } from '../rate-limiter';
 
 // ---------------------------------------------------------------------------
@@ -170,6 +173,33 @@ describe('rateLimitHeaders', () => {
     };
     const headers = rateLimitHeaders(result, 10);
     expect(headers['Retry-After']).toBe('30');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Anti-Automation Limiters (ASVS req_id 2.4.1)
+// ---------------------------------------------------------------------------
+
+describe('Anti-Automation Limiters (ASVS 2.4.1)', () => {
+  it('defines AI_EXTRACT_LIMITER to protect costly PDF/OCR extraction', () => {
+    expect(AI_EXTRACT_LIMITER).toBeDefined();
+    expect(AI_EXTRACT_LIMITER.label).toBe('ai-extract');
+    expect(AI_EXTRACT_LIMITER.windowMs).toBe(60000);
+    expect(AI_EXTRACT_LIMITER.max).toBeGreaterThan(0);
+  });
+
+  it('defines AI_CLASSIFY_LIMITER to protect LLM classification calls', () => {
+    expect(AI_CLASSIFY_LIMITER).toBeDefined();
+    expect(AI_CLASSIFY_LIMITER.label).toBe('ai-classify');
+    expect(AI_CLASSIFY_LIMITER.windowMs).toBe(60000);
+    expect(AI_CLASSIFY_LIMITER.max).toBeGreaterThan(0);
+  });
+
+  it('defines SEARCH_SCRAPE_LIMITER to protect against automated scraping', () => {
+    expect(SEARCH_SCRAPE_LIMITER).toBeDefined();
+    expect(SEARCH_SCRAPE_LIMITER.label).toBe('search-scrape');
+    expect(SEARCH_SCRAPE_LIMITER.windowMs).toBe(60000);
+    expect(SEARCH_SCRAPE_LIMITER.max).toBeGreaterThan(0);
   });
 });
 

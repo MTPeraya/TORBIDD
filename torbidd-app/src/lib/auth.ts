@@ -6,16 +6,21 @@ import crypto from 'crypto';
 
 import {
   AUTH_COOKIE_NAME,
+  LEGACY_AUTH_COOKIE_NAME,
   OAUTH_STATE_COOKIE,
+  LEGACY_OAUTH_STATE_COOKIE,
   AuthSessionUser,
   AuthSessionPayload,
   isAdminUser,
   decodeSessionPayload,
 } from './auth-constants';
+import { readCookieWithFallback } from './cookie-security';
 
 export {
   AUTH_COOKIE_NAME,
+  LEGACY_AUTH_COOKIE_NAME,
   OAUTH_STATE_COOKIE,
+  LEGACY_OAUTH_STATE_COOKIE,
   isAdminUser,
   decodeSessionPayload,
 };
@@ -149,7 +154,7 @@ export interface CookieReader {
  * Extracts and verifies the session from an incoming NextRequest or cookie container.
  */
 export function getAuthSessionFromRequest(req: CookieReader): AuthSessionUser | null {
-  const cookie = req.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const cookie = readCookieWithFallback(req.cookies, AUTH_COOKIE_NAME, LEGACY_AUTH_COOKIE_NAME);
   if (!cookie) return null;
   const verified = verifySession(cookie);
   return verified ? verified.user : null;

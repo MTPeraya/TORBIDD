@@ -3,8 +3,12 @@
 // (Edge-runtime safe: does not import Node.js built-ins)
 // =============================================================================
 
-export const AUTH_COOKIE_NAME = 'torbidd_auth_session';
-export const OAUTH_STATE_COOKIE = 'torbidd_oauth_state';
+export {
+  AUTH_COOKIE_NAME,
+  LEGACY_AUTH_COOKIE_NAME,
+  OAUTH_STATE_COOKIE,
+  LEGACY_OAUTH_STATE_COOKIE,
+} from './cookie-security';
 
 export interface AuthSessionUser {
   id: string;
