@@ -11,8 +11,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
-import { SESSION_COOKIE } from '@/lib/session';
+import { generateSessionId, SESSION_COOKIE } from '@/lib/session';
 import { AUTH_COOKIE_NAME, decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
 import { applySecurityHeaders } from '@/lib/security-headers';
 
@@ -87,7 +86,7 @@ function handleMiddleware(req: NextRequest) {
 
     // Ensure session cookie is set
     if (!req.cookies.get(SESSION_COOKIE)) {
-      rewriteResponse.cookies.set(SESSION_COOKIE, uuidv4(), {
+      rewriteResponse.cookies.set(SESSION_COOKIE, generateSessionId(), {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 365,
@@ -133,7 +132,7 @@ function handleMiddleware(req: NextRequest) {
 
     const response = NextResponse.next();
     if (!req.cookies.get(SESSION_COOKIE)) {
-      response.cookies.set(SESSION_COOKIE, uuidv4(), {
+      response.cookies.set(SESSION_COOKIE, generateSessionId(), {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 365,
@@ -158,7 +157,7 @@ function handleMiddleware(req: NextRequest) {
 
     const response = NextResponse.next();
     if (!req.cookies.get(SESSION_COOKIE)) {
-      response.cookies.set(SESSION_COOKIE, uuidv4(), {
+      response.cookies.set(SESSION_COOKIE, generateSessionId(), {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 365,
@@ -178,7 +177,7 @@ function handleMiddleware(req: NextRequest) {
   if (isApiOrStatic) {
     const response = NextResponse.next();
     if (!req.cookies.get(SESSION_COOKIE)) {
-      response.cookies.set(SESSION_COOKIE, uuidv4(), {
+      response.cookies.set(SESSION_COOKIE, generateSessionId(), {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 365,
@@ -206,7 +205,7 @@ function handleMiddleware(req: NextRequest) {
   // ── 7. Session Cookie Initialization for public routes ────────────────────
   const response = NextResponse.next();
   if (!req.cookies.get(SESSION_COOKIE)) {
-    response.cookies.set(SESSION_COOKIE, uuidv4(), {
+    response.cookies.set(SESSION_COOKIE, generateSessionId(), {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 365,
