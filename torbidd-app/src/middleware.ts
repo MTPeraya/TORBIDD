@@ -11,7 +11,10 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
+const uuidv4 = (): string =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : require('crypto').randomUUID();
 import { SESSION_COOKIE } from '@/lib/session';
 import { AUTH_COOKIE_NAME, decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
 import { applySecurityHeaders } from '@/lib/security-headers';
