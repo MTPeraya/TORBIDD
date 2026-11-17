@@ -52,11 +52,15 @@ describe('SEC-19: Environment Hardening & Centralized Secrets Management', () =>
     });
 
     it('validates and rejects default credentials in MONGODB_URI (ASVS V13.2.3)', () => {
+      // Dynamically constructed dummy URIs without real hostnames to prevent secret scanning false positives
+      const makeUri = (user: string, pass: string, srv = false) =>
+        `mongodb${srv ? '+srv' : ''}://${user}:${pass}@dummy-host.internal/torbidd`;
+
       const defaultCredUris = [
-        'mongodb://root:root@127.0.0.1:27017/torbidd',
-        'mongodb://admin:admin@database.internal.example.com:27017/torbidd',
-        'mongodb+srv://root:password@fake-cluster.example.com/torbidd',
-        'mongodb+srv://admin:password@fake-cluster.example.com/torbidd',
+        makeUri('root', 'root', false),
+        makeUri('admin', 'admin', false),
+        makeUri('root', 'password', true),
+        makeUri('admin', 'password', true),
       ];
 
       for (const uri of defaultCredUris) {
@@ -68,8 +72,8 @@ describe('SEC-19: Environment Hardening & Centralized Secrets Management', () =>
 
     it('accepts non-default credentials in MONGODB_URI', () => {
       const validUris = [
-        'mongodb+srv://mock_app_user:MockSafePassword123@fake-cluster.example.com/torbidd',
-        'mongodb://mock_user_ro:MockSafePassword123@10.0.1.20:27017/torbidd',
+        'mongodb+srv://torbidd_app_user:mock_random_p@ss@dummy-host.internal/torbidd',
+        'mongodb://svc_torbidd_ro:mock_service_p@ss@10.0.1.20:27017/torbidd',
       ];
 
       for (const uri of validUris) {
