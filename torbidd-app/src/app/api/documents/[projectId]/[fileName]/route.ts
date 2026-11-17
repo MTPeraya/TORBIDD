@@ -9,6 +9,7 @@ import connectToDatabase from '@/lib/mongodb';
 import ProcurementProject from '@/models/ProcurementProject';
 import Project from '@/models/Project';
 import { getIngestionConfig } from '@/lib/config';
+import { validateFetchMetadata, withCorpHeader } from '@/lib/fetch-metadata';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,10 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ projectId: string; fileName: string }> },
 ) {
+  // ASVS req_id 3.5.8: Validate Fetch Metadata to prevent cross-origin embedding of document resources
+  const deny = validateFetchMetadata(_req);
+  if (deny) return withCorpHeader(deny);
+
   try {
     const { projectId, fileName } = await params;
     const cleanProjectId = path.basename(projectId.trim());
@@ -65,13 +70,15 @@ export async function GET(
             const fullPath = path.join(dir, matchFile);
             if (fs.existsSync(fullPath)) {
               const fileBuffer = fs.readFileSync(fullPath);
-              return new NextResponse(fileBuffer, {
-                headers: {
-                  'Content-Type': 'application/pdf',
-                  'Content-Disposition': `inline; filename="${encodeURIComponent(matchFile)}"`,
-                  'Cache-Control': 'public, max-age=86400',
-                },
-              });
+              return withCorpHeader(
+                new NextResponse(fileBuffer, {
+                  headers: {
+                    'Content-Type': 'application/pdf',
+                    'Content-Disposition': `inline; filename="${encodeURIComponent(matchFile)}"`,
+                    'Cache-Control': 'public, max-age=86400',
+                  },
+                }),
+              );
             }
           }
         }
@@ -106,14 +113,16 @@ export async function GET(
         if (projectData) {
           const { generateProjectPdf } = await import('@/lib/pdf-generator');
           const generatedPdf = generateProjectPdf(projectData);
-          return new NextResponse(new Uint8Array(generatedPdf), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/pdf',
-              'Content-Disposition': `inline; filename="TOR_${targetExtId}.pdf"`,
-              'Cache-Control': 'public, max-age=3600',
-            },
-          });
+          return withCorpHeader(
+            new NextResponse(new Uint8Array(generatedPdf), {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename="TOR_${targetExtId}.pdf"`,
+                'Cache-Control': 'public, max-age=3600',
+              },
+            }),
+          );
         }
       } catch (genErr) {
         console.warn(`[DocumentRoute] PDF generation error for ${targetExtId}:`, genErr);
@@ -255,13 +264,15 @@ export async function GET(
 </body>
 </html>`;
 
-    return new NextResponse(htmlFallback, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-      },
-    });
+    return withCorpHeader(
+      new NextResponse(htmlFallback, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      }),
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: 'Failed to access document', message }, { status: 500 });

@@ -10,7 +10,7 @@ import {
 } from '../security-headers';
 import nextConfig from '../../../next.config';
 
-describe('Security Headers (ASVS 3.4.1, 3.4.3, 3.4.4, 3.4.5, 3.4.6, 3.4.7)', () => {
+describe('Security Headers (ASVS 3.4.1, 3.4.3, 3.4.4, 3.4.5, 3.4.6, 3.4.7, 3.4.8, 3.5.8)', () => {
   describe('req_id 3.4.1 - Strict-Transport-Security (HSTS)', () => {
     it('should include Strict-Transport-Security with max-age >= 31536000, includeSubDomains, and preload', () => {
       const hstsHeader = SECURITY_HEADERS.find(
@@ -267,6 +267,80 @@ describe('Security Headers (ASVS 3.4.1, 3.4.3, 3.4.4, 3.4.5, 3.4.6, 3.4.7)', () 
 
     it('CSP_REPORT_PATH should point to the actual collector API route', () => {
       expect(CSP_REPORT_PATH).toBe('/api/security/csp-report');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ASVS req_id 3.4.8 — Cross-Origin-Opener-Policy (COOP)
+  // Verify that HTTP responses include Cross-Origin-Opener-Policy: same-origin
+  // to isolate browsing context groups and mitigate tabnabbing / Spectre side-channels.
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('req_id 3.4.8 - Cross-Origin-Opener-Policy (COOP)', () => {
+    it('should include Cross-Origin-Opener-Policy in SECURITY_HEADERS', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Cross-Origin-Opener-Policy');
+      expect(header).toBeDefined();
+    });
+
+    it('should set Cross-Origin-Opener-Policy to same-origin', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Cross-Origin-Opener-Policy');
+      expect(header?.value).toBe('same-origin');
+    });
+
+    it('should apply Cross-Origin-Opener-Policy via applySecurityHeaders helper', () => {
+      const mockHeaders = new Map<string, string>();
+      const mockResponse = {
+        headers: {
+          set: (key: string, value: string) => { mockHeaders.set(key, value); },
+          get: (key: string) => mockHeaders.get(key),
+        } as unknown as Headers,
+      };
+
+      applySecurityHeaders(mockResponse);
+      expect(mockHeaders.get('Cross-Origin-Opener-Policy')).toBe('same-origin');
+    });
+
+    it('should include Cross-Origin-Opener-Policy in next.config.ts headers for all routes', async () => {
+      const configuredHeaders = await nextConfig.headers!();
+      const routeHeaders = configuredHeaders.find((r) => r.source === '/:path*')?.headers ?? [];
+      const header = routeHeaders.find((h) => h.key === 'Cross-Origin-Opener-Policy');
+      expect(header?.value).toBe('same-origin');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ASVS req_id 3.5.8 — Cross-Origin-Resource-Policy (CORP)
+  // Verify that HTTP responses include Cross-Origin-Resource-Policy: same-origin
+  // to prevent untrusted cross-origin embedding of authenticated application resources.
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('req_id 3.5.8 - Cross-Origin-Resource-Policy (CORP)', () => {
+    it('should include Cross-Origin-Resource-Policy in SECURITY_HEADERS', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Cross-Origin-Resource-Policy');
+      expect(header).toBeDefined();
+    });
+
+    it('should set Cross-Origin-Resource-Policy to same-origin', () => {
+      const header = SECURITY_HEADERS.find((h) => h.key === 'Cross-Origin-Resource-Policy');
+      expect(header?.value).toBe('same-origin');
+    });
+
+    it('should apply Cross-Origin-Resource-Policy via applySecurityHeaders helper', () => {
+      const mockHeaders = new Map<string, string>();
+      const mockResponse = {
+        headers: {
+          set: (key: string, value: string) => { mockHeaders.set(key, value); },
+          get: (key: string) => mockHeaders.get(key),
+        } as unknown as Headers,
+      };
+
+      applySecurityHeaders(mockResponse);
+      expect(mockHeaders.get('Cross-Origin-Resource-Policy')).toBe('same-origin');
+    });
+
+    it('should include Cross-Origin-Resource-Policy in next.config.ts headers for all routes', async () => {
+      const configuredHeaders = await nextConfig.headers!();
+      const routeHeaders = configuredHeaders.find((r) => r.source === '/:path*')?.headers ?? [];
+      const header = routeHeaders.find((h) => h.key === 'Cross-Origin-Resource-Policy');
+      expect(header?.value).toBe('same-origin');
     });
   });
 

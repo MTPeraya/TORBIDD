@@ -8,6 +8,8 @@
  * - ASVS req_id 3.4.5: Referrer-Policy — prevents sensitive URL data leakage to third parties via Referer header.
  * - ASVS req_id 3.4.6: CSP frame-ancestors directive — prevents clickjacking / UI-redress attacks.
  * - ASVS req_id 3.4.7: CSP report-to directive + Reporting-Endpoints header — enables violation telemetry.
+ * - ASVS req_id 3.4.8: Cross-Origin-Opener-Policy — isolates browsing context, prevents tabnabbing & window attacks.
+ * - ASVS req_id 3.5.8: Cross-Origin-Resource-Policy — prevents cross-site embedding of authenticated resources.
  */
 
 export const HSTS_HEADER_VALUE = 'max-age=31536000; includeSubDomains; preload';
@@ -65,6 +67,8 @@ export const CSP_HEADER_VALUE = buildCspHeader();
  * - X-Content-Type-Options     → ASVS req_id 3.4.4
  * - Referrer-Policy            → ASVS req_id 3.4.5
  * - Reporting-Endpoints        → ASVS req_id 3.4.7 (Reporting API v1 group declaration)
+ * - Cross-Origin-Opener-Policy → ASVS req_id 3.4.8
+ * - Cross-Origin-Resource-Policy → ASVS req_id 3.5.8 (global default; tightened per-route in middleware)
  */
 export const SECURITY_HEADERS: { key: string; value: string }[] = [
   {
@@ -93,6 +97,20 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
     // ASVS req_id 3.4.7 — Reporting API v1: declares the named endpoint group referenced by CSP report-to
     key: 'Reporting-Endpoints',
     value: `${CSP_REPORT_GROUP}="${CSP_REPORT_PATH}"`,
+  },
+  {
+    // ASVS req_id 3.4.8 — Isolate browsing context to same-origin; prevents tabnabbing and
+    // cross-window attacks where a malicious page gains access to window.opener.
+    key: 'Cross-Origin-Opener-Policy',
+    value: 'same-origin',
+  },
+  {
+    // ASVS req_id 3.5.8 — Prevent browsers from loading this app's responses as cross-origin
+    // sub-resources (images, scripts, etc.) embedded by untrusted third-party pages.
+    // Individual authenticated API routes additionally apply Sec-Fetch-* validation via
+    // src/lib/fetch-metadata.ts for defence-in-depth.
+    key: 'Cross-Origin-Resource-Policy',
+    value: 'same-origin',
   },
   {
     // Defense in depth: redundant framing protection alongside CSP frame-ancestors
