@@ -75,11 +75,9 @@ export async function withTransaction<T>(
 
   try {
     let result: T;
-    let transactionExecuted = false;
 
     try {
       await session.withTransaction(async () => {
-        transactionExecuted = true;
         result = await operation(session);
       });
       return result!;
