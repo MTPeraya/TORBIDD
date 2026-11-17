@@ -13,6 +13,12 @@ import {
   KeywordClassifierAdapter,
 } from '@/services/ai/adapters';
 import { AiClassifySchema } from '@/lib/validation';
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+  AI_CLASSIFY_LIMITER,
+} from '@/lib/rate-limiter';
 
 /**
  * GET /api/ai/classify - Diagnostic endpoint reporting provider configuration status
@@ -72,6 +78,22 @@ export async function GET() {
  * POST /api/ai/classify - Classify project title & description
  */
 export async function POST(req: NextRequest) {
+  // ── ASVS req_id 2.4.1: Anti-automation control ─────────────────────────────
+  const clientIp = getClientIp(req);
+  const rl = checkRateLimit('ai-classify', clientIp, AI_CLASSIFY_LIMITER);
+  const rlHeaders = rateLimitHeaders(rl, AI_CLASSIFY_LIMITER.max);
+
+  if (!rl.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many classification requests. Please wait before submitting again.',
+        retryAfter: rl.retryAfter,
+      },
+      { status: 429, headers: rlHeaders },
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   try {
     const body = await req.json();
     const parsed = AiClassifySchema.safeParse(body);
@@ -79,7 +101,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Invalid request body', details: parsed.error.flatten() },
-        { status: 400 },
+        { status: 400, headers: rlHeaders },
       );
     }
 
@@ -93,9 +115,9 @@ export async function POST(req: NextRequest) {
     };
 
     const result = await classifyProject(title, description, options);
-    return NextResponse.json({ data: result });
+    return NextResponse.json({ data: result }, { headers: rlHeaders });
   } catch (err) {
     console.error('[POST /api/ai/classify]', err);
-    return NextResponse.json({ error: 'AI classification failed' }, { status: 500 });
+    return NextResponse.json({ error: 'AI classification failed' }, { status: 500, headers: rlHeaders });
   }
 }

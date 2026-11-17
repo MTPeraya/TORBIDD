@@ -10,6 +10,7 @@ import {
   generatePkcePair,
   REQUIRED_OIDC_SCOPES,
 } from '@/lib/auth';
+import { buildSecureCookieOptions } from '@/lib/cookie-security';
 import {
   checkRateLimit,
   getClientIp,
@@ -47,7 +48,6 @@ export async function GET(req: NextRequest) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
   const redirectUri = `${appUrl}/api/auth/callback/google`;
-  const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
 
   // ── SEC-04: Generate cryptographic OIDC Nonce & PKCE Pair ──────────────────
   // Nonce has 256 bits of entropy (ASVS V6.7.2, V10.5.1)
@@ -65,13 +65,7 @@ export async function GET(req: NextRequest) {
       res.cookies.set(
         OAUTH_STATE_COOKIE,
         JSON.stringify({ state: signedMockState, nonce, returnUrl, codeVerifier }),
-        {
-          httpOnly: true,
-          secure: isHttps,
-          sameSite: 'lax',
-          maxAge: 600, // 10 minutes
-          path: '/',
-        },
+        buildSecureCookieOptions({ maxAge: 600 }),
       );
       return res;
     } else {
@@ -105,13 +99,11 @@ export async function GET(req: NextRequest) {
   googleAuthUrl.searchParams.set('prompt', 'select_account');
 
   const response = NextResponse.redirect(googleAuthUrl.toString());
-  response.cookies.set(OAUTH_STATE_COOKIE, stateData, {
-    httpOnly: true,
-    secure: isHttps,
-    sameSite: 'lax',
-    maxAge: 600,
-    path: '/',
-  });
+  response.cookies.set(
+    OAUTH_STATE_COOKIE,
+    stateData,
+    buildSecureCookieOptions({ maxAge: 600 }),
+  );
 
   // Attach rate-limit informational headers
   Object.entries(rlHeaders).forEach(([k, v]) => response.headers.set(k, v));
