@@ -123,11 +123,15 @@ describe('SEC-23: WebRTC Architectural Scope Exclusion (ASVS Chapter 17)', () =>
         expect(line).not.toContain('20000');
       }
 
-      // Check specifically that only 3000:3000 (TCP default) is mapped
-      expect(portLines.some((p) => p.includes('3000:3000'))).toBe(true);
+      // Check specifically that only web ports (3000:3000 or 80/443 TCP) are mapped
+      expect(
+        portLines.some(
+          (p) => p.includes('3000:3000') || p.includes('443:443') || p.includes('80:80'),
+        ),
+      ).toBe(true);
     });
 
-    it('Dockerfile exposes only TCP 3000 and zero UDP ports or media relay servers', () => {
+    it('Dockerfile exposes only TCP 3000 or 3443 and zero UDP ports or media relay servers', () => {
       const dockerfilePath = path.join(appDir, 'Dockerfile');
       expect(fs.existsSync(dockerfilePath)).toBe(true);
 
@@ -143,7 +147,7 @@ describe('SEC-23: WebRTC Architectural Scope Exclusion (ASVS Chapter 17)', () =>
         expect(expose.toLowerCase()).not.toContain('/udp');
         expect(expose).not.toContain('3478');
         expect(expose).not.toContain('5349');
-        expect(expose).toContain('3000');
+        expect(expose).toMatch(/3000|3443/);
       }
     });
   });

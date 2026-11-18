@@ -13,6 +13,7 @@
 // =============================================================================
 
 import mongoose from 'mongoose';
+import { assertSecureMongoUri } from './tls';
 
 export const MONGO_DEFAULT_POOL_SIZE = 10;
 export const MONGO_DEFAULT_TIMEOUT_MS = 5000;
@@ -73,13 +74,23 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   }
 
   validateMongoUri(MONGODB_URI);
+  const tlsPolicy = assertSecureMongoUri(MONGODB_URI);
 
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
     const options = getMongoConnectionOptions();
     cached.promise = mongoose
-      .connect(MONGODB_URI, options)
+      .connect(MONGODB_URI, {
+        ...options,
+        ...(tlsPolicy.tls
+          ? {
+              tls: true,
+              tlsAllowInvalidCertificates: false,
+              tlsAllowInvalidHostnames: false,
+            }
+          : {}),
+      })
       .then((m) => m)
       .catch((err) => {
         cached.promise = null;

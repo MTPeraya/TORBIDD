@@ -6,6 +6,7 @@
 
 import { DiscoveredProject } from '@/types/procurement';
 import { getIngestionConfig } from '@/lib/config';
+import { assertHttpsUrl } from '@/lib/tls';
 import { assertSafeUrl } from '@/lib/ssrf';
 
 export const BMA_EGP_ENDPOINTS = {
@@ -106,9 +107,10 @@ export class BmaClient {
     const config = getIngestionConfig();
     this.baseUrl = (options.baseUrl ?? config.bmaBaseUrl ?? 'https://egp2.bangkok.go.th').replace(/\/+$/, '');
     this.apiBaseUrl = (options.apiBaseUrl ?? BMA_EGP_ENDPOINTS.api).replace(/\/+$/, '');
-    // Validate target endpoints against SSRF domain allowlist and private RFC 1918 IPs (ASVS V13.2.4 & V13.2.5)
     assertSafeUrl(this.baseUrl);
     assertSafeUrl(this.apiBaseUrl);
+    assertHttpsUrl(this.baseUrl, 'BMA portal URL');
+    assertHttpsUrl(this.apiBaseUrl, 'BMA API URL');
     this.fetchImpl =
       options.fetchImpl ??
       (typeof fetch !== 'undefined'
@@ -152,9 +154,7 @@ export class BmaClient {
    * Get direct URL to download a document from BMA e-GP.
    */
   public fileUrl(announcementId: string, filename: string): string {
-    const url = `${BMA_EGP_ENDPOINTS.file}/${announcementId}/${encodeURIComponent(filename)}`;
-    assertSafeUrl(url);
-    return url;
+    return `${BMA_EGP_ENDPOINTS.file}/${announcementId}/${encodeURIComponent(filename)}`;
   }
 
   /**

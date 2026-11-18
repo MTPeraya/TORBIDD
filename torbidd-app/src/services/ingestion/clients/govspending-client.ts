@@ -6,8 +6,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { DiscoveredProject, GovSpendingSearchParams, GovSpendingSearchResult } from '@/types/procurement';
 import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
+
 import { getIngestionConfig } from '@/lib/config';
 import { assertSafeUrl } from '@/lib/ssrf';
+import { assertHttpsUrl } from '@/lib/tls';
 
 const PROJECT_ID_PATTERN = /^\d{11}$/;
 const MAX_REQUEST_ATTEMPTS = 3;
@@ -99,9 +101,9 @@ export class GovSpendingClient {
     const config = getIngestionConfig();
     const key = options.apiKey !== undefined ? options.apiKey : config.govspendingApiKey;
     this.apiKey = key?.trim() ?? '';
-    this.baseUrl = (options.baseUrl ?? config.govspendingBaseUrl).replace(/\/+$/, '');
-    // Validate target endpoints against SSRF domain allowlist and private RFC 1918 IPs (ASVS V13.2.4 & V13.2.5)
+    this.baseUrl = options.baseUrl ?? config.govspendingBaseUrl;
     assertSafeUrl(this.baseUrl);
+    assertHttpsUrl(this.baseUrl, 'Government spending API URL');
     this.fetchImpl =
       options.fetchImpl ??
       (typeof fetch !== 'undefined'

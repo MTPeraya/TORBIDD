@@ -6,7 +6,6 @@
 // =============================================================================
 
 import { NextRequest } from 'next/server';
-const uuidv4 = () => globalThis.crypto.randomUUID();
 import {
   SESSION_COOKIE,
   LEGACY_SESSION_COOKIE,
@@ -14,6 +13,10 @@ import {
 } from './cookie-security';
 
 export { SESSION_COOKIE, LEGACY_SESSION_COOKIE };
+
+export function generateSessionId(): string {
+  return crypto.randomUUID();
+}
 
 export function getSessionId(req: NextRequest): string {
   const existing = readCookieWithFallback(req.cookies, SESSION_COOKIE, LEGACY_SESSION_COOKIE);

@@ -21,16 +21,16 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY torbidd-app/ ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=--tls-min-v1.2
+ENV NODE_TLS_REJECT_UNAUTHORIZED=1
 ENV NODE_ENV=production
-ENV MONGODB_URI=mongodb://localhost:27017/torbidd
+ENV MONGODB_URI=mongodb+srv://placeholder:placeholder@cluster.invalid/torbidd?tls=true
 ENV MONGODB_DB=torbidd
 ENV GOOGLE_CLOUD_PROJECT=placeholder
 ENV GOOGLE_CLOUD_LOCATION=asia-southeast1
 ENV VERTEX_AI_MODEL_PRO=gemini-1.5-pro
 ENV VERTEX_AI_MODEL_FLASH=gemini-1.5-flash
-ENV NEXT_PUBLIC_APP_URL=http://localhost:3000
-ENV SESSION_SECRET=build-time-placeholder-replace-at-runtime
-ENV CRON_SECRET=build-time-placeholder-replace-at-runtime
+ENV NEXT_PUBLIC_APP_URL=https://localhost
 
 RUN npm run build
 
@@ -40,8 +40,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV NODE_OPTIONS=--tls-min-v1.2
+ENV NODE_TLS_REJECT_UNAUTHORIZED=1
+ENV PORT=3443
+ENV INTERNAL_HTTP_PORT=3000
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser  --system --uid 1001 nextjs
@@ -49,12 +51,13 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/secure-server.mjs ./secure-server.mjs
 
 USER nextjs
-EXPOSE 3000
+EXPOSE 3443
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3000/ || exit 1
+  CMD node -e "const h=require('https'),f=require('fs');h.get({host:'127.0.0.1',port:3443,servername:'app',ca:f.readFileSync('/run/secrets/internal_tls_ca')},r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"
 
-CMD ["node", "server.js"]
+CMD ["node", "secure-server.mjs"]
 

@@ -114,12 +114,12 @@ Ordinary users (`BMA Officer`) cannot modify procurement data, nor can they over
 ## Backend Authorization Enforcement — SEC-08
 
 > ASVS Requirements: **V8.3.1**, **V8.3.2**, **V8.3.3**  
-> Implementation: `src/lib/authorization/backend.ts`, `src/middleware.ts`, `src/app/api/admin/*`
+> Implementation: `src/lib/authorization/backend.ts`, `src/proxy.ts`, `src/app/api/admin/*`
 
 ### 1. Trusted Service Layer Enforcement (V8.3.1)
 
 Authorization checks are enforced in two complementary layers (defence-in-depth):
-- **Edge Middleware (`src/middleware.ts`)**: Fast perimeter check protecting `/admin` and `/api/admin/*` paths before route invocation.
+- **Next.js Proxy (`src/proxy.ts`)**: Fast perimeter check protecting `/admin` and `/api/admin/*` paths before route invocation.
 - **Backend Route Handlers (`src/app/api/**/route.ts`)**: Mandatory handler-level checks utilizing `requireAdmin()`, `requireAuth()`, or `requirePermission()`. Even if edge middleware is bypassed or misconfigured, every backend endpoint validates the session independently.
 
 ### 2. Immediate Permission Freshness (V8.3.2)
@@ -161,7 +161,7 @@ A regular user calling `PUT /api/auth/me` and attempting to supply `role: "admin
 
 ### Cross-user escalation blocked
 Only authenticated admins may call `PATCH /api/admin/users`. Requests pass through two checks:
-1. `src/middleware.ts` → verifies `AUTH_COOKIE_NAME` and `isAdminUser(session.user)`.
+1. `src/proxy.ts` → verifies `AUTH_COOKIE_NAME` and `isAdminUser(session.user)`.
 2. `src/app/api/admin/users/route.ts` → re-verifies admin privileges with `isAdminUser(actor)`.
 
 ### Self-demotion blocked
@@ -196,4 +196,4 @@ All role changes and security violations are logged to stdout:
 | [`src/app/api/bookmarks/[id]/route.ts`](../../src/app/api/bookmarks/[id]/route.ts) | Bookmark delete with ownership verification and IDOR prevention |
 | [`src/app/api/auth/me/route.ts`](../../src/app/api/auth/me/route.ts) | Profile API with field-level authorization and dynamic permission freshness |
 | [`src/app/api/admin/users/route.ts`](../../src/app/api/admin/users/route.ts) | Admin user management and role assignment endpoint |
-| [`src/middleware.ts`](../../src/middleware.ts) | Edge perimeter route protection |
+| [`src/proxy.ts`](../../src/proxy.ts) | Perimeter route protection |

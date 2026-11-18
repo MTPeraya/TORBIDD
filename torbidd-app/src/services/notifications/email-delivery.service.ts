@@ -56,8 +56,12 @@ export class EmailDeliveryService {
           host,
           port,
           secure,
+          requireTLS: !secure,
           auth: { user, pass },
-          tls: { rejectUnauthorized: process.env.NODE_ENV === 'production' },
+          tls: {
+            minVersion: 'TLSv1.2',
+            rejectUnauthorized: true,
+          },
         });
         this.isConfigured = true;
       } catch (err) {
