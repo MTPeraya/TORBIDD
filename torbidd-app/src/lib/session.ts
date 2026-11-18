@@ -22,5 +22,5 @@ export function getSessionId(req: NextRequest): string {
   const existing = readCookieWithFallback(req.cookies, SESSION_COOKIE, LEGACY_SESSION_COOKIE);
   if (existing && existing.length > 0) return existing;
   // Generate a new ID — the response middleware sets the cookie
-  return generateSessionId();
+  return globalThis.crypto.randomUUID();
 }

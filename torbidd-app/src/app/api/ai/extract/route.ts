@@ -5,38 +5,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractTorFromUrl, extractTorFromBase64 } from '@/services/ai/tor-extractor';
 import { AiExtractSchema } from '@/lib/validation';
+import { MAX_PDF_BASE64_LENGTH, PdfSecurityError } from '@/lib/secure-pdf';
 import {
+  AI_EXTRACT_LIMITER,
   checkRateLimit,
   getClientIp,
   rateLimitHeaders,
-  AI_EXTRACT_LIMITER,
 } from '@/lib/rate-limiter';
 
 export async function POST(req: NextRequest) {
-  // ── ASVS req_id 2.4.1: Anti-automation control ─────────────────────────────
+  // ASVS V2.4.1: Prevent automated extraction abuse and AI quota exhaustion.
   const clientIp = getClientIp(req);
-  const rl = checkRateLimit('ai-extract', clientIp, AI_EXTRACT_LIMITER);
-  const rlHeaders = rateLimitHeaders(rl, AI_EXTRACT_LIMITER.max);
+  const rateLimit = checkRateLimit('ai-extract', clientIp, AI_EXTRACT_LIMITER);
+  const responseHeaders = rateLimitHeaders(rateLimit, AI_EXTRACT_LIMITER.max);
 
-  if (!rl.allowed) {
+  if (!rateLimit.allowed) {
     return NextResponse.json(
       {
         error: 'Too many extraction requests. Please wait before submitting again.',
-        retryAfter: rl.retryAfter,
+        retryAfter: rateLimit.retryAfter,
       },
-      { status: 429, headers: rlHeaders },
+      { status: 429, headers: responseHeaders },
     );
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
   try {
+    const contentLength = Number(req.headers.get('content-length'));
+    if (Number.isFinite(contentLength) && contentLength > MAX_PDF_BASE64_LENGTH + 4096) {
+      return NextResponse.json(
+        { error: 'PDF payload exceeds the 25 MB limit' },
+        { status: 413, headers: responseHeaders },
+      );
+    }
+
     const body = await req.json();
     const parsed = AiExtractSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Invalid request body', details: parsed.error.flatten() },
-        { status: 400, headers: rlHeaders },
+        { status: 400, headers: responseHeaders },
       );
     }
 
@@ -47,9 +55,21 @@ export async function POST(req: NextRequest) {
       result = await extractTorFromBase64(parsed.data.documentBase64);
     }
 
-    return NextResponse.json({ data: result }, { headers: rlHeaders });
+    return NextResponse.json({ data: result }, { headers: responseHeaders });
   } catch (err) {
     console.error('[POST /api/ai/extract]', err);
-    return NextResponse.json({ error: 'TOR extraction failed' }, { status: 500, headers: rlHeaders });
+    if (err instanceof PdfSecurityError) {
+      return NextResponse.json(
+        { error: err.message },
+        {
+          status: err.code === 'TOO_LARGE' ? 413 : 400,
+          headers: responseHeaders,
+        },
+      );
+    }
+    return NextResponse.json(
+      { error: 'TOR extraction failed' },
+      { status: 500, headers: responseHeaders },
+    );
   }
 }

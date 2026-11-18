@@ -149,6 +149,24 @@ describe('EgpClient (National e-GP)', () => {
     ).rejects.toThrow(/not a valid ZIP archive/i);
   });
 
+  it('7e. should reject an archive declared larger than the 25 MB limit before reading it', async () => {
+    const mockFetch = jest.fn().mockResolvedValue(
+      new Response(MOCK_ZIP_BUFFER, {
+        status: 200,
+        headers: { 'Content-Length': String(25 * 1024 * 1024 + 1) },
+      }),
+    );
+    const client = new EgpClient({ fetchImpl: mockFetch as unknown as typeof fetch });
+
+    await expect(
+      client.downloadArchive({
+        projectId: MOCK_PROJECT_ID,
+        zipId: MOCK_ZIP_ID,
+        archiveName: 'oversized.zip',
+      }),
+    ).rejects.toThrow(/exceeds.*limit/i);
+  });
+
   // ─── 8. e-GP Health Check & RSS Announcements ─────────────────────────────
   it('8a. should report UP health status when portal is reachable', async () => {
     const mockFetch = jest.fn().mockResolvedValue(new Response('OK', { status: 200 }));

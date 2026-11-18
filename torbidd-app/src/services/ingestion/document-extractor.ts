@@ -7,6 +7,15 @@ import path from 'node:path';
 import { unzipSync, UnzipFileInfo } from 'fflate';
 import { ExtractedDocument, DocumentType } from '@/types/procurement';
 import { getIngestionConfig } from '@/lib/config';
+import {
+  assertNoPathTraversal,
+  assertHashedPdfStorageKey,
+  assertPrivateStorageRoot,
+  assertRealPathWithinRoot,
+  MAX_PDF_BYTES,
+  resolvePrivatePath,
+  validatePdfBuffer,
+} from '@/lib/secure-pdf';
 
 // Regex patterns to identify TOR files inside Thai government archives
 // Matches: "Attach_TOR.pdf", "Attach_TOR_1.pdf", "TOR.pdf", "01_TOR_software.pdf", "ขอบเขตของงาน.pdf", etc.
@@ -15,8 +24,8 @@ const ANNOUNCEMENT_PATTERN = /annou|ประกาศ/iu;
 
 // Security limits against zip bombs & malicious archives
 const MAX_ARCHIVE_ENTRIES = 500;
-const MAX_ENTRY_BYTES = 100 * 1024 * 1024; // 100 MB per entry
-const MAX_TOTAL_UNCOMPRESSED_BYTES = 500 * 1024 * 1024; // 500 MB total
+const MAX_ENTRY_BYTES = MAX_PDF_BYTES;
+const MAX_TOTAL_UNCOMPRESSED_BYTES = MAX_PDF_BYTES;
 const MAX_COMPRESSION_RATIO = 500; // 500:1 ratio limit
 
 export interface DocumentExtractorOptions {
@@ -27,26 +36,16 @@ export class DocumentExtractor {
   private readonly storagePath: string;
 
   public constructor(options: DocumentExtractorOptions = {}) {
-    this.storagePath =
-      options.storagePath ?? getIngestionConfig().resolvedStoragePath;
+    this.storagePath = assertPrivateStorageRoot(
+      options.storagePath ?? getIngestionConfig().resolvedStoragePath,
+    );
   }
 
   /**
    * Validate archive path to prevent directory traversal attacks (Zip Slip).
    */
   public assertSafeEntryPath(entryName: string): void {
-    const normalized = entryName.replaceAll('\\', '/');
-    const segments = normalized.split('/');
-
-    if (
-      normalized.includes('\0') ||
-      normalized.startsWith('/') ||
-      /^[a-zA-Z]:/.test(normalized) ||
-      segments.includes('..') ||
-      segments.some((s) => s.trim() === '..')
-    ) {
-      throw new Error(`Suspicious or unsafe path traversal detected in ZIP entry: ${entryName}`);
-    }
+    assertNoPathTraversal(entryName, 'ZIP entry path');
   }
 
   /**
@@ -126,10 +125,8 @@ export class DocumentExtractor {
       const baseName = path.posix.basename(entryPath.replaceAll('\\', '/'));
       const buffer = Buffer.from(rawContent);
 
-      // Validate PDF magic bytes: %PDF- (0x25, 0x50, 0x44, 0x46, 0x2D)
-      if (buffer.length < 5 || buffer.subarray(0, 5).toString('ascii') !== '%PDF-') {
-        throw new Error(`Extracted document candidate '${baseName}' is not a valid PDF (%PDF- header missing)`);
-      }
+      // Validate extension, 25 MB cap, magic bytes, and disallowed active content.
+      validatePdfBuffer(buffer, { fileName: baseName });
 
       const docType = this.classifyDocumentType(baseName);
 
@@ -161,17 +158,24 @@ export class DocumentExtractor {
     projectId: string,
     documents: ExtractedDocument[],
   ): Promise<Array<{ document: ExtractedDocument; relativePath: string; absolutePath: string }>> {
-    const projectDir = path.join(this.storagePath, projectId);
+    assertNoPathTraversal(projectId, 'project ID');
+    const projectDir = resolvePrivatePath(this.storagePath, projectId);
     await fs.promises.mkdir(projectDir, { recursive: true });
+    await assertRealPathWithinRoot(this.storagePath, projectDir);
 
     const results = [];
     for (const doc of documents) {
-      const safeFileName = path.basename(doc.fileName);
-      const filePath = path.join(projectDir, safeFileName);
-      await fs.promises.writeFile(filePath, doc.content);
+      const { storageKey } = validatePdfBuffer(doc.content, { fileName: doc.fileName });
+      assertHashedPdfStorageKey(storageKey);
+      const filePath = resolvePrivatePath(this.storagePath, projectId, storageKey);
+      try {
+        await fs.promises.writeFile(filePath, doc.content, { flag: 'wx', mode: 0o600 });
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+      }
 
       // Relative path for database portability
-      const relativePath = path.join('storage', 'documents', projectId, safeFileName);
+      const relativePath = path.relative(process.cwd(), filePath);
 
       results.push({
         document: doc,

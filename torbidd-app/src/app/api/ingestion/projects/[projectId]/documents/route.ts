@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProjectIdParamSchema } from '@/lib/validation';
 import { IngestionService } from '@/services/ingestion/ingestion.service';
+import { PdfSecurityError } from '@/lib/secure-pdf';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,13 @@ export async function POST(
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[POST /api/ingestion/projects/[projectId]/documents]', message);
+
+    if (err instanceof PdfSecurityError) {
+      return NextResponse.json(
+        { error: 'Document rejected', message },
+        { status: err.code === 'TOO_LARGE' ? 413 : 400 },
+      );
+    }
 
     if (message.includes('must contain exactly 11 numeric digits')) {
       return NextResponse.json(
