@@ -133,3 +133,24 @@ export function applySecurityHeaders<T extends { headers: Headers }>(response: T
   }
   return response;
 }
+
+/**
+ * ASVS req_id 14.3.2 & 14.2.2 — Anti-caching HTTP response headers
+ * Enforces that sensitive and authenticated endpoints are never cached in intermediate
+ * proxies, CDNs, or client browser storage.
+ */
+export const ANTI_CACHE_HEADERS: Record<string, string> = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+  Pragma: 'no-cache',
+  Expires: '0',
+};
+
+/**
+ * Applies anti-caching headers to a Response or Headers object.
+ */
+export function applyAntiCacheHeaders<T extends { headers: Headers }>(response: T): T {
+  for (const [key, value] of Object.entries(ANTI_CACHE_HEADERS)) {
+    response.headers.set(key, value);
+  }
+  return response;
+}

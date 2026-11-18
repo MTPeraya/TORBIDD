@@ -19,6 +19,7 @@
 import { NextResponse } from 'next/server';
 import { AuthSessionUser, isAdminUser } from '../auth-constants';
 import { hasPermission, type Permission } from './permissions';
+import { logAuthzFailure } from '../audit-logger';
 
 export type AuthResult =
   | { ok: true }
@@ -50,6 +51,8 @@ export function requireAuth(user: AuthSessionUser | null | undefined): AuthResul
  */
 export function requireAdmin(user: AuthSessionUser | null | undefined): AuthResult {
   if (!user || !isAdminUser(user)) {
+    // ASVS req_id 16.3.2: Log failed administrative authorization attempts with 403
+    logAuthzFailure(user?.id || user?.email || null, null, 'administrative_endpoint', 'Admin access required', { status: 403 });
     return {
       ok: false,
       response: NextResponse.json(

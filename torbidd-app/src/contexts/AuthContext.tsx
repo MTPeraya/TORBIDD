@@ -106,9 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout error:', err);
     } finally {
       setUser(null);
-      // Clear legacy localStorage cache if present
+      // Clear client storage upon session termination (ASVS V14.3.1 & V14.3.3)
       try {
         localStorage.removeItem('torbidd_profile');
+        localStorage.removeItem('torbidd_settings');
+        sessionStorage.clear();
       } catch {
         // ignore
       }

@@ -11,10 +11,11 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
+const uuidv4 = () => globalThis.crypto.randomUUID();
 import { decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
-import { applySecurityHeaders } from '@/lib/security-headers';
+import { applySecurityHeaders, applyAntiCacheHeaders } from '@/lib/security-headers';
 import { sanitizeIntermediaryHeaders } from '@/lib/trusted-proxy';
+import { logAuthzFailure, logSecurityEvent } from '@/lib/audit-logger';
 import {
   LOCALE_COOKIE,
   LEGACY_LOCALE_COOKIE,
@@ -36,6 +37,21 @@ const PROTECTED_ROUTES = ['/historical', '/saved', '/notifications'];
 const ADMIN_ROUTES = ['/admin'];
 
 function handleMiddleware(req: NextRequest) {
+  // ── HTTP Method Restriction: Disable TRACE (ASVS V13.4.4 & V16.3.3) ─────
+  if (req.method === 'TRACE') {
+    const clientIp = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    logSecurityEvent('HTTP_TRACE_METHOD_REJECTED', clientIp, { pathname: req.nextUrl.pathname, method: req.method }, 'BLOCKED');
+    return NextResponse.json(
+      { error: 'Method Not Allowed' },
+      {
+        status: 405,
+        headers: {
+          Allow: 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD',
+        },
+      },
+    );
+  }
+
   const { pathname } = req.nextUrl;
 
   // ── Intermediary Header Sanitization (ASVS req_id 4.1.3) ──────────────────
@@ -148,27 +164,32 @@ function handleMiddleware(req: NextRequest) {
     }
   };
 
-  // ── 2. Admin API Protection (/api/admin/*) ────────────────────────────────
+  // ── 2. Admin API Protection (/api/admin/*) (ASVS V16.3.2) ───────────────
   if (pathname.startsWith('/api/admin/')) {
+    const clientIp = req.headers.get('x-forwarded-for') || '127.0.0.1';
     const authCookie = readCookieWithFallback(req.cookies, AUTH_COOKIE_NAME, LEGACY_AUTH_COOKIE_NAME);
     if (!authCookie) {
+      logAuthzFailure(null, clientIp, pathname, 'Unauthenticated admin API access', { status: 401 });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const session = decodeSessionPayload(authCookie);
     if (!session || !isAdminUser(session.user)) {
+      logAuthzFailure(session?.user?.id || session?.user?.email || null, clientIp, pathname, 'Forbidden: Admin access required', { status: 403 });
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
   }
 
-  // ── 3. Bare Admin Page Protection (/admin) ────────────────────────────────
+  // ── 3. Bare Admin Page Protection (/admin) (ASVS V16.3.2) ─────────────────
   const isAdminRoute = ADMIN_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
   if (isAdminRoute) {
+    const clientIp = req.headers.get('x-forwarded-for') || '127.0.0.1';
     const authCookie = readCookieWithFallback(req.cookies, AUTH_COOKIE_NAME, LEGACY_AUTH_COOKIE_NAME);
     if (!authCookie) {
+      logAuthzFailure(null, clientIp, pathname, 'Unauthenticated admin page access', { status: 401 });
       const loginUrl = new URL('/login', req.url);
       loginUrl.searchParams.set('from', pathname);
       return NextResponse.redirect(loginUrl);
@@ -176,6 +197,7 @@ function handleMiddleware(req: NextRequest) {
 
     const session = decodeSessionPayload(authCookie);
     if (!session || !isAdminUser(session.user)) {
+      logAuthzFailure(session?.user?.id || session?.user?.email || null, clientIp, pathname, 'Forbidden: Admin role required for /admin', { status: 403 });
       const homeUrl = new URL('/', req.url);
       homeUrl.searchParams.set('auth_error', 'admin_required');
       return NextResponse.redirect(homeUrl);
@@ -240,7 +262,23 @@ function handleMiddleware(req: NextRequest) {
 
 export function middleware(req: NextRequest) {
   const response = handleMiddleware(req);
-  return applySecurityHeaders(response);
+  applySecurityHeaders(response);
+
+  // ── ASVS V14.3.2 & V14.2.2: Anti-caching headers for sensitive/dynamic routes ─
+  const { pathname } = req.nextUrl;
+  const isSensitiveRoute =
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/admin') ||
+    pathname.includes('/historical') ||
+    pathname.includes('/saved') ||
+    pathname.includes('/notifications') ||
+    pathname.includes('/settings');
+
+  if (isSensitiveRoute) {
+    applyAntiCacheHeaders(response);
+  }
+
+  return response;
 }
 
 export const config = {

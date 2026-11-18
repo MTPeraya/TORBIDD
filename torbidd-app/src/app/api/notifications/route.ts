@@ -13,6 +13,7 @@ import {
   createNotification,
 } from '@/services/database/notifications';
 import { NotificationType } from '@/types/notification';
+import { applyAntiCacheHeaders } from '@/lib/security-headers';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,12 +41,14 @@ export async function GET(req: NextRequest) {
       type,
     });
 
-    return NextResponse.json(result);
+    return applyAntiCacheHeaders(NextResponse.json(result));
   } catch (err) {
     console.error('[GET /api/notifications]', err);
-    return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
-      { status: 500 },
+    return applyAntiCacheHeaders(
+      NextResponse.json(
+        { error: 'Failed to fetch notifications' },
+        { status: 500 },
+      ),
     );
   }
 }
@@ -57,20 +60,22 @@ export async function PATCH(req: NextRequest) {
 
     if (body.action === 'markAllRead') {
       const modifiedCount = await markAllAsRead(recipientId);
-      return NextResponse.json({ success: true, modifiedCount });
+      return applyAntiCacheHeaders(NextResponse.json({ success: true, modifiedCount }));
     }
 
     if (body.action === 'markRead' && body.id) {
       const success = await markAsRead(recipientId, String(body.id));
-      return NextResponse.json({ success });
+      return applyAntiCacheHeaders(NextResponse.json({ success }));
     }
 
-    return NextResponse.json({ error: 'Invalid action parameter' }, { status: 400 });
+    return applyAntiCacheHeaders(NextResponse.json({ error: 'Invalid action parameter' }, { status: 400 }));
   } catch (err) {
     console.error('[PATCH /api/notifications]', err);
-    return NextResponse.json(
-      { error: 'Failed to update notification status' },
-      { status: 500 },
+    return applyAntiCacheHeaders(
+      NextResponse.json(
+        { error: 'Failed to update notification status' },
+        { status: 500 },
+      ),
     );
   }
 }

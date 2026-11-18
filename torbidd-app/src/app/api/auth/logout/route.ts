@@ -14,6 +14,7 @@ import {
   rateLimitHeaders,
   AUTH_LOGOUT_LIMITER,
 } from '@/lib/rate-limiter';
+import { applyAntiCacheHeaders } from '@/lib/security-headers';
 
 const LIMITER_ID = 'auth-logout';
 
@@ -37,6 +38,12 @@ export async function POST(req?: NextRequest) {
   const clearOptions = buildSecureCookieOptions({ maxAge: 0 });
   res.cookies.set(AUTH_COOKIE_NAME, '', clearOptions);
   res.cookies.set(LEGACY_AUTH_COOKIE_NAME, '', clearOptions);
+
+  // ASVS V14.3.1: Instruct browser to clear sensitive client storage and cache
+  res.headers.set('Clear-Site-Data', '"cache", "cookies", "storage"');
+
+  // ASVS V14.3.2 & V14.2.2: Anti-caching response headers
+  applyAntiCacheHeaders(res);
 
   return res;
 }

@@ -41,6 +41,17 @@ services:
     # Update the host path to point at your service account JSON.
     # volumes:
     #   - ./secrets/gcp-service-account.json:/secrets/gcp-sa.json:ro
+    # ASVS V15.1.5 & V15.2.5: Sandbox container resources with 1GB RAM cap and CPU limit
+    mem_limit: 1024m
+    cpus: 2.0
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
     networks:
       - torbidd-net
 

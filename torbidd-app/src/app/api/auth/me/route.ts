@@ -22,6 +22,7 @@ import {
   rateLimitHeaders,
   AUTH_ME_WRITE_LIMITER,
 } from '@/lib/rate-limiter';
+import { applyAntiCacheHeaders } from '@/lib/security-headers';
 
 const LIMITER_ID = 'auth-me-write';
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const user = getAuthSessionFromRequest(req);
 
   if (!user) {
-    return NextResponse.json({ authenticated: false, user: null, isAdmin: false });
+    return applyAntiCacheHeaders(NextResponse.json({ authenticated: false, user: null, isAdmin: false }));
   }
 
   // ── SEC-08: Immediate permission freshness (ASVS V8.3.2) ──────────────────
@@ -77,6 +78,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  applyAntiCacheHeaders(res);
   return res;
 }
 
@@ -196,6 +198,7 @@ export async function PUT(req: NextRequest) {
       buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 7 }),
     );
 
+    applyAntiCacheHeaders(res);
     return res;
   } catch (err) {
     console.error('[PUT /api/auth/me] Error:', err);

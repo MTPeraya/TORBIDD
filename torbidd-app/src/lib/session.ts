@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { NextRequest } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
+const uuidv4 = () => globalThis.crypto.randomUUID();
 import {
   SESSION_COOKIE,
   LEGACY_SESSION_COOKIE,

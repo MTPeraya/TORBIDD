@@ -11,6 +11,7 @@ import { getBookmarks, addBookmark } from '@/services/database/bookmarks';
 import { BookmarkCreateSchema } from '@/lib/validation';
 import { getSessionId } from '@/lib/session';
 import { getAuthSessionFromRequest } from '@/lib/auth';
+import { applyAntiCacheHeaders } from '@/lib/security-headers';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,13 +24,13 @@ export async function GET(req: NextRequest) {
 
     try {
       const bookmarks = await getBookmarks(sessionId, userId);
-      return NextResponse.json({ data: bookmarks });
+      return applyAntiCacheHeaders(NextResponse.json({ data: bookmarks }));
     } catch {
-      return NextResponse.json({ data: [] });
+      return applyAntiCacheHeaders(NextResponse.json({ data: [] }));
     }
   } catch (err) {
     console.error('[GET /api/bookmarks]', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return applyAntiCacheHeaders(NextResponse.json({ error: 'Internal server error' }, { status: 500 }));
   }
 }
 
@@ -44,9 +45,11 @@ export async function POST(req: NextRequest) {
     const parsed = BookmarkCreateSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid request body', details: parsed.error.flatten() },
-        { status: 400 },
+      return applyAntiCacheHeaders(
+        NextResponse.json(
+          { error: 'Invalid request body', details: parsed.error.flatten() },
+          { status: 400 },
+        ),
       );
     }
 
@@ -54,9 +57,9 @@ export async function POST(req: NextRequest) {
       await addBookmark(sessionId, parsed.data.projectId, userId);
     } catch {}
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    return applyAntiCacheHeaders(NextResponse.json({ success: true }, { status: 201 }));
   } catch (err) {
     console.error('[POST /api/bookmarks]', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return applyAntiCacheHeaders(NextResponse.json({ error: 'Internal server error' }, { status: 500 }));
   }
 }

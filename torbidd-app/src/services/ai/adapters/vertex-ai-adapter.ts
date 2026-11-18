@@ -11,11 +11,22 @@ import {
 } from './types';
 import { buildClassificationPrompt, parseAndValidateAiResponse } from './prompt';
 import { classifyByKeywords } from './keyword-adapter';
-import { getVertexAI, VERTEX_MODEL_FLASH } from '../vertex-ai';
+import { getVertexAI, VERTEX_MODEL_FLASH, withTimeout } from '../vertex-ai';
 
 export interface VertexAiAdapterOptions {
   model?: string;
   disableKeywordFallback?: boolean;
+}
+
+async function runWithTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = 10_000,
+  operationName: string = 'Vertex AI prompt classification',
+): Promise<T> {
+  if (typeof withTimeout === 'function') {
+    return withTimeout(promise, timeoutMs, operationName);
+  }
+  return promise;
 }
 
 export class VertexAiAdapter implements AiClassifierAdapter {
@@ -47,7 +58,12 @@ export class VertexAiAdapter implements AiClassifierAdapter {
       const generativeModel = vertexAI.getGenerativeModel({ model: this.model });
 
       const prompt = buildClassificationPrompt(title, description);
-      const result = await generativeModel.generateContent(prompt);
+      // ASVS V15.1.3 & V15.2.2: Enforce 10s execution timeout on Vertex AI prompt calls
+      const result = await runWithTimeout(
+        generativeModel.generateContent(prompt),
+        10_000,
+        'Vertex AI prompt classification',
+      );
       const rawText = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
       return parseAndValidateAiResponse(

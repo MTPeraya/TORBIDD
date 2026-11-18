@@ -165,6 +165,7 @@ export function Topbar() {
     try {
       localStorage.removeItem('torbidd_settings');
       localStorage.removeItem('torbidd_profile');
+      sessionStorage.clear();
     } catch {
       // ignore
     }
