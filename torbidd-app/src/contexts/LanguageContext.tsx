@@ -52,7 +52,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    syncInitialLanguage();
+    const timer = setTimeout(syncInitialLanguage, 0);
 
     const handlePopState = () => {
       const pathMatch = window.location.pathname.match(/^\/(th|en)(\/|$)/);
@@ -63,7 +63,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       }
     };
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   const setLanguage = (lang: Language) => {

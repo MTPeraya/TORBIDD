@@ -68,9 +68,11 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED=1
 ENV PORT=3443
 ENV INTERNAL_HTTP_PORT=3000
 
-# Security: create a non-root user
+# Security: create a non-root user and writable storage directory
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser  --system --uid 1001 nextjs
+    adduser  --system --uid 1001 nextjs && \
+    mkdir -p /app/storage/documents && \
+    chown -R nextjs:nodejs /app/storage
 
 # Copy the standalone output (includes server.js + minimal node_modules)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
