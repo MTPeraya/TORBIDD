@@ -742,6 +742,7 @@ describe('Procurement Diff Engine & Scheduled Notification Integration Suite', (
         project: {
           id: '6801999992',
           title: 'โครงการทดสอบ',
+          deadline: new Date().toISOString(),
         },
         daysRemaining: 1,
       });
@@ -758,6 +759,7 @@ describe('Procurement Diff Engine & Scheduled Notification Integration Suite', (
         project: {
           id: 'dedup_email_proj',
           title: 'โครงการพัฒนาระบบ Big Data',
+          deadline: new Date().toISOString(),
         },
         daysRemaining: 2,
       };

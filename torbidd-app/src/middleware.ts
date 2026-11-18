@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
+const uuidv4 = () => globalThis.crypto.randomUUID();
 import { decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
 import { applySecurityHeaders } from '@/lib/security-headers';
 import { sanitizeIntermediaryHeaders } from '@/lib/trusted-proxy';
@@ -36,6 +36,19 @@ const PROTECTED_ROUTES = ['/historical', '/saved', '/notifications'];
 const ADMIN_ROUTES = ['/admin'];
 
 function handleMiddleware(req: NextRequest) {
+  // ── HTTP Method Restriction: Disable TRACE (ASVS V13.4.4) ────────────────
+  if (req.method === 'TRACE') {
+    return NextResponse.json(
+      { error: 'Method Not Allowed' },
+      {
+        status: 405,
+        headers: {
+          Allow: 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD',
+        },
+      },
+    );
+  }
+
   const { pathname } = req.nextUrl;
 
   // ── Intermediary Header Sanitization (ASVS req_id 4.1.3) ──────────────────
