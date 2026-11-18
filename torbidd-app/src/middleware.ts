@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 const uuidv4 = () => globalThis.crypto.randomUUID();
 import { decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
-import { applySecurityHeaders } from '@/lib/security-headers';
+import { applySecurityHeaders, applyAntiCacheHeaders } from '@/lib/security-headers';
 import { sanitizeIntermediaryHeaders } from '@/lib/trusted-proxy';
 import {
   LOCALE_COOKIE,
@@ -253,7 +253,23 @@ function handleMiddleware(req: NextRequest) {
 
 export function middleware(req: NextRequest) {
   const response = handleMiddleware(req);
-  return applySecurityHeaders(response);
+  applySecurityHeaders(response);
+
+  // ── ASVS V14.3.2 & V14.2.2: Anti-caching headers for sensitive/dynamic routes ─
+  const { pathname } = req.nextUrl;
+  const isSensitiveRoute =
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/admin') ||
+    pathname.includes('/historical') ||
+    pathname.includes('/saved') ||
+    pathname.includes('/notifications') ||
+    pathname.includes('/settings');
+
+  if (isSensitiveRoute) {
+    applyAntiCacheHeaders(response);
+  }
+
+  return response;
 }
 
 export const config = {
