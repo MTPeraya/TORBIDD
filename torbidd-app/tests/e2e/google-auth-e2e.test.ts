@@ -27,7 +27,7 @@ import { GET as initiateGoogleAuth } from '@/app/api/auth/google/route';
 import { GET as handleGoogleCallback } from '@/app/api/auth/callback/google/route';
 import { GET as getMe, PUT as updateMe } from '@/app/api/auth/me/route';
 import { POST as handleLogout } from '@/app/api/auth/logout/route';
-import { proxy as middleware } from '@/proxy';
+import { middleware } from '@/middleware';
 import {
   AUTH_COOKIE_NAME,
   OAUTH_STATE_COOKIE,

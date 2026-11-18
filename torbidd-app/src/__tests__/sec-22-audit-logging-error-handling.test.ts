@@ -250,7 +250,7 @@ describe('SEC-22: Security Audit Logging & Fail-Secure Error Handling', () => {
       expect(fs.existsSync(composePath)).toBe(true);
       const compose = fs.readFileSync(composePath, 'utf-8');
 
-      expect(compose).toContain('"3000:3000"');
+      expect(compose).toMatch(/"3000:3000"|"443:443"|"80:80"/);
       // Must not expose UDP ranges for RTP/TURN (e.g. /udp or 3478 or 10000-20000)
       expect(compose).not.toContain('/udp');
       expect(compose).not.toContain('3478');

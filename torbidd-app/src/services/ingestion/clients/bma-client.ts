@@ -7,6 +7,7 @@
 import { DiscoveredProject } from '@/types/procurement';
 import { getIngestionConfig } from '@/lib/config';
 import { assertHttpsUrl } from '@/lib/tls';
+import { assertSafeUrl } from '@/lib/ssrf';
 
 export const BMA_EGP_ENDPOINTS = {
   api: 'https://egp2.bangkok.go.th/appapi/api',
@@ -106,6 +107,8 @@ export class BmaClient {
     const config = getIngestionConfig();
     this.baseUrl = (options.baseUrl ?? config.bmaBaseUrl ?? 'https://egp2.bangkok.go.th').replace(/\/+$/, '');
     this.apiBaseUrl = (options.apiBaseUrl ?? BMA_EGP_ENDPOINTS.api).replace(/\/+$/, '');
+    assertSafeUrl(this.baseUrl);
+    assertSafeUrl(this.apiBaseUrl);
     assertHttpsUrl(this.baseUrl, 'BMA portal URL');
     assertHttpsUrl(this.apiBaseUrl, 'BMA API URL');
     this.fetchImpl =

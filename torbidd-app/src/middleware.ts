@@ -1,5 +1,5 @@
 // =============================================================================
-// proxy.ts - Locale URL Routing, Session Cookie Init & Route Protection
+// middleware.ts - Locale URL Routing, Session Cookie Init & Route Protection
 // =============================================================================
 // 1. Handles /th/* and /en/* locale-prefixed URL routing:
 //    - Rewrites /th/historical → /historical (internal), sets torbidd_locale=th
@@ -11,10 +11,11 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+const uuidv4 = () => globalThis.crypto.randomUUID();
 import { decodeSessionPayload, isAdminUser } from '@/lib/auth-constants';
-import { applySecurityHeaders } from '@/lib/security-headers';
+import { applySecurityHeaders, applyAntiCacheHeaders } from '@/lib/security-headers';
 import { sanitizeIntermediaryHeaders } from '@/lib/trusted-proxy';
-import { generateSessionId } from '@/lib/session';
+import { logAuthzFailure, logSecurityEvent } from '@/lib/audit-logger';
 import {
   LOCALE_COOKIE,
   LEGACY_LOCALE_COOKIE,
@@ -35,26 +36,53 @@ const PROTECTED_ROUTES = ['/historical', '/saved', '/notifications'];
 /** Routes that strictly require administrator privileges */
 const ADMIN_ROUTES = ['/admin'];
 
-function handleProxy(req: NextRequest) {
+function handleMiddleware(req: NextRequest) {
+  // ── HTTP Method Restriction: Disable TRACE (ASVS V13.4.4 & V16.3.3) ─────
+  if (req.method === 'TRACE') {
+    const clientIp = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    logSecurityEvent('HTTP_TRACE_METHOD_REJECTED', clientIp, { pathname: req.nextUrl.pathname, method: req.method }, 'BLOCKED');
+    return NextResponse.json(
+      { error: 'Method Not Allowed' },
+      {
+        status: 405,
+        headers: {
+          Allow: 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD',
+        },
+      },
+    );
+  }
+
   const { pathname } = req.nextUrl;
 
   // ── Intermediary Header Sanitization (ASVS req_id 4.1.3) ──────────────────
   // Prevent end-users from spoofing internal/intermediary headers (e.g. X-User-ID)
   sanitizeIntermediaryHeaders(req.headers);
 
-  // ── 0. Protocol Security & HTTPS Enforcement (ASVS V12.2.1) ───────────────
-  // The trusted TLS ingress overwrites X-Forwarded-Proto. A 308 preserves the
-  // method and request body while permanently upgrading every route to HTTPS.
-  const forwardedProto = req.headers.get('x-forwarded-proto')
-    ?.split(',')[0]
-    ?.trim()
-    .toLowerCase();
-  // `next dev` does not provide a TLS listener. Permit cleartext only in the
-  // development runtime so localhost and LAN browser testing continue to work.
-  const isDevelopmentRuntime = process.env.NODE_ENV === 'development';
-  const isCleartextHttp = forwardedProto === 'http' && !isDevelopmentRuntime;
+  // ── 0. Protocol Security & HTTPS Enforcement (ASVS req_id 4.1.2) ──────────
+  // User-facing endpoints redirect from HTTP to HTTPS; machine/API endpoints
+  // MUST NOT transparently redirect (which leaks unencrypted credentials/payloads)
+  // and instead reject cleartext calls with 426 Upgrade Required.
+  const forwardedProto = req.headers.get('x-forwarded-proto');
+  const isCleartextHttp = forwardedProto === 'http';
 
   if (isCleartextHttp) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        {
+          error: 'HTTPS Required',
+          message: 'Cleartext HTTP is not permitted for API endpoints. Please use HTTPS (ASVS 4.1.2).',
+        },
+        {
+          status: 426,
+          headers: {
+            Upgrade: 'TLS/1.3, HTTP/2',
+            Connection: 'Upgrade',
+          },
+        },
+      );
+    }
+
+    // User-facing browser route: transparently redirect to HTTPS
     const httpsUrl = req.nextUrl.clone();
     httpsUrl.protocol = 'https:';
     return NextResponse.redirect(httpsUrl, 308);
@@ -117,7 +145,7 @@ function handleProxy(req: NextRequest) {
     if (!readCookieWithFallback(req.cookies, SESSION_COOKIE, LEGACY_SESSION_COOKIE)) {
       rewriteResponse.cookies.set(
         SESSION_COOKIE,
-        generateSessionId(),
+        uuidv4(),
         buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 365 }),
       );
     }
@@ -130,33 +158,38 @@ function handleProxy(req: NextRequest) {
     if (!readCookieWithFallback(req.cookies, SESSION_COOKIE, LEGACY_SESSION_COOKIE)) {
       res.cookies.set(
         SESSION_COOKIE,
-        generateSessionId(),
+        uuidv4(),
         buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 365 }),
       );
     }
   };
 
-  // ── 2. Admin API Protection (/api/admin/*) ────────────────────────────────
+  // ── 2. Admin API Protection (/api/admin/*) (ASVS V16.3.2) ───────────────
   if (pathname.startsWith('/api/admin/')) {
+    const clientIp = req.headers.get('x-forwarded-for') || '127.0.0.1';
     const authCookie = readCookieWithFallback(req.cookies, AUTH_COOKIE_NAME, LEGACY_AUTH_COOKIE_NAME);
     if (!authCookie) {
+      logAuthzFailure(null, clientIp, pathname, 'Unauthenticated admin API access', { status: 401 });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const session = decodeSessionPayload(authCookie);
     if (!session || !isAdminUser(session.user)) {
+      logAuthzFailure(session?.user?.id || session?.user?.email || null, clientIp, pathname, 'Forbidden: Admin access required', { status: 403 });
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
   }
 
-  // ── 3. Bare Admin Page Protection (/admin) ────────────────────────────────
+  // ── 3. Bare Admin Page Protection (/admin) (ASVS V16.3.2) ─────────────────
   const isAdminRoute = ADMIN_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
   if (isAdminRoute) {
+    const clientIp = req.headers.get('x-forwarded-for') || '127.0.0.1';
     const authCookie = readCookieWithFallback(req.cookies, AUTH_COOKIE_NAME, LEGACY_AUTH_COOKIE_NAME);
     if (!authCookie) {
+      logAuthzFailure(null, clientIp, pathname, 'Unauthenticated admin page access', { status: 401 });
       const loginUrl = new URL('/login', req.url);
       loginUrl.searchParams.set('from', pathname);
       return NextResponse.redirect(loginUrl);
@@ -164,6 +197,7 @@ function handleProxy(req: NextRequest) {
 
     const session = decodeSessionPayload(authCookie);
     if (!session || !isAdminUser(session.user)) {
+      logAuthzFailure(session?.user?.id || session?.user?.email || null, clientIp, pathname, 'Forbidden: Admin role required for /admin', { status: 403 });
       const homeUrl = new URL('/', req.url);
       homeUrl.searchParams.set('auth_error', 'admin_required');
       return NextResponse.redirect(homeUrl);
@@ -226,10 +260,28 @@ function handleProxy(req: NextRequest) {
   return response;
 }
 
-export function proxy(req: NextRequest) {
-  const response = handleProxy(req);
-  return applySecurityHeaders(response);
+export function middleware(req: NextRequest) {
+  const response = handleMiddleware(req);
+  applySecurityHeaders(response);
+
+  // ── ASVS V14.3.2 & V14.2.2: Anti-caching headers for sensitive/dynamic routes ─
+  const { pathname } = req.nextUrl;
+  const isSensitiveRoute =
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/admin') ||
+    pathname.includes('/historical') ||
+    pathname.includes('/saved') ||
+    pathname.includes('/notifications') ||
+    pathname.includes('/settings');
+
+  if (isSensitiveRoute) {
+    applyAntiCacheHeaders(response);
+  }
+
+  return response;
 }
+
+export const proxy = middleware;
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],

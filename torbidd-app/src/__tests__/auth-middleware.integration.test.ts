@@ -8,7 +8,7 @@
 
 import crypto from 'crypto';
 import { NextRequest } from 'next/server';
-import { proxy as middleware } from '@/proxy';
+import { middleware } from '@/middleware';
 import {
   signSession,
   AUTH_COOKIE_NAME,
