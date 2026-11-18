@@ -16,7 +16,7 @@ import {
   readValidatedPdfFile,
   validatePdfBuffer,
 } from '@/lib/secure-pdf';
-import { getVertexAI, VERTEX_MODEL_PRO } from './vertex-ai';
+import { getVertexAI, VERTEX_MODEL_PRO, withTimeout } from './vertex-ai';
 import { ExtractedQualificationItem } from '@/types/project';
 import { validateAndEnrichQualifications } from './qualification-validator';
 
@@ -623,6 +623,23 @@ export function extractTorHeuristic(
 }
 
 /**
+ * ASVS req_id 15.1.3 & 15.2.2: Maximum safe PDF buffer size (50MB)
+ * Prevents memory exhaustion and Denial of Service during parsing.
+ */
+export const MAX_PDF_BUFFER_BYTES = 50 * 1024 * 1024; // 50MB
+
+async function runWithTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = 10_000,
+  operationName: string = 'Vertex AI multimodal extraction',
+): Promise<T> {
+  if (typeof withTimeout === 'function') {
+    return withTimeout(promise, timeoutMs, operationName);
+  }
+  return promise;
+}
+
+/**
  * Extract TOR information from a Buffer containing PDF data.
  * Leverages Google Vertex AI Gemini Pro multimodal when configured,
  * or gracefully falls back to the domain-aware heuristic extractor.
@@ -631,6 +648,11 @@ export async function extractTorFromBuffer(
   buffer?: Buffer,
   options: ExtractionOptions = {},
 ): Promise<TorExtractResult> {
+  // ASVS V15.1.3 & V15.2.2: Defense against loss of availability via buffer size check
+  if (buffer && buffer.length > MAX_PDF_BUFFER_BYTES) {
+    throw new Error(`PDF document size (${(buffer.length / (1024 * 1024)).toFixed(1)}MB) exceeds maximum safe limit of 50MB`);
+  }
+
   if (buffer) {
     validatePdfBuffer(buffer, { fileName: options.fileName });
   }
@@ -715,17 +737,22 @@ export async function extractTorFromBuffer(
       const model = vertexAI.getGenerativeModel({ model: VERTEX_MODEL_PRO });
 
       const base64Data = buffer.toString('base64');
-      const result = await model.generateContent({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { inlineData: { mimeType: 'application/pdf', data: base64Data } },
-              { text: EXTRACTION_PROMPT },
-            ],
-          },
-        ],
-      });
+      // ASVS V15.1.3 & V15.2.2: Enforce 10s execution timeout on multimodal Vertex AI calls
+      const result = await runWithTimeout(
+        model.generateContent({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: 'application/pdf', data: base64Data } },
+                { text: EXTRACTION_PROMPT },
+              ],
+            },
+          ],
+        }),
+        10_000,
+        'Vertex AI multimodal extraction',
+      );
 
       const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
       const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();

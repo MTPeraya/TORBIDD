@@ -14,6 +14,8 @@
 //  - Returns 429 Too Many Requests with Retry-After header when limit exceeded.
 // =============================================================================
 
+import { getTrustedClientIp, RequestWithHeaders } from './trusted-proxy';
+
 export interface RateLimitConfig {
   /** Sliding window duration in milliseconds (e.g. 60_000 for 1 minute). */
   windowMs: number;
@@ -171,22 +173,38 @@ export const AI_EXTRACT_LIMITER: RateLimitConfig = {
   label: 'ai-extract',
 };
 
+/**
+ * AI_CLASSIFY_LIMITER (ASVS req_id 2.4.1) – Anti-automation control for AI Classification.
+ * Protects against LLM API quota exhaustion and multi-provider cascade overload.
+ *   · 20 requests per minute per IP
+ */
+export const AI_CLASSIFY_LIMITER: RateLimitConfig = {
+  windowMs: 60 * 1000, // 1 minute
+  max: process.env.NODE_ENV === 'test' ? 1000 : 20,
+  label: 'ai-classify',
+};
+
+/**
+ * SEARCH_SCRAPE_LIMITER (ASVS req_id 2.4.1) – Anti-automation control against data exfiltration.
+ * Protects public/protected search and listing endpoints from automated scraping.
+ *   · 60 requests per minute per IP
+ */
+export const SEARCH_SCRAPE_LIMITER: RateLimitConfig = {
+  windowMs: 60 * 1000, // 1 minute
+  max: process.env.NODE_ENV === 'test' ? 1000 : 60,
+  label: 'search-scrape',
+};
+
 // ---------------------------------------------------------------------------
 // Helper: extract best-effort client IP from a Next.js request
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the client IP address suitable for use as a rate-limit key.
- * Respects common reverse-proxy headers; falls back to 'unknown'.
+ * Returns the trusted client IP address suitable for use as a rate-limit key (ASVS 4.1.3).
+ * Sanitizes headers and rejects client-injected spoofed proxy headers.
  */
-export function getClientIp(req?: { headers?: { get: (name: string) => string | null } }): string {
-  if (!req?.headers?.get) return 'unknown';
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) {
-    // x-forwarded-for may contain a comma-separated list; take the first (leftmost) IP
-    return forwarded.split(',')[0].trim();
-  }
-  return req.headers.get('x-real-ip') ?? req.headers.get('cf-connecting-ip') ?? 'unknown';
+export function getClientIp(req?: RequestWithHeaders): string {
+  return getTrustedClientIp(req);
 }
 
 /**

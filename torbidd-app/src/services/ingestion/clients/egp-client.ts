@@ -5,6 +5,7 @@
 import { DiscoveredProject, EgpArchiveMetadata } from '@/types/procurement';
 import { getIngestionConfig } from '@/lib/config';
 import { parseToIsoDate } from '@/services/transformation/normalizers/date-normalizer';
+import { assertSafeUrl } from '@/lib/ssrf';
 import { MAX_PDF_BYTES, PdfSecurityError, readResponseWithLimit } from '@/lib/secure-pdf';
 
 const METADATA_PATH = '/egp-approval-service/apv-common/infoProcureDocAnnounZipTemp';
@@ -54,6 +55,10 @@ export class EgpClient {
       process.env.EGP_RSS_BASE_URL ??
       'https://process3.gprocurement.go.th/EPROCRssFeedWeb/egpannouncerss.xml'
     ).trim();
+    // Validate target endpoints against SSRF domain allowlist and private RFC 1918 IPs (ASVS V13.2.4 & V13.2.5)
+    assertSafeUrl(this.baseUrl);
+    assertSafeUrl(this.portalUrl);
+    assertSafeUrl(this.rssBaseUrl);
     this.fetchImpl =
       options.fetchImpl ??
       (typeof fetch !== 'undefined'

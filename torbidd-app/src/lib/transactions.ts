@@ -17,11 +17,6 @@ export interface TransactionOptions {
   timeoutMs?: number;
 }
 
-/**
- * Read the driver's topology type when it is available. An undefined value is
- * treated as unknown so mocked connections can still exercise the transaction
- * path and the driver remains the final authority.
- */
 function getTopologyType(conn: Awaited<ReturnType<typeof connectToDatabase>>): string | undefined {
   const rawConnection = (conn as unknown as {
     connection?: {
@@ -31,11 +26,7 @@ function getTopologyType(conn: Awaited<ReturnType<typeof connectToDatabase>>): s
   }).connection;
   if (!rawConnection) return undefined;
 
-  const connection = rawConnection as {
-    getClient?: () => { topology?: { description?: { type?: string } } };
-    client?: { topology?: { description?: { type?: string } } };
-  };
-  const client = connection.getClient?.() ?? connection.client;
+  const client = rawConnection.getClient?.() ?? rawConnection.client;
   return client?.topology?.description?.type;
 }
 
@@ -77,9 +68,8 @@ export async function withTransaction<T>(
 ): Promise<T> {
   const conn = await connectToDatabase();
 
-  // A standalone MongoDB server can create sessions but rejects the first
-  // transactional write. Detect that topology before invoking the operation so
-  // the callback is not partially run and then retried.
+  // Standalone MongoDB can create a session but rejects its first transaction
+  // command. Detect it before invoking the callback to avoid partial retries.
   const topologyType = getTopologyType(conn);
   if (topologyType && !topologySupportsTransactions(topologyType)) {
     return operation(null);
