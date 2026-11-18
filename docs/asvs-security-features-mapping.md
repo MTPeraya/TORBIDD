@@ -17,8 +17,8 @@
 | **V13** | Configuration | 21 | **18** | 3 | **SEC-18** | **100%** (18/18) |
 | **V14** | Data Protection | 13 | **12** | 1 | **SEC-19** | **100%** (12/12) |
 | **V15** | Secure Coding and Architecture | 21 | **17** | 4 | **SEC-20** | **100%** (17/17) |
-| **V16** | Security Logging and Error Handling | 17 | **16** | 1 | **SEC-21** | **100%** (16/16) |
-| **V17** | WebRTC | 12 | **0** | 12 | **SEC-22** *(Boundary)* | **100%** (0 planned) |
+| **V16** | Security Logging and Error Handling | 17 | **16** | 1 | **SEC-22** | **100%** (16/16) |
+| **V17** | WebRTC | 12 | **0** | 12 | **SEC-23** *(Boundary)* | **100%** (0 planned) |
 | **TOTAL** | **Chapters V5, V12–V17** | **109** | **78** | **31** | **6 Core Features + 1 Scope Boundary** | **100% Coverage (78/78)** |
 
 ---
@@ -50,12 +50,12 @@
    - **All 17 Planned Requirements Covered:** V15.1.1, V15.1.2, V15.1.3, V15.1.5, V15.2.1, V15.2.2, V15.2.3, V15.2.4, V15.2.5, V15.3.1, V15.3.2, V15.3.3, V15.3.4, V15.3.5, V15.3.6, V15.3.7, V15.4.2.
    - *4 Excluded in Excel (`Plan = FALSE`):* V15.1.4, V15.4.1, V15.4.3, V15.4.4 (Reason: Single-threaded Node.js event-driven runtime; no manual multi-threading locks).
 
-6. **SEC-21 (Security Logging and Error Handling)**:
+6. **SEC-22 (Security Logging and Error Handling)**:
    - **Origin in Excel:** Chapter V16, Sections V16.1, V16.2, V16.3, V16.4, V16.5.
    - **All 16 Planned Requirements Covered:** V16.1.1, V16.2.1, V16.2.2, V16.2.3, V16.2.4, V16.2.5, V16.3.1, V16.3.2, V16.3.3, V16.3.4, V16.4.1, V16.4.2, V16.5.1, V16.5.2, V16.5.3, V16.5.4.
    - *1 Excluded in Excel (`Plan = FALSE`):* V16.4.3 (Reason: Centralized container logging suffices for 12-week development phase).
 
-7. **SEC-22 (WebRTC Boundary)**:
+7. **SEC-23 (WebRTC Boundary)**:
    - **Origin in Excel:** Chapter V17, Sections V17.1, V17.2, V17.3.
    - **All 12 Requirements in Excel are `Plan = FALSE`:** V17.1.1 - V17.3.2 (Reason: TORBIDD does not operate WebRTC, TURN, or media streaming servers).
 
@@ -344,7 +344,7 @@ Global error boundaries (error.tsx), authentication middleware, Dead Letter Queu
 
 ---
 
-# SEC-22: WebRTC Architectural Scope Exclusion (ASVS V17)
+# SEC-23: WebRTC Architectural Scope Exclusion (ASVS V17)
 > **Excel Origin:** Chapter V17 (WebRTC) — All 12 of 12 Requirements in Excel are `Plan = FALSE` (`V17.1.1` - `V17.3.2`)
 
 ## Description
@@ -356,8 +356,16 @@ System architecture, network port allocations, and threat modeling documentation
 ## ASVS Security Requirements
 - V17.1.1: TURN server IP filtering (Plan=FALSE; no TURN server operated).
 - V17.1.2: TURN resource exhaustion protection (Plan=FALSE; no TURN server operated).
-- V17.2.1 - V17.2.8: DTLS, SRTP, and media server protections (Plan=FALSE; no media servers operated).
-- V17.3.1 - V17.3.2: Signaling server rate limiting and message handling (Plan=FALSE; no signaling server operated).
+- V17.2.1: Media server peer authentication and authorization (Plan=FALSE; no media servers operated).
+- V17.2.2: DTLS-SRTP real-time media encryption (Plan=FALSE; no media streams operated).
+- V17.2.3: Rejection of unencrypted RTP streams (Plan=FALSE; no media streams operated).
+- V17.2.4: Ephemeral encryption key regeneration (Plan=FALSE; no media streams operated).
+- V17.2.5: ICE candidate internal IP leakage protection (Plan=FALSE; no ICE negotiation).
+- V17.2.6: WebRTC data channel integrity and confidentiality (Plan=FALSE; no data channels).
+- V17.2.7: Media codec parser defenses and buffer overflow protections (Plan=FALSE; no media codecs).
+- V17.2.8: Real-time stream archiving and recording compliance (Plan=FALSE; no media recording).
+- V17.3.1: Signaling channel TLS/WSS encryption and message validation (Plan=FALSE; no signaling channels).
+- V17.3.2: Signaling endpoint rate limiting and authentication (Plan=FALSE; no signaling endpoints).
 
 ## Related Files
 - docs/TORBIDD SRS.pdf

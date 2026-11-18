@@ -1,6 +1,8 @@
-# SEC-22: Security Audit Logging, Fail-Secure Error Handling & WebRTC Scope Exclusion
+# SEC-22: Security Audit Logging & Fail-Secure Error Handling
 
-This document defines TORBIDD's security audit logging architecture, time synchronization, sensitive token redaction, fail-secure error boundaries, and WebRTC architectural scope exclusion in compliance with **OWASP ASVS v4.0.3 Chapter 16 (Security Logging and Error Handling)** and **Chapter 17 (WebRTC)**.
+This document defines TORBIDD's security audit logging architecture, time synchronization, sensitive token redaction, and fail-secure error boundaries in compliance with **OWASP ASVS v4.0.3 Chapter 16 (Security Logging and Error Handling)**.
+
+*(For WebRTC architectural scope boundary and threat model analysis, refer to [webrtc-architectural-scope-exclusion.md](./webrtc-architectural-scope-exclusion.md)).*
 
 ---
 
