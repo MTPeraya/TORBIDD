@@ -34,6 +34,7 @@ import {
   rateLimitHeaders,
   AUTH_CALLBACK_LIMITER,
 } from '@/lib/rate-limiter';
+import { logAuthSuccess, logAuthFailure } from '@/lib/audit-logger';
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -105,16 +106,19 @@ export async function GET(req: NextRequest) {
   }
 
   if (!stateIsValid) {
+    logAuthFailure('unknown', clientIp, 'State validation failed', { cookiePresent: Boolean(stateCookieRaw) });
     console.warn('[Google Auth Callback] State validation failed. Cookie present:', Boolean(stateCookieRaw));
     return NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
   }
 
   const googleError = searchParams.get('error');
   if (googleError) {
+    logAuthFailure('unknown', clientIp, `Google OAuth error: ${googleError}`);
     return NextResponse.redirect(`${appUrl}/login?error=${encodeURIComponent(googleError)}`);
   }
 
   if (!code) {
+    logAuthFailure('unknown', clientIp, 'Missing authorization code');
     return NextResponse.redirect(`${appUrl}/login?error=missing_code`);
   }
 
@@ -307,6 +311,8 @@ export async function GET(req: NextRequest) {
 
   // ── SEC-01: Successful auth – reset the callback rate-limit counter ──────
   resetRateLimit(LIMITER_ID, clientIp);
+  // ── ASVS req_id 16.3.1: Log successful authentication ─────────────────────
+  logAuthSuccess(sessionUser.id, clientIp, { email: sessionUser.email, role: sessionUser.role });
   // ─────────────────────────────────────────────────────────────────────────
 
   const response = NextResponse.redirect(`${appUrl}${returnUrl}`);

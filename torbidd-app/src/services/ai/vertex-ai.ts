@@ -37,3 +37,31 @@ export function getVertexAI(): VertexAI {
 
 export const VERTEX_MODEL_PRO = process.env.VERTEX_AI_MODEL_PRO || 'gemini-1.5-pro';
 export const VERTEX_MODEL_FLASH = process.env.VERTEX_AI_MODEL_FLASH || 'gemini-1.5-flash';
+
+/**
+ * ASVS req_id 15.1.3 & 15.2.2: Standard execution timeout for Vertex AI prompt calls
+ * Prevents loss of availability or thread starvation if cloud endpoints stall.
+ */
+export const VERTEX_AI_TIMEOUT_MS = 10_000; // 10 seconds
+
+/**
+ * Executes a Promise with an enforced timeout, rejecting if the operation exceeds timeoutMs.
+ */
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = VERTEX_AI_TIMEOUT_MS,
+  operationName: string = 'Vertex AI operation',
+): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`[Timeout] ${operationName} exceeded execution deadline of ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
