@@ -7,8 +7,7 @@
 //   overridden by the end-user (e.g., X-Real-IP, X-Forwarded-*, X-User-ID).
 // =============================================================================
 
-import net from 'net';
-import { isPrivateOrReservedIp } from './ssrf';
+import { isIPv4, isIPv6, isPrivateOrReservedIp } from './ssrf';
 
 /**
  * List of headers reserved for internal system use or set only by trusted intermediaries.
@@ -30,7 +29,7 @@ export const SENSITIVE_INTERMEDIARY_HEADERS = [
 export function isValidIp(ip: string): boolean {
   if (!ip || typeof ip !== 'string') return false;
   const trimmed = ip.trim();
-  return net.isIP(trimmed) !== 0;
+  return isIPv4(trimmed) || isIPv6(trimmed);
 }
 
 export interface RequestWithHeaders {

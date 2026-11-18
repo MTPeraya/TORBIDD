@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { markAlertSent } from '@/services/database/dlq';
+import { emitAuditLog } from '@/lib/audit-logger';
 
 export interface AlertPayload {
   errorCode: string;
@@ -55,6 +56,22 @@ export class AlertService {
    */
   public async sendRetryExceededAlert(payload: AlertPayload): Promise<AlertDispatchResult> {
     const timestamp = (payload.occurredAt || new Date()).toISOString();
+
+    // ASVS req_id 16.3.4: Emit structured audit log for system retry exhaustion
+    emitAuditLog({
+      level: 'SECURITY',
+      eventType: 'SYNC_RETRIES_EXHAUSTED_ALERT',
+      resource: payload.source,
+      outcome: 'BLOCKED',
+      details: {
+        errorCode: payload.errorCode,
+        errorMessage: payload.errorMessage,
+        retryAttempts: payload.retryAttempts,
+        maxAttempts: payload.maxAttempts,
+        dlqId: payload.dlqId,
+      },
+    });
+
     const alertTitle = `🚨 [TORBIDD Critical Alert] Synchronization Retries Exceeded`;
     const alertBody = [
       `*Error Code:* \`${payload.errorCode}\``,

@@ -51,6 +51,7 @@ ENV VERTEX_AI_MODEL_PRO=gemini-1.5-pro
 ENV VERTEX_AI_MODEL_FLASH=gemini-1.5-flash
 ENV NEXT_PUBLIC_APP_URL=http://localhost:3000
 ENV SESSION_SECRET=build-time-placeholder-replace-at-runtime
+ENV CRON_SECRET=build-time-placeholder-replace-at-runtime
 
 # Build — next.config.ts output: 'standalone' creates a self-contained bundle
 RUN npm run build

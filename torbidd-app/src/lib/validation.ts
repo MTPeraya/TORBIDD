@@ -143,9 +143,11 @@ export const HistoricalFiltersSchema = z.object({
 
 // ─── Bookmark (POST /api/bookmarks) ─────────────────────────────────────────
 
-export const BookmarkCreateSchema = z.object({
-  projectId: canonicalString(z.string().length(24)), // MongoDB ObjectId hex
-});
+export const BookmarkCreateSchema = z
+  .object({
+    projectId: canonicalString(z.string().length(24)), // MongoDB ObjectId hex
+  })
+  .strict();
 
 // ─── Settings (PUT /api/settings) ───────────────────────────────────────────
 
@@ -167,6 +169,7 @@ export const SettingsUpdateSchema = z
     language: z.enum(['th', 'en']).optional(),
     email: canonicalString(z.string().email()).nullable().optional(),
   })
+  .strict()
   .refine(
     (data) => {
       if (data.budgetMin != null && data.budgetMax != null) {
@@ -195,6 +198,7 @@ export const NotificationPreferencesSchema = z
     language: z.enum(['th', 'en']).optional(),
     email: canonicalString(z.string().email()).nullable().optional(),
   })
+  .strict()
   .refine(
     (data) => {
       if (data.budgetMin != null && data.budgetMax != null) {
@@ -230,10 +234,15 @@ export const AiExtractSchema = z
 
 // ─── AI Classify (POST /api/ai/classify) ────────────────────────────────────
 
-export const AiClassifySchema = z.object({
-  title: canonicalString(z.string().min(1).max(500)),
-  description: canonicalString(z.string().min(1).max(5000)),
-});
+export const AiClassifySchema = z
+  .object({
+    title: canonicalString(z.string().min(1).max(500)),
+    description: canonicalString(z.string().min(1).max(5000)),
+    provider: z.string().max(50).optional(),
+    apiKey: z.string().max(200).optional(),
+    model: z.string().max(100).optional(),
+  })
+  .strict();
 
 // ─── Ingestion: Discover (POST /api/ingestion/discover) ─────────────────────
 
@@ -307,3 +316,22 @@ export const ProjectCreateSchema = z.object({
 });
 
 export const ProjectUpdateSchema = ProjectCreateSchema.partial();
+
+/**
+ * ASVS req_id 15.3.3: Strict schema for Admin project updates preventing mass assignment.
+ * Blocks insertion or mutation of unauthorized object fields (e.g. role, admin flags).
+ */
+export const AdminProjectUpdateSchema = z
+  .object({
+    projectName: canonicalString(z.string().min(1).max(500)).optional(),
+    agencyName: canonicalString(z.string().min(1).max(500)).optional(),
+    budget: z.coerce.number().min(0).optional(),
+    fiscalYear: z.coerce.number().int().min(2500).max(2600).optional(),
+    procurementType: canonicalString(z.string().max(200)).optional(),
+    is_software: z.boolean().optional(),
+    software_category: z.enum(VALID_CATEGORIES).optional(),
+    classification_reason: canonicalString(z.string().max(1000)).optional(),
+    admin_reviewed: z.boolean().optional(),
+    review_status: z.enum(['PENDING_REVIEW', 'APPROVED', 'CORRECTED']).optional(),
+  })
+  .strict();
