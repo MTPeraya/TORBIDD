@@ -6,6 +6,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { assertPrivateStorageRoot } from './secure-pdf';
+import { assertHttpsUrl } from './tls';
+
+const httpsUrl = z.string().url().superRefine((value, ctx) => {
+  try {
+    assertHttpsUrl(value);
+  } catch (error) {
+    ctx.addIssue({
+      code: 'custom',
+      message: error instanceof Error ? error.message : 'URL must use HTTPS',
+    });
+  }
+});
 
 export const IngestionConfigSchema = z.object({
   govspendingApiKey: z.string().trim().default(''),
