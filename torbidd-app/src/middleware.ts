@@ -62,10 +62,12 @@ function handleMiddleware(req: NextRequest) {
   // User-facing endpoints redirect from HTTP to HTTPS; machine/API endpoints
   // MUST NOT transparently redirect (which leaks unencrypted credentials/payloads)
   // and instead reject cleartext calls with 426 Upgrade Required.
+  // NOTE: In development mode (NODE_ENV=development), HTTP is permitted.
+  const isDev = process.env.NODE_ENV === 'development';
   const forwardedProto = req.headers.get('x-forwarded-proto');
   const isCleartextHttp = forwardedProto === 'http';
 
-  if (isCleartextHttp) {
+  if (!isDev && isCleartextHttp) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json(
         {

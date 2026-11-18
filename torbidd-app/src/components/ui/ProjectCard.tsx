@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Project, TorStatus } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,6 +76,7 @@ function getTorBadge(torStatus: TorStatus | undefined, language: 'th' | 'en') {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
 
@@ -132,7 +133,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   const handleCardClick = () => {
     const targetId = extProject.externalProjectId ?? project.externalId ?? project._id;
-    router.push(`/opportunities/${targetId}`);
+    if (targetId === undefined || targetId === null || targetId === '') return;
+    const localePrefix = pathname.match(/^\/(th|en)(?:\/|$)/)?.[0].replace(/\/$/, '') ?? '';
+    router.push(`${localePrefix}/opportunities/${encodeURIComponent(String(targetId))}`);
   };
 
   // ─── Fiscal Year display ───────────────────────────────────────────────────
@@ -158,7 +161,18 @@ export function ProjectCard({ project }: ProjectCardProps) {
   };
 
   return (
-    <div className="project-card" onClick={handleCardClick} role="button" tabIndex={0}>
+    <div
+      className="project-card"
+      onClick={handleCardClick}
+      onKeyDown={(event) => {
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          handleCardClick();
+        }
+      }}
+      role="link"
+      tabIndex={0}
+    >
       <div>
         <div className="project-card-header">
           <div className="project-card-tags">

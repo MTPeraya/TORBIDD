@@ -123,7 +123,10 @@ export function ProcurementList({
       {/* Projects Grid */}
       <div className="projects-grid" id="procurements-results-grid">
         {projects.map((project) => (
-          <ProjectCard key={project.externalId} project={project} />
+          <ProjectCard
+            key={project.externalProjectId ?? project._id ?? project.externalId}
+            project={project}
+          />
         ))}
       </div>
 

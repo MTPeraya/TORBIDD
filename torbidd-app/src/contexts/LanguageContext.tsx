@@ -26,34 +26,34 @@ function getLocaleCookie(): Language | null {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    // Priority: 1) Browser URL pathname prefix (/th/... or /en/...)
-    //           2) URL-based locale cookie (set by middleware)
-    //           3) localStorage preference
-    //           4) default 'th'
-    if (typeof window !== 'undefined') {
+  // Always initialize to 'th' on both server and initial client render to prevent hydration mismatch.
+  const [language, setLanguageState] = useState<Language>('th');
+
+  // Sync client preference (URL prefix / cookie / localStorage) after hydration
+  useEffect(() => {
+    const syncInitialLanguage = () => {
       const pathMatch = window.location.pathname.match(/^\/(th|en)(\/|$)/);
       if (pathMatch) {
         const urlLang = pathMatch[1] as Language;
+        setLanguageState(urlLang);
         document.documentElement.lang = urlLang;
-        return urlLang;
+        return;
       }
       const localeCookie = getLocaleCookie();
       if (localeCookie) {
+        setLanguageState(localeCookie);
         document.documentElement.lang = localeCookie;
-        return localeCookie;
+        return;
       }
       const saved = localStorage.getItem('torbidd_lang') as Language;
       if (saved === 'th' || saved === 'en') {
+        setLanguageState(saved);
         document.documentElement.lang = saved;
-        return saved;
       }
-    }
-    return 'th';
-  });
+    };
 
-  // Sync state if browser back/forward button is pressed
-  useEffect(() => {
+    syncInitialLanguage();
+
     const handlePopState = () => {
       const pathMatch = window.location.pathname.match(/^\/(th|en)(\/|$)/);
       if (pathMatch) {

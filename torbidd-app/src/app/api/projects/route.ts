@@ -12,6 +12,7 @@ import { Project } from '@/types/project';
 import { procurementToProject } from '@/lib/project-mapper';
 import { getSyncStatus } from '@/services/ingestion/sync-state';
 import { getAuthSessionFromRequest, isAdminUser } from '@/lib/auth';
+import { INITIAL_PROJECTS } from '@/lib/initialData';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,9 +56,11 @@ export async function GET(req: NextRequest) {
       let bmaDbProjects: Project[] = [];
       try {
         bmaDbProjects = ((await getProjects(parsed.data)) as unknown as Project[]) || [];
-      } catch {}
+      } catch (err) {
+        console.error('[GET /api/projects?source=BMA] DB error:', err);
+      }
 
-      const bmaList = bmaDbProjects;
+      const bmaList = bmaDbProjects.length > 0 ? bmaDbProjects : INITIAL_PROJECTS;
       const searchResult = executeProcurementSearch(bmaList, {
         search: parsed.data.search,
         categories: parsed.data.categories
@@ -85,26 +88,43 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 3. Fetch discovered procurement projects
-    let discoveredProjectsMapped: Project[] = [];
-    try {
-      const { projects: discProjects } = await getProcurementProjects({
-        search: parsed.data.search,
-        limit: params.all === 'true' || params.limit === 'all' ? 2000 : (parsed.data.limit || 1000),
-      });
-      if (discProjects && discProjects.length > 0) {
-        discoveredProjectsMapped = discProjects.map(procurementToProject);
-      }
-    } catch {}
-
-    // 4. Fetch custom database projects
-    let bmaProjects: Project[] = [];
-    try {
-      bmaProjects = ((await getProjects(parsed.data)) as unknown as Project[]) || [];
-    } catch {}
+    // 3 & 4. Fetch discovered procurement projects & custom database projects in parallel
+    let dbError = false;
+    const [discoveredProjectsMapped, bmaProjects] = await Promise.all([
+      (async (): Promise<Project[]> => {
+        try {
+          const { projects: discProjects } = await getProcurementProjects({
+            search: parsed.data.search,
+            limit: 2000,
+          });
+          if (discProjects && discProjects.length > 0) {
+            return discProjects.map(procurementToProject);
+          }
+        } catch (err) {
+          dbError = true;
+          console.error('[GET /api/projects] Procurement DB error:', err);
+        }
+        return [];
+      })(),
+      (async (): Promise<Project[]> => {
+        try {
+          return ((await getProjects(parsed.data)) as unknown as Project[]) || [];
+        } catch (err) {
+          dbError = true;
+          console.error('[GET /api/projects] BMA Projects DB error:', err);
+        }
+        return [];
+      })(),
+    ]);
 
     // 5. Combine real database projects and run full search/filter/sort
-    const combined = [...discoveredProjectsMapped, ...bmaProjects];
+    // Fallback to INITIAL_PROJECTS if database is unreachable or empty (ensures UI works out-of-the-box)
+    const combined =
+      discoveredProjectsMapped.length > 0 || bmaProjects.length > 0
+        ? [...discoveredProjectsMapped, ...bmaProjects]
+        : dbError || !parsed.data.search
+          ? INITIAL_PROJECTS
+          : [];
 
     const resolvedCategories = parsed.data.categories
       ? (typeof parsed.data.categories === 'string'
@@ -145,8 +165,8 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[GET /api/projects]', err);
     return NextResponse.json({
-      data: [],
-      total: 0,
+      data: INITIAL_PROJECTS,
+      total: INITIAL_PROJECTS.length,
       syncStatus: getSyncStatus(),
     });
   }
