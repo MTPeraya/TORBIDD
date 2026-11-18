@@ -11,6 +11,7 @@ import {
   isAdminUser,
   validateEmailMutation,
 } from '@/lib/auth';
+import { buildSecureCookieOptions } from '@/lib/cookie-security';
 import { validateRoleAssignment } from '@/lib/authorization';
 import { rejectUnauthorizedFields, ADMIN_ONLY_USER_FIELDS } from '@/lib/authorization/fields';
 import connectToDatabase from '@/lib/mongodb';
@@ -21,6 +22,7 @@ import {
   rateLimitHeaders,
   AUTH_ME_WRITE_LIMITER,
 } from '@/lib/rate-limiter';
+import { applyAntiCacheHeaders } from '@/lib/security-headers';
 
 const LIMITER_ID = 'auth-me-write';
 
@@ -28,7 +30,7 @@ export async function GET(req: NextRequest) {
   const user = getAuthSessionFromRequest(req);
 
   if (!user) {
-    return NextResponse.json({ authenticated: false, user: null, isAdmin: false });
+    return applyAntiCacheHeaders(NextResponse.json({ authenticated: false, user: null, isAdmin: false }));
   }
 
   // ── SEC-08: Immediate permission freshness (ASVS V8.3.2) ──────────────────
@@ -66,18 +68,17 @@ export async function GET(req: NextRequest) {
     isAdmin,
   });
 
-  // Re-issue signed cookie when role changes dynamically
+  // Re-issue signed cookie when role changes dynamically (ASVS 3.3.1 & 3.3.3)
   if (roleChanged) {
     const sessionToken = signSession(freshUser);
-    res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    res.cookies.set(
+      AUTH_COOKIE_NAME,
+      sessionToken,
+      buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 7 }),
+    );
   }
 
+  applyAntiCacheHeaders(res);
   return res;
 }
 
@@ -191,14 +192,13 @@ export async function PUT(req: NextRequest) {
     const sessionToken = signSession(updatedUser);
     const res = NextResponse.json({ success: true, user: updatedUser }, { headers: rlHeaders });
 
-    res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    res.cookies.set(
+      AUTH_COOKIE_NAME,
+      sessionToken,
+      buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 7 }),
+    );
 
+    applyAntiCacheHeaders(res);
     return res;
   } catch (err) {
     console.error('[PUT /api/auth/me] Error:', err);

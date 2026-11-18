@@ -6,11 +6,17 @@
 // =============================================================================
 
 import { NextRequest } from 'next/server';
+const uuidv4 = () => globalThis.crypto.randomUUID();
+import {
+  SESSION_COOKIE,
+  LEGACY_SESSION_COOKIE,
+  readCookieWithFallback,
+} from './cookie-security';
 
-export const SESSION_COOKIE = 'torbidd_session';
+export { SESSION_COOKIE, LEGACY_SESSION_COOKIE };
 
 export function getSessionId(req: NextRequest): string {
-  const existing = req.cookies.get(SESSION_COOKIE)?.value;
+  const existing = readCookieWithFallback(req.cookies, SESSION_COOKIE, LEGACY_SESSION_COOKIE);
   if (existing && existing.length > 0) return existing;
   // Generate a new ID — the response middleware sets the cookie
   return globalThis.crypto.randomUUID();

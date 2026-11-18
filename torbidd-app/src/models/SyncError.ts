@@ -97,6 +97,9 @@ const SyncErrorSchema = new Schema<ISyncError>(
 
 SyncErrorSchema.index({ status: 1, createdAt: -1 });
 
+// ASVS V14.2.7: Automated retention pruning - TTL index deletes dead-letter queue records after 30 days (2,592,000 seconds)
+SyncErrorSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
 const SyncError: Model<ISyncError> =
   (mongoose.models.SyncError as Model<ISyncError>) ??
   mongoose.model<ISyncError>('SyncError', SyncErrorSchema);

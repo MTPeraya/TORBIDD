@@ -20,7 +20,7 @@ const LanguageContext = createContext<LanguageContextValue | undefined>(undefine
 /** Read the torbidd_locale cookie set by middleware for URL-based locale routing */
 function getLocaleCookie(): Language | null {
   if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|;\s*)torbidd_locale=([^;]+)/);
+  const match = document.cookie.match(/(?:^|;\s*)(?:__Host-)?torbidd_locale=([^;]+)/);
   const val = match?.[1];
   return val === 'th' || val === 'en' ? val : null;
 }
@@ -70,7 +70,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLanguageState(lang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('torbidd_lang', lang);
-      document.cookie = `torbidd_locale=${lang}; path=/; max-age=31536000; SameSite=Lax`;
+      const isSecure = window.location.protocol === 'https:';
+      const secureFlag = isSecure ? '; Secure' : '';
+      const cookieName = isSecure ? '__Host-torbidd_locale' : 'torbidd_locale';
+      document.cookie = `${cookieName}=${lang}; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
       document.documentElement.lang = lang;
 
       // Update URL to match new locale: e.g. /th/historical -> /en/historical

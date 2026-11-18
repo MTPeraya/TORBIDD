@@ -5,11 +5,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME } from '@/lib/auth';
 import {
+  LEGACY_AUTH_COOKIE_NAME,
+  buildSecureCookieOptions,
+} from '@/lib/cookie-security';
+import {
   checkRateLimit,
   getClientIp,
   rateLimitHeaders,
   AUTH_LOGOUT_LIMITER,
 } from '@/lib/rate-limiter';
+import { applyAntiCacheHeaders } from '@/lib/security-headers';
 
 const LIMITER_ID = 'auth-logout';
 
@@ -29,13 +34,16 @@ export async function POST(req?: NextRequest) {
 
   const res = NextResponse.json({ success: true, message: 'Logged out successfully' }, { headers: rlHeaders });
 
-  res.cookies.set(AUTH_COOKIE_NAME, '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0,
-    path: '/',
-  });
+  // Clear both __Host- prefixed and legacy auth session cookies (ASVS 3.3.1 & 3.3.3)
+  const clearOptions = buildSecureCookieOptions({ maxAge: 0 });
+  res.cookies.set(AUTH_COOKIE_NAME, '', clearOptions);
+  res.cookies.set(LEGACY_AUTH_COOKIE_NAME, '', clearOptions);
+
+  // ASVS V14.3.1: Instruct browser to clear sensitive client storage and cache
+  res.headers.set('Clear-Site-Data', '"cache", "cookies", "storage"');
+
+  // ASVS V14.3.2 & V14.2.2: Anti-caching response headers
+  applyAntiCacheHeaders(res);
 
   return res;
 }

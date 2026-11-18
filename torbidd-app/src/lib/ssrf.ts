@@ -8,7 +8,31 @@
 // using the data to call another service."
 // =============================================================================
 
-import net from 'node:net';
+/**
+ * Validates whether a string is a valid IPv4 address (Edge & Node compatible).
+ */
+export function isIPv4(ip: string): boolean {
+  const parts = ip.split('.');
+  if (parts.length !== 4) return false;
+  for (let i = 0; i < 4; i++) {
+    const p = parts[i];
+    if (!/^\d{1,3}$/.test(p)) return false;
+    const n = Number(p);
+    if (n < 0 || n > 255) return false;
+    if (p.length > 1 && p.startsWith('0')) return false;
+  }
+  return true;
+}
+
+/**
+ * Validates whether a string is a valid IPv6 address (Edge & Node compatible).
+ */
+export function isIPv6(ip: string): boolean {
+  if (!ip.includes(':')) return false;
+  const parts = ip.split(':');
+  if (parts.length < 3 || parts.length > 8) return false;
+  return /^[0-9a-fA-F:]+$/.test(ip);
+}
 
 /**
  * Standard allowed protocols for external outbound document retrieval.
@@ -60,7 +84,7 @@ export function isPrivateOrReservedIp(ip: string): boolean {
   }
 
   // Check IPv4
-  if (net.isIPv4(cleanIp)) {
+  if (isIPv4(cleanIp)) {
     const parts = cleanIp.split('.').map(Number);
     const [p0, p1] = parts;
 
@@ -92,7 +116,7 @@ export function isPrivateOrReservedIp(ip: string): boolean {
   }
 
   // Check IPv6
-  if (net.isIPv6(cleanIp)) {
+  if (isIPv6(cleanIp)) {
     if (cleanIp === '::1' || cleanIp === '::') return true; // Loopback / Unspecified
     if (cleanIp.startsWith('fe80:') || cleanIp.startsWith('fe8') || cleanIp.startsWith('fe9') || cleanIp.startsWith('fea') || cleanIp.startsWith('feb')) {
       return true; // Link-local

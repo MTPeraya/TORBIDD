@@ -17,6 +17,25 @@ export interface TransactionOptions {
   timeoutMs?: number;
 }
 
+function getTopologyType(conn: Awaited<ReturnType<typeof connectToDatabase>>): string | undefined {
+  const rawConnection = (conn as unknown as {
+    connection?: {
+      getClient?: () => { topology?: { description?: { type?: string } } };
+      client?: { topology?: { description?: { type?: string } } };
+    };
+  }).connection;
+  if (!rawConnection) return undefined;
+
+  const client = rawConnection.getClient?.() ?? rawConnection.client;
+  return client?.topology?.description?.type;
+}
+
+function topologySupportsTransactions(type: string | undefined): boolean {
+  return Boolean(
+    type && (type.includes('ReplicaSet') || type === 'Sharded' || type === 'LoadBalanced'),
+  );
+}
+
 /**
  * Checks whether the current MongoDB connection supports multi-document transactions.
  * Transactions in MongoDB require a replica set or sharded cluster.
@@ -24,21 +43,7 @@ export interface TransactionOptions {
 export async function isTransactionSupported(): Promise<boolean> {
   try {
     const conn = await connectToDatabase();
-    // Check if client topology is a replica set or sharded cluster
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawConn = conn.connection as any;
-    const client = typeof rawConn?.getClient === 'function' ? rawConn.getClient() : rawConn?.client;
-    if (!client?.topology) return false;
-
-    const description = client.topology.description;
-    const type = description?.type;
-
-    // ReplicaSetNoPrimary, ReplicaSetWithPrimary, Sharded, LoadBalanced all support transactions
-    if (type && (type.includes('ReplicaSet') || type === 'Sharded' || type === 'LoadBalanced')) {
-      return true;
-    }
-
-    return false;
+    return topologySupportsTransactions(getTopologyType(conn));
   } catch {
     return false;
   }
@@ -62,6 +67,13 @@ export async function withTransaction<T>(
   operation: (session: ClientSession | null) => Promise<T>,
 ): Promise<T> {
   const conn = await connectToDatabase();
+
+  // Standalone MongoDB can create a session but rejects its first transaction
+  // command. Detect it before invoking the callback to avoid partial retries.
+  const topologyType = getTopologyType(conn);
+  if (topologyType && !topologySupportsTransactions(topologyType)) {
+    return operation(null);
+  }
 
   let session: ClientSession | null = null;
   try {
