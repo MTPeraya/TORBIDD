@@ -211,7 +211,7 @@ function OpportunitiesContent() {
       void fetchOpportunities();
     }, searchQuery.trim() ? 180 : 0);
     return () => clearTimeout(timer);
-  }, [fetchOpportunities]);
+  }, [fetchOpportunities, searchQuery]);
 
   // Initial load to fetch all projects for stats and agency/category counts
   useEffect(() => {

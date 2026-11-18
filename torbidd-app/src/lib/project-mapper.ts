@@ -213,7 +213,6 @@ export function procurementToProject(
   return {
     _id: p._id?.toString() || extId,
     externalId: Number(extId.replace(/\D/g, '')) || 100000,
-    externalProjectId: extId,
     title: {
       th: titleText,
       en: titleEn,

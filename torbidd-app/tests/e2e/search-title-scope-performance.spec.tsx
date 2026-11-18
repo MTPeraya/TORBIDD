@@ -160,6 +160,15 @@ jest.mock('@/models/ProcurementProject', () => {
           }),
         }),
       }),
+      select: jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              lean: jest.fn().mockResolvedValue(filtered),
+            }),
+          }),
+        }),
+      }),
       lean: jest.fn().mockResolvedValue(filtered),
     };
   });

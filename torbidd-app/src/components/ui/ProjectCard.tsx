@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Project, TorStatus } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,7 +76,6 @@ function getTorBadge(torStatus: TorStatus | undefined, language: 'th' | 'en') {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const { language, L, getLocalized } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
 
@@ -134,7 +133,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const handleCardClick = () => {
     const targetId = extProject.externalProjectId ?? project.externalId ?? project._id;
     if (targetId === undefined || targetId === null || targetId === '') return;
-    const localePrefix = pathname.match(/^\/(th|en)(?:\/|$)/)?.[0].replace(/\/$/, '') ?? '';
+    const localePrefix = window.location.pathname.match(/^\/(th|en)(?:\/|$)/)?.[0].replace(/\/$/, '') ?? '';
     router.push(`${localePrefix}/opportunities/${encodeURIComponent(String(targetId))}`);
   };
 
@@ -170,7 +169,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           handleCardClick();
         }
       }}
-      role="link"
+      role="button"
       tabIndex={0}
     >
       <div>
