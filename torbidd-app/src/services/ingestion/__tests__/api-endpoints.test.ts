@@ -17,6 +17,7 @@ import { GET as projectsHandler } from '@/app/api/projects/route';
 import { GET as projectDetailHandler } from '@/app/api/projects/[id]/route';
 import { IngestionService } from '@/services/ingestion/ingestion.service';
 import * as procurementDb from '@/services/database/procurement';
+import { PdfSecurityError } from '@/lib/secure-pdf';
 
 jest.mock('@/services/ingestion/ingestion.service');
 jest.mock('@/services/database/procurement');
@@ -171,6 +172,23 @@ describe('Ingestion API Route Handlers', () => {
       expect(response.status).toBe(404);
       const body = await response.json();
       expect(body.error).toBe('Archive Not Found');
+    });
+
+    it('should return 413 when an ingestion payload exceeds 25 MB', async () => {
+      (IngestionService.prototype.ingestProjectDocuments as jest.Mock).mockRejectedValue(
+        new PdfSecurityError('e-GP ZIP archive exceeds the 25 MB limit', 'TOO_LARGE'),
+      );
+
+      const request = new NextRequest(
+        `http://localhost:3000/api/ingestion/projects/${MOCK_PROJECT_ID}/documents`,
+        { method: 'POST' },
+      );
+      const response = await documentsHandler(request, {
+        params: Promise.resolve({ projectId: MOCK_PROJECT_ID }),
+      });
+
+      expect(response.status).toBe(413);
+      await expect(response.json()).resolves.toMatchObject({ error: 'Document rejected' });
     });
   });
 

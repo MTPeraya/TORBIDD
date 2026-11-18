@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { assertPrivateStorageRoot } from './secure-pdf';
 
 export const IngestionConfigSchema = z.object({
   govspendingApiKey: z.string().trim().default(''),
@@ -50,9 +51,9 @@ export type IngestionConfig = z.infer<typeof IngestionConfigSchema> & {
  * If the path does not exist, it will be automatically created recursively.
  */
 export function ensureStorageDirectoryExists(storagePath: string): string {
-  const resolved = path.isAbsolute(storagePath)
+  const resolved = assertPrivateStorageRoot(path.isAbsolute(storagePath)
     ? storagePath
-    : path.resolve(/*turbopackIgnore: true*/ process.cwd(), storagePath);
+    : path.resolve(/*turbopackIgnore: true*/ process.cwd(), storagePath));
 
   try {
     if (!fs.existsSync(resolved)) {

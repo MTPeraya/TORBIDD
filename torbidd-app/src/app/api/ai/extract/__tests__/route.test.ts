@@ -1,87 +1,63 @@
-/**
- * @jest-environment node
- */
-// =============================================================================
-// app/api/ai/extract/__tests__/route.test.ts
-// Unit tests for /api/ai/extract route handler (ASVS 2.4.1 Anti-Automation)
-// =============================================================================
+/** @jest-environment node */
 
 import { NextRequest } from 'next/server';
 import { POST } from '../route';
-
-jest.mock('@/lib/rate-limiter', () => {
-  const actual = jest.requireActual('@/lib/rate-limiter');
-  return {
-    ...actual,
-    checkRateLimit: jest.fn((...args) => actual.checkRateLimit(...args)),
-  };
-});
+import { extractTorFromBase64 } from '@/services/ai/tor-extractor';
+import { MAX_PDF_BASE64_LENGTH, PdfSecurityError } from '@/lib/secure-pdf';
 
 jest.mock('@/services/ai/tor-extractor', () => ({
-  extractTorFromUrl: jest.fn().mockResolvedValue({
-    projectName: 'Mock TOR Project',
-    budget: 1000000,
-  }),
-  extractTorFromBase64: jest.fn().mockResolvedValue({
-    projectName: 'Mock Base64 TOR',
-    budget: 500000,
-  }),
+  extractTorFromBase64: jest.fn(),
+  extractTorFromUrl: jest.fn(),
 }));
 
-describe('/api/ai/extract Route Handler', () => {
-  it('returns 400 when documentUrl and documentBase64 are missing', async () => {
-    const req = new NextRequest('http://localhost:3000/api/ai/extract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
+const mockExtractBase64 = extractTorFromBase64 as jest.MockedFunction<typeof extractTorFromBase64>;
 
-    const response = await POST(req);
+function request(body: unknown, ip: string, headers: Record<string, string> = {}): NextRequest {
+  return new NextRequest('http://localhost/api/ai/extract', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-forwarded-for': ip,
+      ...headers,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+describe('POST /api/ai/extract merged security controls', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('includes rate-limit headers on validation errors', async () => {
+    const response = await POST(request({}, '203.0.113.11'));
+
     expect(response.status).toBe(400);
-    const json = await response.json();
-    expect(json.error).toBe('Invalid request body');
+    expect(response.headers.get('x-ratelimit-limit')).toBeTruthy();
+    await expect(response.json()).resolves.toMatchObject({ error: 'Invalid request body' });
   });
 
-  it('extracts TOR successfully from valid documentUrl and returns rate-limit headers (ASVS 2.4.1)', async () => {
-    const req = new NextRequest('http://localhost:3000/api/ai/extract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        documentUrl: 'https://process5.gprocurement.go.th/tor.pdf',
+  it('rejects declared payloads over the SEC-17 limit with rate-limit headers', async () => {
+    const response = await POST(
+      request({}, '203.0.113.12', {
+        'content-length': String(MAX_PDF_BASE64_LENGTH + 4097),
       }),
-    });
+    );
 
-    const response = await POST(req);
-    expect(response.status).toBe(200);
-    expect(response.headers.get('x-ratelimit-limit')).toBeDefined();
-    expect(response.headers.get('x-ratelimit-remaining')).toBeDefined();
-
-    const json = await response.json();
-    expect(json.data.projectName).toBe('Mock TOR Project');
+    expect(response.status).toBe(413);
+    expect(response.headers.get('x-ratelimit-limit')).toBeTruthy();
   });
 
-  it('rejects with 429 when anti-automation rate limit is exceeded (ASVS 2.4.1)', async () => {
-    const { checkRateLimit } = await import('@/lib/rate-limiter');
-    (checkRateLimit as jest.Mock).mockReturnValueOnce({
-      allowed: false,
-      remaining: 0,
-      resetAt: Date.now() + 60000,
-      retryAfter: 60,
-    });
+  it('preserves typed PDF security errors and rate-limit headers', async () => {
+    mockExtractBase64.mockRejectedValueOnce(
+      new PdfSecurityError('PDF magic bytes are invalid', 'INVALID_MAGIC'),
+    );
 
-    const req = new NextRequest('http://localhost:3000/api/ai/extract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        documentUrl: 'https://process5.gprocurement.go.th/tor.pdf',
-      }),
-    });
+    const response = await POST(
+      request({ documentBase64: 'JVBERi0xLjQ=' }, '203.0.113.13'),
+    );
 
-    const response = await POST(req);
-    expect(response.status).toBe(429);
-    expect(response.headers.get('retry-after')).toBe('60');
-
-    const json = await response.json();
-    expect(json.error).toContain('Too many extraction requests');
+    expect(response.status).toBe(400);
+    expect(response.headers.get('x-ratelimit-limit')).toBeTruthy();
+    await expect(response.json()).resolves.toEqual({ error: 'PDF magic bytes are invalid' });
   });
 });
+

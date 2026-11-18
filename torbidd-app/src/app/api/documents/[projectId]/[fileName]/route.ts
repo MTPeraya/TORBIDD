@@ -10,6 +10,15 @@ import ProcurementProject from '@/models/ProcurementProject';
 import Project from '@/models/Project';
 import { getIngestionConfig } from '@/lib/config';
 import { validateFetchMetadata, withCorpHeader } from '@/lib/fetch-metadata';
+import {
+  assertNoPathTraversal,
+  assertPdfExtension,
+  pdfContentDisposition,
+  PdfSecurityError,
+  readValidatedPdfFile,
+  resolvePrivatePath,
+  validatePdfBuffer,
+} from '@/lib/secure-pdf';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +32,13 @@ export async function GET(
 
   try {
     const { projectId, fileName } = await params;
-    const cleanProjectId = path.basename(projectId.trim());
+    assertNoPathTraversal(projectId, 'project ID');
+    assertNoPathTraversal(fileName, 'document filename');
+    const cleanProjectId = projectId.trim();
+    if (!/^[A-Za-z0-9_-]{1,80}$/.test(cleanProjectId)) {
+      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
+    }
+    if (fileName.toLowerCase().endsWith('.pdf')) assertPdfExtension(fileName);
 
     // 1. Resolve project ID (handle 11-digit e-GP ID or internal ID)
     let targetExtId = cleanProjectId;
@@ -50,32 +65,33 @@ export async function GET(
     // 2. Check if a real downloaded PDF document exists in project-specific folders on local disk
     const storageBase = getIngestionConfig().resolvedStoragePath;
     const candidateDirs = [
-      path.join(storageBase, targetExtId),
-      path.join(storageBase, cleanProjectId),
+      resolvePrivatePath(storageBase, targetExtId),
+      resolvePrivatePath(storageBase, cleanProjectId),
     ];
 
     for (const dir of candidateDirs) {
       if (fs.existsSync(dir)) {
         const stat = fs.statSync(dir);
         if (stat.isDirectory()) {
-          const files = fs.readdirSync(dir);
+          const files = fs.readdirSync(dir).filter((entry) => entry.toLowerCase().endsWith('.pdf'));
           // Look for requested fileName or any TOR/PDF document
           const matchFile = files.find(
             (f) =>
               f.toLowerCase() === fileName.toLowerCase() ||
-              f.toLowerCase().includes('tor') ||
-              f.toLowerCase().endsWith('.pdf'),
+              /^tor_[a-f0-9]{64}\.pdf$/.test(f) ||
+              f.toLowerCase().includes('tor'),
           );
           if (matchFile) {
-            const fullPath = path.join(dir, matchFile);
+            const fullPath = resolvePrivatePath(storageBase, path.basename(dir), matchFile);
             if (fs.existsSync(fullPath)) {
-              const fileBuffer = fs.readFileSync(fullPath);
+              const fileBuffer = await readValidatedPdfFile(fullPath, storageBase);
               return withCorpHeader(
-                new NextResponse(fileBuffer, {
+                new NextResponse(new Uint8Array(fileBuffer), {
                   headers: {
                     'Content-Type': 'application/pdf',
-                    'Content-Disposition': `inline; filename="${encodeURIComponent(matchFile)}"`,
+                    'Content-Disposition': pdfContentDisposition(targetExtId),
                     'Cache-Control': 'public, max-age=86400',
+                    'X-Content-Type-Options': 'nosniff',
                   },
                 }),
               );
@@ -113,13 +129,15 @@ export async function GET(
         if (projectData) {
           const { generateProjectPdf } = await import('@/lib/pdf-generator');
           const generatedPdf = generateProjectPdf(projectData);
+          validatePdfBuffer(generatedPdf, { fileName: `TOR_${targetExtId}.pdf` });
           return withCorpHeader(
             new NextResponse(new Uint8Array(generatedPdf), {
               status: 200,
               headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `inline; filename="TOR_${targetExtId}.pdf"`,
+                'Content-Disposition': pdfContentDisposition(targetExtId),
                 'Cache-Control': 'public, max-age=3600',
+                'X-Content-Type-Options': 'nosniff',
               },
             }),
           );
@@ -275,7 +293,17 @@ export async function GET(
     );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: 'Failed to access document', message }, { status: 500 });
+    if (err instanceof PdfSecurityError) {
+      return withCorpHeader(
+        NextResponse.json(
+          { error: 'Document rejected', message },
+          { status: err.code === 'TOO_LARGE' ? 413 : 400 },
+        ),
+      );
+    }
+    return withCorpHeader(
+      NextResponse.json({ error: 'Failed to access document', message }, { status: 500 }),
+    );
   }
 }
 

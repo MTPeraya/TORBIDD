@@ -165,4 +165,16 @@ describe('E2E: Document Download API (GET /api/documents/[projectId]/[fileName])
     expect(htmlText).toContain('process5.gprocurement.go.th/egp-agpc01-web/announcement?keywordSearch=67119538991');
     expect(htmlText).toContain('เอกสารประกาศและ TOR (e-GP)');
   });
+
+  it.each(['../secret.pdf', '..\\secret.pdf', '%2e%2e%2fsecret.pdf'])(
+    '4. rejects path traversal filename %s with HTTP 400',
+    async (fileName) => {
+      const req = new NextRequest('http://localhost:3000/api/documents/67119538991/invalid.pdf');
+      const response = await getDocumentRoute(req, {
+        params: Promise.resolve({ projectId: '67119538991', fileName }),
+      });
+
+      expect(response.status).toBe(400);
+    },
+  );
 });

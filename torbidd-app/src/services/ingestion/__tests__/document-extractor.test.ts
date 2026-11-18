@@ -83,6 +83,8 @@ describe('DocumentExtractor (ZIP & ATTACH_TOR Processing)', () => {
     const savedTor = persistResult.find((r) => r.document.documentType === 'ATTACH_TOR');
     expect(savedTor).toBeDefined();
     expect(fs.existsSync(savedTor!.absolutePath)).toBe(true);
+    expect(path.basename(savedTor!.absolutePath)).toMatch(/^tor_[a-f0-9]{64}\.pdf$/);
+    expect(path.basename(savedTor!.absolutePath)).not.toBe(savedTor!.document.fileName);
 
     const fileContentOnDisk = await fs.promises.readFile(savedTor!.absolutePath);
     expect(fileContentOnDisk.subarray(0, 5).toString()).toBe('%PDF-');
@@ -116,6 +118,12 @@ describe('DocumentExtractor (ZIP & ATTACH_TOR Processing)', () => {
     expect(() => extractor.assertSafeEntryPath('Attach_TOR\0.pdf')).toThrow(
       /path traversal/i,
     );
+    expect(() => extractor.assertSafeEntryPath('%2e%2e%2fAttach_TOR.pdf')).toThrow(
+      /path traversal/i,
+    );
+    expect(() => extractor.assertSafeEntryPath('..\\Attach_TOR.pdf')).toThrow(
+      /path traversal/i,
+    );
   });
 
   // ─── Security: PDF Magic Header Validation ────────────────────────────────
@@ -130,6 +138,16 @@ describe('DocumentExtractor (ZIP & ATTACH_TOR Processing)', () => {
 
     expect(() => extractor.extractZip(Buffer.from(zipData), MOCK_PROJECT_ID)).toThrow(
       /%PDF- header missing/i,
+    );
+  });
+
+  it('should reject active content in an otherwise valid PDF', () => {
+    const extractor = new DocumentExtractor({ storagePath: tempStorageDir });
+    const activePdf = strToU8('%PDF-1.7\n1 0 obj<</OpenAction 2 0 R /JavaScript true>>endobj\n%%EOF');
+    const zipData = zipSync({ 'Attach_TOR.pdf': activePdf });
+
+    expect(() => extractor.extractZip(Buffer.from(zipData), MOCK_PROJECT_ID)).toThrow(
+      /disallowed active-content/i,
     );
   });
 });

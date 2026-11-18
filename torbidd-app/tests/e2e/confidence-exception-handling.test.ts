@@ -308,39 +308,31 @@ describe('UC-10 Confidence Exception Handling & Review Routing E2E Test Suite', 
   // Section 2: Unreadable PDFs & Document Processing Exception Handling
   // ===========================================================================
   describe('2. Unreadable / Corrupted PDFs & Document Processing Exception Handling', () => {
-    it('2.1 extractTorFromFile catches file system errors gracefully for non-existent files', async () => {
+    it('2.1 extractTorFromFile rejects non-existent files before AI processing', async () => {
       const nonExistentPath = path.join(tempDir, 'does-not-exist.pdf');
 
-      // Must not throw, should fall back to heuristic extraction gracefully
-      const result = await extractTorFromFile(nonExistentPath, {
-        projectId: UNREADABLE_DOC_PROJECT_ID,
-        fileName: 'does-not-exist.pdf',
-      });
-
-      expect(result).toBeDefined();
-      expect(result.title).toBeDefined();
-      expect(result.title?.th).toBeDefined();
-      // Heuristic fallback produces Medium confidence
-      expect(result.confidence).toBe('Medium');
-      expect(result.rawText).toContain('does-not-exist.pdf');
+      await expect(
+        extractTorFromFile(nonExistentPath, {
+          projectId: UNREADABLE_DOC_PROJECT_ID,
+          fileName: 'does-not-exist.pdf',
+        }),
+      ).rejects.toThrow(/ENOENT|no such file/i);
     });
 
-    it('2.2 extractTorFromBuffer gracefully handles corrupted binary data without crashing', async () => {
+    it('2.2 extractTorFromBuffer rejects corrupted binary data before AI processing', async () => {
       // Create invalid / corrupted pseudo-PDF buffer (random bytes without %PDF header)
       const corruptedBuffer = Buffer.from([0x00, 0xff, 0xee, 0xdd, 0xcc, 0xbb, 0x12, 0x34]);
 
-      const result = await extractTorFromBuffer(corruptedBuffer, {
-        projectId: UNREADABLE_DOC_PROJECT_ID,
-        fileName: 'corrupted_tor.pdf',
-        projectContext: {
-          projectName: 'โครงการระบบสารสนเทศฉุกเฉิน',
-          budget: 1200000,
-        },
-      });
-
-      expect(result).toBeDefined();
-      expect(result.budget).toBe(1200000);
-      expect(result.confidence).toBe('Medium');
+      await expect(
+        extractTorFromBuffer(corruptedBuffer, {
+          projectId: UNREADABLE_DOC_PROJECT_ID,
+          fileName: 'corrupted_tor.pdf',
+          projectContext: {
+            projectName: 'โครงการระบบสารสนเทศฉุกเฉิน',
+            budget: 1200000,
+          },
+        }),
+      ).rejects.toThrow(/magic bytes/i);
     });
 
     it('2.3 Unreadable document persistence tracks status="FAILED" and captures error message', async () => {
