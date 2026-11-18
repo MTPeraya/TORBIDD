@@ -11,6 +11,7 @@ import {
   isAdminUser,
   validateEmailMutation,
 } from '@/lib/auth';
+import { buildSecureCookieOptions } from '@/lib/cookie-security';
 import { validateRoleAssignment } from '@/lib/authorization';
 import { rejectUnauthorizedFields, ADMIN_ONLY_USER_FIELDS } from '@/lib/authorization/fields';
 import connectToDatabase from '@/lib/mongodb';
@@ -66,16 +67,14 @@ export async function GET(req: NextRequest) {
     isAdmin,
   });
 
-  // Re-issue signed cookie when role changes dynamically
+  // Re-issue signed cookie when role changes dynamically (ASVS 3.3.1 & 3.3.3)
   if (roleChanged) {
     const sessionToken = signSession(freshUser);
-    res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    res.cookies.set(
+      AUTH_COOKIE_NAME,
+      sessionToken,
+      buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 7 }),
+    );
   }
 
   return res;
@@ -191,13 +190,11 @@ export async function PUT(req: NextRequest) {
     const sessionToken = signSession(updatedUser);
     const res = NextResponse.json({ success: true, user: updatedUser }, { headers: rlHeaders });
 
-    res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    res.cookies.set(
+      AUTH_COOKIE_NAME,
+      sessionToken,
+      buildSecureCookieOptions({ maxAge: 60 * 60 * 24 * 7 }),
+    );
 
     return res;
   } catch (err) {
