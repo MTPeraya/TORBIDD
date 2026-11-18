@@ -87,23 +87,24 @@ export async function withTransaction<T>(
 
   try {
     let result: T;
-    let transactionExecuted = false;
 
     try {
       await session.withTransaction(async () => {
-        transactionExecuted = true;
         result = await operation(session);
       });
       return result!;
     } catch (txErr: unknown) {
       const msg = txErr instanceof Error ? txErr.message : String(txErr);
+      const fullMsg = `${msg} ${txErr && typeof txErr === 'object' ? JSON.stringify(txErr) : ''}`;
       const isStandaloneUnsupported =
-        msg.includes('replica set') ||
-        msg.includes('Standalone') ||
-        msg.includes('Transaction numbers are only allowed on a storage engine supporting replica sets') ||
-        msg.includes('Transactions are not supported');
+        fullMsg.includes('replica set') ||
+        fullMsg.includes('Standalone') ||
+        fullMsg.includes('retryable writes') ||
+        fullMsg.includes('Transaction numbers are only allowed') ||
+        fullMsg.includes('Transactions are not supported') ||
+        fullMsg.includes('IllegalOperation');
 
-      if (!transactionExecuted && isStandaloneUnsupported) {
+      if (isStandaloneUnsupported) {
         // Fallback for standalone test/dev databases without replica set enabled
         console.warn(`[Transactions] Deployment does not support replica set transactions. Executing standalone fallback: ${msg}`);
         return await operation(null);
