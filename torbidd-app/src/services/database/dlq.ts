@@ -4,6 +4,7 @@
 
 import connectToDatabase from '@/lib/mongodb';
 import SyncError, { ISyncError, DlqStatus } from '@/models/SyncError';
+import { emitAuditLog } from '@/lib/audit-logger';
 
 export interface EnqueueSyncErrorParams {
   errorCode: string;
@@ -26,6 +27,20 @@ export async function enqueueSyncError(params: EnqueueSyncErrorParams): Promise<
   const snippet = params.payloadSnippet
     ? params.payloadSnippet.slice(0, 1000)
     : undefined;
+
+  // ASVS req_id 16.3.4: Emit structured audit log for DLQ error ingestion
+  emitAuditLog({
+    level: 'ERROR',
+    eventType: 'DLQ_SYNC_ERROR_ENQUEUED',
+    resource: params.source || 'CKAN_GOVSPENDING',
+    outcome: 'FAILURE',
+    details: {
+      errorCode: params.errorCode,
+      errorMessage: params.errorMessage,
+      requestUrl: params.requestUrl,
+      retryCount: params.retryCount ?? 3,
+    },
+  });
 
   const dlqItem = new SyncError({
     errorCode: params.errorCode,
