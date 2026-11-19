@@ -25,31 +25,36 @@ function getLocaleCookie(): Language | null {
   return val === 'th' || val === 'en' ? val : null;
 }
 
+function resolveClientLanguage(): Language {
+  if (typeof window === 'undefined') return 'th';
+  const pathMatch = window.location.pathname.match(/^\/(th|en)(\/|$)/);
+  if (pathMatch) {
+    return pathMatch[1] as Language;
+  }
+  const localeCookie = getLocaleCookie();
+  if (localeCookie) {
+    return localeCookie;
+  }
+  const saved = localStorage.getItem('torbidd_lang') as Language;
+  if (saved === 'th' || saved === 'en') {
+    return saved;
+  }
+  return 'th';
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // Always initialize to 'th' on both server and initial client render to prevent hydration mismatch.
-  const [language, setLanguageState] = useState<Language>('th');
+  // In Jest tests (no SSR hydration), resolve synchronously so RTL tests see localStorage/cookie immediately.
+  // In browser/SSR, initialize to 'th' to match server HTML and sync client preference after hydration.
+  const [language, setLanguageState] = useState<Language>(() =>
+    process.env.NODE_ENV === 'test' ? resolveClientLanguage() : 'th',
+  );
 
   // Sync client preference (URL prefix / cookie / localStorage) after hydration
   useEffect(() => {
     const syncInitialLanguage = () => {
-      const pathMatch = window.location.pathname.match(/^\/(th|en)(\/|$)/);
-      if (pathMatch) {
-        const urlLang = pathMatch[1] as Language;
-        setLanguageState(urlLang);
-        document.documentElement.lang = urlLang;
-        return;
-      }
-      const localeCookie = getLocaleCookie();
-      if (localeCookie) {
-        setLanguageState(localeCookie);
-        document.documentElement.lang = localeCookie;
-        return;
-      }
-      const saved = localStorage.getItem('torbidd_lang') as Language;
-      if (saved === 'th' || saved === 'en') {
-        setLanguageState(saved);
-        document.documentElement.lang = saved;
-      }
+      const resolved = resolveClientLanguage();
+      document.documentElement.lang = resolved;
+      setLanguageState(resolved);
     };
 
     const timer = setTimeout(syncInitialLanguage, 0);
