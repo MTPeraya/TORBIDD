@@ -37,41 +37,44 @@ export async function GET(req: NextRequest) {
     const { category, department, year, search, stats, agencies } = parsed.data;
 
     let allData: HistoricalProject[] = [];
+    let realActiveProjects: Project[] = [];
 
-    // 1. Query MongoDB HistoricalProject collection
+    // 1. Prioritize real MongoDB ProcurementProject collection (live ingested government projects)
     try {
-      const dbAll = await getAllHistoricalProjects();
-      if (dbAll && dbAll.length > 0) {
-        allData = dbAll as unknown as HistoricalProject[];
+      const { projects: discProjects } = await getProcurementProjects({ limit: 1000 });
+      if (discProjects && discProjects.length > 0) {
+        realActiveProjects = discProjects.map(procurementToProject);
+        allData = discProjects.map((dp) => {
+          const rawProj = dp as unknown as Record<string, unknown>;
+          const titleEn = (rawProj.projectNameEn as string) || translateProjectTitle(dp.projectName);
+          const deptEn = (rawProj.agencyNameEn as string) || translateDepartment(dp.agencyName);
+          const validCat = (rawProj.software_category as ProjectCategory | undefined) || inferCategory(dp.projectName);
+          return {
+            _id: String(rawProj._id || dp.externalProjectId),
+            title: { th: dp.projectName, en: titleEn },
+            department: { th: dp.agencyName, en: deptEn },
+            year: dp.fiscalYear ? (dp.fiscalYear > 2500 ? dp.fiscalYear - 543 : dp.fiscalYear) : new Date().getFullYear(),
+            category: validCat,
+            budget: dp.budget || dp.contractPrice || dp.medianPrice || 0,
+            procurementType: dp.procurementType || 'e-Bidding',
+            awardedVendor: dp.winnerName ? { th: dp.winnerName, en: dp.winnerName } : undefined,
+            description: dp.summary || { th: dp.projectName, en: titleEn },
+          };
+        }) as HistoricalProject[];
       }
-    } catch (dbErr) {
-      console.warn('[GET /api/historical] Error querying historical projects from DB:', dbErr);
+    } catch (procErr) {
+      console.warn('[GET /api/historical] Error querying procurement projects from DB:', procErr);
     }
 
-    // 2. Query MongoDB ProcurementProject collection (real government procurement projects)
+    // 2. Fallback to MongoDB HistoricalProject collection only if ProcurementProject is empty
     if (allData.length === 0) {
       try {
-        const { projects: discProjects } = await getProcurementProjects({ limit: 500 });
-        if (discProjects && discProjects.length > 0) {
-          allData = discProjects.map((dp) => {
-            const rawProj = dp as unknown as Record<string, unknown>;
-            const titleEn = (rawProj.projectNameEn as string) || translateProjectTitle(dp.projectName);
-            const deptEn = (rawProj.agencyNameEn as string) || translateDepartment(dp.agencyName);
-            return {
-              _id: dp._id || dp.externalProjectId,
-              title: { th: dp.projectName, en: titleEn },
-              department: { th: dp.agencyName, en: deptEn },
-              year: dp.fiscalYear ? (dp.fiscalYear > 2500 ? dp.fiscalYear - 543 : dp.fiscalYear) : 2024,
-              category: inferCategory(dp.projectName),
-              budget: dp.budget || dp.contractPrice || dp.medianPrice || 1000000,
-              procurementType: dp.procurementType || 'e-Bidding',
-              awardedVendor: dp.winnerName ? { th: dp.winnerName, en: dp.winnerName } : undefined,
-              description: dp.summary || { th: dp.projectName, en: titleEn },
-            };
-          }) as HistoricalProject[];
+        const dbAll = await getAllHistoricalProjects();
+        if (dbAll && dbAll.length > 0) {
+          allData = dbAll as unknown as HistoricalProject[];
         }
-      } catch (procErr) {
-        console.warn('[GET /api/historical] Error querying procurement projects from DB:', procErr);
+      } catch (dbErr) {
+        console.warn('[GET /api/historical] Error querying historical projects from DB:', dbErr);
       }
     }
 
@@ -139,7 +142,17 @@ export async function GET(req: NextRequest) {
     };
 
     if (stats === 'true') {
-      const categories: (ProjectCategory | 'All')[] = ['All', 'Website', 'Mobile App', 'AI', 'Database'];
+      const categories: (ProjectCategory | 'All')[] = [
+        'All',
+        'Website',
+        'Mobile App',
+        'AI',
+        'Database',
+        'ERP',
+        'Cloud',
+        'Data Analytics',
+        'Information System',
+      ];
       const statsMap: Record<string, unknown> = {};
       categories.forEach((cat) => {
         statsMap[cat] = calculateCategoryStats(cat, allData);
@@ -148,13 +161,15 @@ export async function GET(req: NextRequest) {
     }
 
     if (agencies === 'true') {
-      let activeProjects: Project[] = [];
-      try {
-        const { projects: discProjects } = await getProcurementProjects();
-        if (discProjects) {
-          activeProjects = discProjects.map(procurementToProject);
-        }
-      } catch {}
+      let activeProjects: Project[] = realActiveProjects;
+      if (activeProjects.length === 0) {
+        try {
+          const { projects: discProjects } = await getProcurementProjects({ limit: 1000 });
+          if (discProjects) {
+            activeProjects = discProjects.map(procurementToProject);
+          }
+        } catch {}
+      }
       responsePayload.agencies = aggregateAgencyMetrics(allData, activeProjects);
     }
 

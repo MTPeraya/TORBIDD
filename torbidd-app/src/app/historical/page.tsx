@@ -57,7 +57,7 @@ export default function HistoricalPage() {
       })
       .catch(() => {});
 
-    fetchPublicProjects<{ data?: Project[] }>('/api/projects')
+    fetchPublicProjects<{ data?: Project[] }>('/api/projects?limit=1000&all=true')
       .then((json) => {
         if (json.data && Array.isArray(json.data)) {
           setProjects(json.data);
