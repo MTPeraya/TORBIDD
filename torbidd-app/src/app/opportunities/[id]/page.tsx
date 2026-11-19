@@ -63,7 +63,6 @@ export default function ProjectDetailPage({
 
   // Load project data and saved checklist state
   useEffect(() => {
-    setIsLoading(true);
     // Fetch fresh from API
     fetch(`/api/projects/${id}`)
       .then((res) => (res.ok ? res.json() : null))

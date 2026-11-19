@@ -18,7 +18,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
-    trustHostHeader: true,
   },
 
   // Security Headers (ASVS 3.4.1 & 3.4.3)
