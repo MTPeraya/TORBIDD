@@ -129,8 +129,17 @@ function handleMiddleware(req: NextRequest) {
       }
     }
 
-    // Build the internal rewrite URL (strip locale prefix, keep the rest)
+    // Build the internal rewrite URL (strip locale prefix, keep the rest).
+    // IMPORTANT: Next.js rewrites are resolved internally by the Next.js HTTP
+    // server (plain HTTP on 127.0.0.1:3000 inside the container). We must NOT
+    // keep the original https: protocol or the public hostname, because Next.js
+    // would then try to open an HTTPS connection to itself and fail with EPROTO
+    // ("wrong version number"). Force http: + loopback so the rewrite stays
+    // process-internal and never touches TLS.
+    const internalPort = process.env.INTERNAL_HTTP_PORT || '3000';
     const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.protocol = 'http:';
+    rewriteUrl.host = `127.0.0.1:${internalPort}`;
     rewriteUrl.pathname = rest;
 
     const requestHeaders = new Headers(req.headers);
