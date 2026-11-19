@@ -138,8 +138,8 @@ npm run build
 
 2. Open `.env.local` and configure your credentials:
    ```ini
-   # MongoDB Atlas Connection
-   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?tls=true
+   # MongoDB Atlas Connection (must include database name /torbidd and explicit ?tls=true)
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/torbidd?tls=true
    MONGODB_DB=torbidd
 
    # Google Cloud / Vertex AI (Server-side only)
@@ -149,14 +149,23 @@ npm run build
    VERTEX_AI_MODEL_FLASH=gemini-1.5-flash
    GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 
+   # Google OAuth 2.0 Authentication
+   GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+
    # App URL
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   # • Local Next.js dev: http://localhost:3000
+   # • Docker Compose:   https://localhost
+   NEXT_PUBLIC_APP_URL=https://localhost
 
    # SEC-18 transport policy
    NODE_TLS_REJECT_UNAUTHORIZED=1
    NODE_OPTIONS=--tls-min-v1.2
    BMA_BASE_URL=https://egp2.bangkok.go.th
    ```
+
+> [!IMPORTANT]
+> **MongoDB Atlas URI Format**: In accordance with project security policies (SEC-18), `MONGODB_URI` must include explicit `?tls=true`. Always specify the database name `/torbidd` in the connection path (e.g. `...mongodb.net/torbidd?tls=true`) to avoid falling back to the default `test` database.
 
 > [!NOTE]
 > If `MONGODB_URI` or `GOOGLE_CLOUD_PROJECT` are not configured, the application automatically falls back to the embedded offline dataset and mock AI responses so the entire UI and all interactions work out-of-the-box for development.
@@ -365,32 +374,41 @@ npm run docker:build
 ```
 
 ### Run the secure stack
+
 ```bash
 # 1. From the repository root, create and fill in runtime configuration
 cp torbidd-app/.env.example torbidd-app/.env.local
 
-# 2. Provision certificates as described in infra/tls/README.md
-#    Production requires a publicly trusted certificate for the public endpoint.
+# In torbidd-app/.env.local, set NEXT_PUBLIC_APP_URL:
+# NEXT_PUBLIC_APP_URL=https://localhost
 
-# 3. Start Nginx and the application
+# 2. Generate local development TLS certificates (SEC-18 compliance)
+./infra/tls/generate-dev-certs.sh
+
+# 3. Start Nginx reverse proxy and the Next.js application
 docker compose up --build
 
 # 4. Optional: seed MongoDB Atlas after the app is healthy
 docker compose --profile seed run seed
 ```
 
-The client opens at `https://<deployed-hostname>/`. Requests to
-`http://<deployed-hostname>/` receive a permanent `308` HTTPS redirect. The
-public certificate must match that hostname.
+The application will be accessible at:
+```text
+https://localhost
+```
 
-From `torbidd-app/`, `npm run docker:compose` and `npm run docker:run` both use
-the secure Compose stack. Directly publishing the app's internal port is no
-longer supported because it would bypass SEC-18.
+Requests to `http://localhost` are permanently redirected to `https://localhost` (HTTP 308).
 
-> **Note**: There is no local MongoDB container. Set `MONGODB_URI` to an Atlas
-> `mongodb+srv://` URI containing `tls=true`. See
-> [`infra/tls/README.md`](./infra/tls/README.md) for public and internal
-> certificate requirements.
+> [!TIP]
+> **Google OAuth Redirect URI Configuration**:  
+> If using Google OAuth sign-in, add the callback URL to your OAuth 2.0 Client credentials in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+> - **For Docker Compose**: `https://localhost/api/auth/callback/google`
+> - **For Local Dev (`npm run dev`)**: `http://localhost:3000/api/auth/callback/google`
+>
+> Mismatches between `NEXT_PUBLIC_APP_URL` and the redirect URI registered in Google Console will result in `Error 400: redirect_uri_mismatch`.
+
+> [!NOTE]
+> **Database**: There is no local MongoDB container. Point `MONGODB_URI` to your Atlas `mongodb+srv://.../torbidd?tls=true` cluster. Certificates under `infra/tls/` are gitignored and generated locally via `generate-dev-certs.sh`.
 
 ### Run-mode summary
 
