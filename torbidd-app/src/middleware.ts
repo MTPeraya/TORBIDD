@@ -133,8 +133,15 @@ function handleMiddleware(req: NextRequest) {
     const rewriteUrl = req.nextUrl.clone();
     rewriteUrl.pathname = rest;
 
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-torbidd-internal-rewrite', '1');
+
     // Rewrite to the canonical page
-    const rewriteResponse = NextResponse.rewrite(rewriteUrl);
+    const rewriteResponse = NextResponse.rewrite(rewriteUrl, {
+      request: {
+        headers: requestHeaders,
+      },
+    });
 
     // Set locale cookie (readable by client for LanguageContext)
     rewriteResponse.cookies.set(
@@ -228,12 +235,16 @@ function handleMiddleware(req: NextRequest) {
     return response;
   }
 
-  // ── 5. Bypass API, docs, static assets ────────────────────────────────────
+  // ── 5. Bypass API, docs, static assets, and Next.js router data requests ──
   const isApiOrStatic =
     pathname.startsWith('/api/') ||
     pathname.startsWith('/docs/') ||
     pathname.includes('.') ||
-    pathname.startsWith('/_next/');
+    pathname.startsWith('/_next/') ||
+    req.headers.has('rsc') ||
+    req.headers.has('next-router-prefetch') ||
+    req.headers.has('next-router-state-tree') ||
+    req.nextUrl.searchParams.has('_rsc');
 
   if (isApiOrStatic) {
     const response = NextResponse.next();
@@ -243,7 +254,7 @@ function handleMiddleware(req: NextRequest) {
 
   // ── 6. Redirect bare page routes to locale-prefixed routes when host header present ──
   // e.g. /opportunities -> /th/opportunities or /en/opportunities
-  if (pathname !== '/' && req.headers.has('host')) {
+  if (!req.headers.has('x-torbidd-internal-rewrite') && pathname !== '/' && req.headers.has('host')) {
     const savedLocale = readCookieWithFallback(req.cookies, LOCALE_COOKIE, LEGACY_LOCALE_COOKIE);
     const preferredLocale: Locale =
       savedLocale === 'en' || savedLocale === 'th' ? (savedLocale as Locale) : 'th';

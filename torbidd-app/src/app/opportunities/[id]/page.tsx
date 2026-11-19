@@ -41,6 +41,7 @@ export default function ProjectDetailPage({
   const [authModalFeature, setAuthModalFeature] = useState<AuthFeatureType>('bookmark');
 
   const [project, setProject] = useState<Project | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [checkedIndices, setCheckedIndices] = useState<number[]>([]);
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -62,16 +63,20 @@ export default function ProjectDetailPage({
 
   // Load project data and saved checklist state
   useEffect(() => {
+    setIsLoading(true);
     // Fetch fresh from API
     fetch(`/api/projects/${id}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         const projData = json?.data ?? json;
-        if (projData && (projData.id || projData.externalId || projData.externalProjectId)) {
+        if (projData && (projData.id || projData._id || projData.externalId || projData.externalProjectId)) {
           setProject(enrichProjectDetail(projData));
         }
       })
-      .catch(() => { });
+      .catch(() => { })
+      .finally(() => {
+        setIsLoading(false);
+      });
 
     // Restore persistent checklist state
     try {
@@ -111,6 +116,21 @@ export default function ProjectDetailPage({
       window.print();
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="page-content">
+        <button className="detail-back-btn" onClick={() => router.push('/opportunities')}>
+          {ICONS.arrowLeft}
+          {L('backToList')}
+        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, gap: 16 }}>
+          <div style={{ width: 36, height: 36, border: '3px solid #e2e8f0', borderTopColor: '#059669', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: '#64748b', fontSize: 14 }}>{language === 'th' ? 'กำลังโหลดข้อมูลโครงการ...' : 'Loading opportunity details...'}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!project) {
     return (

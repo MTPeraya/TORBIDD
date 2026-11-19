@@ -128,7 +128,7 @@ export default function HomePage() {
               <span className="landing-card-link">{L('cap1Link')}</span>
             </div>
 
-            <div className="landing-card" onClick={() => router.push('/opportunities/1')} role="button" tabIndex={0}>
+            <div className="landing-card" onClick={() => router.push('/opportunities')} role="button" tabIndex={0}>
               <div className="landing-card-number">02</div>
               <div className="landing-card-icon">{ICONS.shield}</div>
               <h3 className="landing-card-title">{L('cap2Title')}</h3>

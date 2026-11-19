@@ -68,7 +68,7 @@ services:
       - internal_tls_key
       - internal_tls_ca
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('https://app:3443/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "const h=require('https'),f=require('fs');h.get({host:'127.0.0.1',port:3443,servername:'app',ca:f.readFileSync('/run/secrets/internal_tls_ca')},r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -120,7 +120,6 @@ services:
 
 networks:
   frontend:
-    internal: true
     driver: bridge
   egress:
     driver: bridge
