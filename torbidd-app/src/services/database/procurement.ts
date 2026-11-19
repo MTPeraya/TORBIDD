@@ -333,6 +333,7 @@ export async function getProcurementProjects(params: {
 
     const [projects, total] = await Promise.all([
       ProcurementProject.find(query)
+        .select('-rawPayload')
         .sort({ discoveredAt: -1, createdAt: -1 })
         .skip(offset)
         .limit(limit)

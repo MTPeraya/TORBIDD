@@ -132,7 +132,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   const handleCardClick = () => {
     const targetId = extProject.externalProjectId ?? project.externalId ?? project._id;
-    router.push(`/opportunities/${targetId}`);
+    if (targetId === undefined || targetId === null || targetId === '') return;
+    const localePrefix = window.location.pathname.match(/^\/(th|en)(?:\/|$)/)?.[0].replace(/\/$/, '') ?? '';
+    router.push(`${localePrefix}/opportunities/${encodeURIComponent(String(targetId))}`);
   };
 
   // ─── Fiscal Year display ───────────────────────────────────────────────────
@@ -158,7 +160,18 @@ export function ProjectCard({ project }: ProjectCardProps) {
   };
 
   return (
-    <div className="project-card" onClick={handleCardClick} role="button" tabIndex={0}>
+    <div
+      className="project-card"
+      onClick={handleCardClick}
+      onKeyDown={(event) => {
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          handleCardClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
       <div>
         <div className="project-card-header">
           <div className="project-card-tags">

@@ -22,10 +22,13 @@ const nextConfig: NextConfig = {
 
   // Security Headers (ASVS 3.4.1 & 3.4.3)
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development';
     return [
       {
         source: '/:path*',
-        headers: SECURITY_HEADERS,
+        headers: isDev
+          ? SECURITY_HEADERS.filter((h) => h.key !== 'Strict-Transport-Security')
+          : SECURITY_HEADERS,
       },
     ];
   },

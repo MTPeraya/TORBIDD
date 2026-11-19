@@ -5,7 +5,7 @@
 // (Integrates Issues #147, #149, #150, #152, #154, #155, #156 & Live Ingestion)
 // =============================================================================
 
-import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Project } from '@/types/project';
 import { SoftwareCategory, isSoftwareCategory } from '@/types/procurement-category';
@@ -16,6 +16,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { formatBudget, isNew, daysUntil } from '@/lib/utils';
 import { executeProcurementSearch } from '@/services/procurement-search';
 import { isContractAwarded, isProjectClosedOrAwarded } from '@/services/procurement-filter';
+import { fetchPublicProjects } from '@/lib/public-project-cache';
 
 // Discovery Components
 import { ProcurementSearchBar } from '@/components/procurement-search/ProcurementSearchBar';
@@ -44,12 +45,14 @@ function OpportunitiesContent() {
   const initialMaxBudget = searchParams.get('maxBudget') ? Number(searchParams.get('maxBudget')) : null;
   const initialBudgetPreset = searchParams.get('budget') || '';
   const initialDeadline = searchParams.get('deadline') || '';
-  const initialHideClosed = searchParams.get('hideClosed') !== 'false';
+  const initialHideClosed = searchParams.get('hideClosed') === 'true';
+  const initialQuickFilter = searchParams.get('quick') === 'new' ? 'new' : null;
   const initialSortBy = (searchParams.get('sortBy') as ProcurementSortOption) || 'publishDate_desc';
   const initialPage = searchParams.get('page') ? Number(searchParams.get('page')) : 1;
 
   // State Management
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const opportunitiesRequestId = useRef(0);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategories, setSelectedCategories] = useState<SoftwareCategory[]>(initialCategories);
   const [selectedAgencies, setSelectedAgencies] = useState<string[]>(initialAgencies);
@@ -58,6 +61,7 @@ function OpportunitiesContent() {
   const [budgetPreset, setBudgetPreset] = useState<string>(initialBudgetPreset);
   const [selectedDeadline, setSelectedDeadline] = useState<string>(initialDeadline);
   const [hideClosed, setHideClosed] = useState<boolean>(initialHideClosed);
+  const [quickFilter, setQuickFilter] = useState<'new' | null>(initialQuickFilter);
   const [sortBy, setSortBy] = useState<ProcurementSortOption>(initialSortBy);
   const [page, setPage] = useState<number>(initialPage);
 
@@ -92,6 +96,7 @@ function OpportunitiesContent() {
 
   // Fetch or Compute Filtered Results
   const fetchOpportunities = useCallback(async () => {
+    const requestId = ++opportunitiesRequestId.current;
     setIsLoading(true);
     setError(null);
 
@@ -117,27 +122,53 @@ function OpportunitiesContent() {
       maxBudget: maxBudget !== null ? maxBudget : null,
       budget: budgetPreset || null,
       deadline: selectedDeadline || null,
-      hideClosed: hideClosed ? null : 'false',
+      hideClosed: hideClosed ? 'true' : null,
+      quick: quickFilter,
       sortBy: sortBy !== 'publishDate_desc' ? sortBy : null,
       page: page > 1 ? page : null,
     });
 
     try {
-      const res = await fetch(`/api/projects?${queryParams.toString()}`);
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}`);
-      }
-      const json = await res.json();
+      // The complete public list is already loaded for the stats and filter
+      // counts. Filter it locally so changing a control does not wait for a
+      // fresh database round trip on every interaction.
+      const sourceProjects = quickFilter === 'new'
+        ? allProjects.filter((project) => isNew(project.publishDate))
+        : allProjects;
 
-      if (json.data && Array.isArray(json.data)) {
-        setResultItems(json.data);
-        setTotalCount(json.total || json.data.length);
-        setTotalPages(json.totalPages || Math.max(1, Math.ceil((json.total || json.data.length) / 12)));
-      } else {
-        throw new Error('Invalid response structure');
+      if (allProjects.length > 0) {
+        const filteredResult = executeProcurementSearch(sourceProjects, {
+          search: searchQuery.trim(),
+          categories: selectedCategories,
+          agencies: selectedAgencies,
+          minBudget,
+          maxBudget,
+          budgetPreset: budgetPreset as ProcurementFilters['budgetPreset'],
+          deadline: selectedDeadline as ProcurementFilters['deadline'],
+          hideClosed,
+          sortBy,
+          page,
+          limit: 12,
+        });
+
+        setResultItems(filteredResult.items);
+        setTotalCount(filteredResult.total);
+        setTotalPages(filteredResult.totalPages);
+        return;
       }
+
+      // Keep a server fallback if the public list could not be loaded.
+      const params = new URLSearchParams(queryParams);
+      const response = await fetch(`/api/projects?${params.toString()}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Server returned HTTP ${response.status}`);
+      const json = await response.json();
+      if (requestId !== opportunitiesRequestId.current) return;
+      if (!json.data || !Array.isArray(json.data)) throw new Error('Invalid response structure');
+      setResultItems(json.data);
+      setTotalCount(json.total || json.data.length);
+      setTotalPages(json.totalPages || Math.max(1, Math.ceil((json.total || json.data.length) / 12)));
     } catch {
-      // Offline fallback: Run in-memory query service directly
+      if (requestId !== opportunitiesRequestId.current) return;
       const fallbackResult = executeProcurementSearch(allProjects, {
         search: searchQuery.trim(),
         categories: selectedCategories,
@@ -156,7 +187,7 @@ function OpportunitiesContent() {
       setTotalCount(fallbackResult.total);
       setTotalPages(fallbackResult.totalPages);
     } finally {
-      setIsLoading(false);
+      if (requestId === opportunitiesRequestId.current) setIsLoading(false);
     }
   }, [
     searchQuery,
@@ -167,6 +198,7 @@ function OpportunitiesContent() {
     budgetPreset,
     selectedDeadline,
     hideClosed,
+    quickFilter,
     sortBy,
     page,
     allProjects,
@@ -177,14 +209,13 @@ function OpportunitiesContent() {
   useEffect(() => {
     const timer = setTimeout(() => {
       void fetchOpportunities();
-    }, 0);
+    }, searchQuery.trim() ? 180 : 0);
     return () => clearTimeout(timer);
-  }, [fetchOpportunities]);
+  }, [fetchOpportunities, searchQuery]);
 
   // Initial load to fetch all projects for stats and agency/category counts
   useEffect(() => {
-    fetch('/api/projects?limit=1000&all=true')
-      .then((res) => res.json())
+    fetchPublicProjects<{ data?: Project[] }>('/api/projects?limit=1000&all=true')
       .then((json) => {
         if (json.data && Array.isArray(json.data)) {
           setAllProjects(json.data);
@@ -303,7 +334,27 @@ function OpportunitiesContent() {
     setMaxBudget(null);
     setBudgetPreset('');
     setSelectedDeadline('');
+    setQuickFilter(null);
     setPage(1);
+  };
+
+  const handleShowAllOpportunities = () => {
+    handleClearAll();
+    setHideClosed(false);
+    setSortBy('publishDate_desc');
+  };
+
+  const handleShowLatestOpportunities = () => {
+    handleClearAll();
+    setQuickFilter('new');
+    setHideClosed(false);
+    setSortBy('publishDate_desc');
+  };
+
+  const handleShowLargestBudgets = () => {
+    handleClearAll();
+    setHideClosed(false);
+    setSortBy('budget_desc');
   };
 
   // Filter change handlers that reset page to 1
@@ -348,7 +399,8 @@ function OpportunitiesContent() {
     selectedCategories.length +
     selectedAgencies.length +
     (minBudget !== null || maxBudget !== null || budgetPreset ? 1 : 0) +
-    (selectedDeadline ? 1 : 0);
+    (selectedDeadline ? 1 : 0) +
+    (quickFilter ? 1 : 0);
 
   return (
     <div className="page-content" id="opportunities-discovery-page">
@@ -367,6 +419,7 @@ function OpportunitiesContent() {
           changeType="positive"
           icon={ICONS.target}
           iconColor="blue"
+          onClick={handleShowAllOpportunities}
         />
 
         <StatCard
@@ -392,6 +445,7 @@ function OpportunitiesContent() {
           changeType="positive"
           icon={ICONS.star}
           iconColor="green"
+          onClick={handleShowLatestOpportunities}
         />
 
         <StatCard
@@ -401,6 +455,7 @@ function OpportunitiesContent() {
           changeType="neutral"
           icon={ICONS.dollarSign}
           iconColor="amber"
+          onClick={handleShowLargestBudgets}
         />
       </div>
 

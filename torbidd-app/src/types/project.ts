@@ -115,6 +115,8 @@ export type TorStatus = 'AVAILABLE' | 'NO_TOR' | 'PENDING';
 export interface Project {
   _id?: string;
   externalId: number;
+  /** Original source ID, retained for detail links when the source ID is non-numeric. */
+  externalProjectId?: string | number;
   title: BilingualText;
   department: Department;
   budget: number; // in THB

@@ -14,6 +14,7 @@ import { aggregateAgencyMetrics } from '@/lib/historicalAnalytics';
 import { formatBudget, formatBudgetFull, getCategoryAvg, getOutlierStatus } from '@/lib/utils';
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
 import { translateProcurementType } from '@/services/translation/dictionary';
+import { fetchPublicProjects } from '@/lib/public-project-cache';
 
 export default function HistoricalPage() {
   const router = useRouter();
@@ -56,8 +57,7 @@ export default function HistoricalPage() {
       })
       .catch(() => {});
 
-    fetch('/api/projects')
-      .then((res) => res.json())
+    fetchPublicProjects<{ data?: Project[] }>('/api/projects')
       .then((json) => {
         if (json.data && Array.isArray(json.data)) {
           setProjects(json.data);

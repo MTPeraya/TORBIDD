@@ -128,7 +128,10 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
  * Helper to apply security headers to a Response or Headers object (e.g. in middleware).
  */
 export function applySecurityHeaders<T extends { headers: Headers }>(response: T): T {
+  const isDev = process.env.NODE_ENV === 'development';
   for (const { key, value } of SECURITY_HEADERS) {
+    // In development, do not enforce HSTS so localhost can be accessed over HTTP
+    if (isDev && key === 'Strict-Transport-Security') continue;
     response.headers.set(key, value);
   }
   return response;

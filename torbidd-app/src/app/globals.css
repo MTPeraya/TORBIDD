@@ -756,7 +756,7 @@ body.dark-mode .demo-banner {
 }
 
 .stat-card.clickable:hover {
-  border-color: #ef4444;
+  border-color: var(--primary-600);
 }
 
 .stat-card.active-filter {

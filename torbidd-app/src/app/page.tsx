@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ICONS } from '@/components/ui/Icons';
 import { ProjectCarousel } from '@/components/ui/ProjectCarousel';
 import { isClosingSoon } from '@/lib/utils';
+import { fetchPublicProjects } from '@/lib/public-project-cache';
 import { isContractAwarded } from '@/services/procurement-filter';
 
 export default function HomePage() {
@@ -16,8 +17,7 @@ export default function HomePage() {
   const [searchVal, setSearchVal] = useState('');
 
   const loadProjects = useCallback(() => {
-    fetch('/api/projects?limit=1000&all=true')
-      .then((res) => res.json())
+    fetchPublicProjects<{ data?: Project[] }>('/api/projects?limit=1000&all=true')
       .then((json) => {
         if (json.data && Array.isArray(json.data)) {
           setProjects(json.data);
