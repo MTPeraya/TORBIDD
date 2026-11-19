@@ -16,9 +16,11 @@ export async function GET(req: NextRequest) {
     }
 
     let stats;
+    let dbConnected = true;
     try {
       stats = await getAdminProjectStats();
     } catch {
+      dbConnected = false;
       stats = {
         totalProjects: 0,
         totalBudget: 0,
@@ -79,7 +81,7 @@ export async function GET(req: NextRequest) {
     const payload = {
       ...stats,
       systemStatus: {
-        database: 'Connected (MongoDB Atlas)',
+        database: dbConnected ? 'Connected (MongoDB Atlas)' : 'Disconnected (Check MONGODB_URI)',
         aiService: aiProviderName,
         crawler: 'Ready',
         lastSync: lastSyncTime || 'ยังไม่มีการซิงค์ข้อมูล (Never)',

@@ -85,6 +85,8 @@ blob-report/
 *.pem
 *.key
 *.crt
+*.csr
+*.srl
 
 
 SKILL.md
