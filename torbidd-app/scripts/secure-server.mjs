@@ -24,6 +24,13 @@ for (const file of [certFile, keyFile]) {
   }
 }
 
+if (process.env.NODE_ENV === 'production') {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32 || secret.includes('placeholder') || secret.includes('change-me')) {
+    throw new Error('FATAL: Insecure or default SESSION_SECRET in production environment');
+  }
+}
+
 const backend = spawn(process.execPath, ['server.js'], {
   env: {
     ...process.env,

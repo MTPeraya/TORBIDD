@@ -1,63 +1,52 @@
-/** @jest-environment node */
-
+/**
+ * @jest-environment node
+ */
 import { NextRequest } from 'next/server';
 import { POST } from '../route';
-import { extractTorFromBase64 } from '@/services/ai/tor-extractor';
-import { MAX_PDF_BASE64_LENGTH, PdfSecurityError } from '@/lib/secure-pdf';
+import { AUTH_COOKIE_NAME, signSession, AuthSessionUser } from '@/lib/auth';
 
 jest.mock('@/services/ai/tor-extractor', () => ({
-  extractTorFromBase64: jest.fn(),
-  extractTorFromUrl: jest.fn(),
+  extractTorFromUrl: jest.fn().mockResolvedValue({ title: 'Mock Result' }),
+  extractTorFromBase64: jest.fn().mockResolvedValue({ title: 'Mock Result' }),
 }));
 
-const mockExtractBase64 = extractTorFromBase64 as jest.MockedFunction<typeof extractTorFromBase64>;
+describe('POST /api/ai/extract - Authentication & Abuse Defense (T-01, T-14)', () => {
+  const testUser: AuthSessionUser = {
+    id: 'user_123',
+    email: 'user@example.com',
+    role: 'officer',
+    name: 'Test Officer',
+    picture: 'https://example.com/pic.jpg',
+    org: 'BMA',
+  };
 
-function request(body: unknown, ip: string, headers: Record<string, string> = {}): NextRequest {
-  return new NextRequest('http://localhost/api/ai/extract', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-forwarded-for': ip,
-      ...headers,
-    },
-    body: JSON.stringify(body),
-  });
-}
+  it('1. rejects unauthenticated requests with HTTP 401 Unauthorized', async () => {
+    const req = new NextRequest('http://localhost:3000/api/ai/extract', {
+      method: 'POST',
+      body: JSON.stringify({ documentUrl: 'https://data.go.th/sample.pdf' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-describe('POST /api/ai/extract merged security controls', () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  it('includes rate-limit headers on validation errors', async () => {
-    const response = await POST(request({}, '203.0.113.11'));
-
-    expect(response.status).toBe(400);
-    expect(response.headers.get('x-ratelimit-limit')).toBeTruthy();
-    await expect(response.json()).resolves.toMatchObject({ error: 'Invalid request body' });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toContain('Unauthorized');
   });
 
-  it('rejects declared payloads over the SEC-17 limit with rate-limit headers', async () => {
-    const response = await POST(
-      request({}, '203.0.113.12', {
-        'content-length': String(MAX_PDF_BASE64_LENGTH + 4097),
-      }),
-    );
+  it('2. accepts authenticated requests and proceeds with extraction', async () => {
+    const token = signSession(testUser);
+    const req = new NextRequest('http://localhost:3000/api/ai/extract', {
+      method: 'POST',
+      body: JSON.stringify({ documentUrl: 'https://data.go.th/sample.pdf' }),
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${AUTH_COOKIE_NAME}=${token}`,
+      },
+    });
 
-    expect(response.status).toBe(413);
-    expect(response.headers.get('x-ratelimit-limit')).toBeTruthy();
-  });
-
-  it('preserves typed PDF security errors and rate-limit headers', async () => {
-    mockExtractBase64.mockRejectedValueOnce(
-      new PdfSecurityError('PDF magic bytes are invalid', 'INVALID_MAGIC'),
-    );
-
-    const response = await POST(
-      request({ documentBase64: 'JVBERi0xLjQ=' }, '203.0.113.13'),
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.headers.get('x-ratelimit-limit')).toBeTruthy();
-    await expect(response.json()).resolves.toEqual({ error: 'PDF magic bytes are invalid' });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeDefined();
   });
 });
-

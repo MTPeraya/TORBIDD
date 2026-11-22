@@ -18,6 +18,7 @@ import { GET as projectDetailHandler } from '@/app/api/projects/[id]/route';
 import { IngestionService } from '@/services/ingestion/ingestion.service';
 import * as procurementDb from '@/services/database/procurement';
 import { PdfSecurityError } from '@/lib/secure-pdf';
+import { AUTH_COOKIE_NAME, signSession, AuthSessionUser } from '@/lib/auth';
 
 jest.mock('@/services/ingestion/ingestion.service');
 jest.mock('@/services/database/procurement');
@@ -26,12 +27,56 @@ jest.mock('@/services/database/projects');
 describe('Ingestion API Route Handlers', () => {
   const MOCK_PROJECT_ID = '67119538991';
 
+  const adminUser: AuthSessionUser = {
+    id: 'admin_1',
+    email: 'admin@torbidd.gov.th',
+    role: 'admin',
+    name: 'Admin User',
+    picture: 'https://example.com/pic.jpg',
+    org: 'BMA',
+  };
+  const standardUser: AuthSessionUser = {
+    id: 'user_1',
+    email: 'user@torbidd.gov.th',
+    role: 'officer',
+    name: 'Standard Officer',
+    picture: 'https://example.com/pic.jpg',
+    org: 'BMA',
+  };
+  const adminCookie = `${AUTH_COOKIE_NAME}=${signSession(adminUser)}`;
+  const standardCookie = `${AUTH_COOKIE_NAME}=${signSession(standardUser)}`;
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   // ─── POST /api/ingestion/discover ──────────────────────────────────────────
   describe('POST /api/ingestion/discover', () => {
+    it('should reject unauthenticated requests with HTTP 403', async () => {
+      const request = new NextRequest('http://localhost:3000/api/ingestion/discover', {
+        method: 'POST',
+        body: JSON.stringify({ keyword: 'AI' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const response = await discoverHandler(request);
+      expect(response.status).toBe(403);
+    });
+
+    it('should reject non-admin users with HTTP 403', async () => {
+      const request = new NextRequest('http://localhost:3000/api/ingestion/discover', {
+        method: 'POST',
+        body: JSON.stringify({ keyword: 'AI' }),
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: standardCookie,
+        },
+      });
+
+      const response = await discoverHandler(request);
+      expect(response.status).toBe(403);
+    });
+
     it('should validate input and return discovered projects', async () => {
       const mockResult = {
         total: 1,
@@ -57,7 +102,10 @@ describe('Ingestion API Route Handlers', () => {
       const request = new NextRequest('http://localhost:3000/api/ingestion/discover', {
         method: 'POST',
         body: JSON.stringify({ keyword: 'ระบบ', fiscalYear: 2568, page: 1, limit: 10 }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: adminCookie,
+        },
       });
 
       const response = await discoverHandler(request);
@@ -74,7 +122,10 @@ describe('Ingestion API Route Handlers', () => {
       const request = new NextRequest('http://localhost:3000/api/ingestion/discover', {
         method: 'POST',
         body: JSON.stringify({ fiscalYear: 1800 }), // fiscal year < 2500 is invalid
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: adminCookie,
+        },
       });
 
       const response = await discoverHandler(request);
@@ -92,7 +143,10 @@ describe('Ingestion API Route Handlers', () => {
       const request = new NextRequest('http://localhost:3000/api/ingestion/discover', {
         method: 'POST',
         body: JSON.stringify({ keyword: 'AI' }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: adminCookie,
+        },
       });
 
       const response = await discoverHandler(request);

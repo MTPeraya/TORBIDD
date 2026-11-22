@@ -24,6 +24,12 @@ export async function register() {
   }
   globalThis.__torbiddAutoSyncInitialized = true;
 
+  // SEC-T02: Assert production session secret validity at server startup
+  if (process.env.NODE_ENV === 'production') {
+    const { assertProductionSessionSecret } = await import('@/lib/auth');
+    assertProductionSessionSecret();
+  }
+
   const { checkAndAutoSync } = await import('@/services/ingestion/sync-state');
 
   // 1. Check shortly after server startup (catches up immediately if >5h passed while offline)
