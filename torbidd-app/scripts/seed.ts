@@ -5,6 +5,12 @@
 // Or: npm run seed
 // =============================================================================
 
+// Fail-safe exit preventing the seed script from running against production databases (T-17)
+if (process.env.NODE_ENV === 'production') {
+  console.error('CRITICAL: Database seed script cannot be executed in production environment.');
+  process.exit(1);
+}
+
 import dotenv from 'dotenv';
 import path from 'path';
 

@@ -33,7 +33,30 @@ export * from './auth/google';
 // 7 days session duration
 const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 7;
 
+export function assertProductionSessionSecret(secret: string | undefined = process.env.SESSION_SECRET): void {
+  if (process.env.NODE_ENV === 'production') {
+    if (!secret || secret.length < 32 || secret.includes('placeholder') || secret.includes('change-me')) {
+      throw new Error('FATAL: Insecure or default SESSION_SECRET in production environment');
+    }
+  }
+}
+
+// Production startup secrets validation (T-02)
+if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32 || secret.includes('placeholder') || secret.includes('change-me')) {
+    throw new Error('FATAL: Insecure or default SESSION_SECRET in production environment');
+  }
+}
+
 function getSecretKey(): string {
+  if (process.env.NODE_ENV === 'production') {
+    const secret = process.env.SESSION_SECRET;
+    if (!secret || secret.length < 32 || secret.includes('placeholder') || secret.includes('change-me')) {
+      throw new Error('FATAL: Insecure or default SESSION_SECRET in production environment');
+    }
+    return secret;
+  }
   return process.env.SESSION_SECRET || process.env.AUTH_SECRET || 'torbidd_dev_fallback_secret_key_32bytes!';
 }
 

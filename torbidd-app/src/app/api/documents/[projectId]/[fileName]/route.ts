@@ -10,6 +10,7 @@ import ProcurementProject from '@/models/ProcurementProject';
 import Project from '@/models/Project';
 import { getIngestionConfig } from '@/lib/config';
 import { validateFetchMetadata, withCorpHeader } from '@/lib/fetch-metadata';
+import { getAuthSessionFromRequest } from '@/lib/auth';
 import {
   assertNoPathTraversal,
   assertPdfExtension,
@@ -39,6 +40,26 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 });
     }
     if (fileName.toLowerCase().endsWith('.pdf')) assertPdfExtension(fileName);
+
+    // Enforce authentication for sensitive/internal documents (T-04)
+    const lowerFileName = fileName.toLowerCase();
+    const isSensitive =
+      lowerFileName.includes('internal') ||
+      lowerFileName.includes('confidential') ||
+      lowerFileName.includes('secret') ||
+      lowerFileName.includes('private');
+
+    if (isSensitive) {
+      const authUser = getAuthSessionFromRequest(_req);
+      if (!authUser) {
+        return withCorpHeader(
+          NextResponse.json(
+            { error: 'Unauthorized: Authentication required for sensitive documents' },
+            { status: 401 },
+          ),
+        );
+      }
+    }
 
     // 1. Resolve project ID (handle 11-digit e-GP ID or internal ID)
     let targetExtId = cleanProjectId;
@@ -145,6 +166,19 @@ export async function GET(
       } catch (genErr) {
         console.warn(`[DocumentRoute] PDF generation error for ${targetExtId}:`, genErr);
       }
+
+      // If document is sensitive or project does not exist and is not an e-GP ID, return 404 (T-04)
+      if (isSensitive || cleanProjectId.length !== 11) {
+        return withCorpHeader(
+          NextResponse.json({ error: 'Document not found' }, { status: 404 }),
+        );
+      }
+    }
+
+    if (isSensitive) {
+      return withCorpHeader(
+        NextResponse.json({ error: 'Document not found' }, { status: 404 }),
+      );
     }
 
     // 3. If real PDF is not on local disk, check if user is asking for direct redirect

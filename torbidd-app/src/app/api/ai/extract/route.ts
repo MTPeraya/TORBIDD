@@ -12,8 +12,17 @@ import {
   getClientIp,
   rateLimitHeaders,
 } from '@/lib/rate-limiter';
+import { getAuthSessionFromRequest } from '@/lib/auth';
+import { requireAuth } from '@/lib/authorization/backend';
 
 export async function POST(req: NextRequest) {
+  // 1. Authenticate user before processing AI extraction (T-01, T-14)
+  const authUser = getAuthSessionFromRequest(req);
+  const authResult = requireAuth(authUser);
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
   // ASVS V2.4.1: Prevent automated extraction abuse and AI quota exhaustion.
   const clientIp = getClientIp(req);
   const rateLimit = checkRateLimit('ai-extract', clientIp, AI_EXTRACT_LIMITER);
