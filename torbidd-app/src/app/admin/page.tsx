@@ -231,8 +231,8 @@ export default function AdminPage() {
         }
         showToast(
           language === 'th'
-            ? 'ลบโครงการออกจากฐานข้อมูลเรียบร้อยแล้ว (ตามนโยบาย UC-4 A5)'
-            : 'Project permanently removed per UC-4 A5 retention policy',
+            ? 'ลบโครงการออกจากฐานข้อมูลเรียบร้อยแล้ว'
+            : 'Project permanently removed',
         );
         setFormModalOpen(false);
         return;
@@ -384,8 +384,8 @@ export default function AdminPage() {
         }
         showToast(
           language === 'th'
-            ? 'ลบโครงการออกจากฐานข้อมูลเรียบร้อยแล้ว (ตามนโยบาย UC-4 A5)'
-            : 'Project permanently removed per UC-4 A5 retention policy',
+            ? 'ลบโครงการออกจากฐานข้อมูลเรียบร้อยแล้ว'
+            : 'Project permanently removed',
         );
       } catch (err: unknown) {
         alert(err instanceof Error ? err.message : 'Deletion failed');
@@ -399,7 +399,7 @@ export default function AdminPage() {
             isSoftwareRelated: false,
             category: nonSoftwareProject.category || 'Information System',
             classificationReviewStatus: 'APPROVED',
-            classificationReviewNote: 'Admin confirmed non-software (UC-4)',
+            classificationReviewNote: 'Admin confirmed non-software',
           }),
         });
 
@@ -431,8 +431,8 @@ export default function AdminPage() {
         }
         showToast(
           language === 'th'
-            ? 'ยืนยันจำแนกเป็นไม่ใช่ซอฟต์แวร์ และนำออกจากแดชบอร์ดสาธารณะแล้ว (UC-4)'
-            : 'Confirmed non-software & excluded from public dashboard (UC-4)',
+            ? 'ยืนยันจำแนกเป็นไม่ใช่ซอฟต์แวร์ และนำออกจากแดชบอร์ดสาธารณะแล้ว'
+            : 'Confirmed non-software & excluded from public dashboard',
         );
       } catch (err: unknown) {
         alert(err instanceof Error ? err.message : 'Classification update failed');
@@ -454,7 +454,7 @@ export default function AdminPage() {
             body: JSON.stringify({
               isSoftwareRelated: false,
               classificationReviewStatus: 'APPROVED',
-              classificationReviewNote: 'Admin bulk confirmed non-software (UC-4)',
+              classificationReviewNote: 'Admin bulk confirmed non-software',
             }),
           });
           if (!res.ok) {
@@ -480,8 +480,8 @@ export default function AdminPage() {
       setSelectedIds(new Set());
       showToast(
         language === 'th'
-          ? `จำแนก ${count} โครงการเป็นไม่ใช่ซอฟต์แวร์ และนำออกจากแดชบอร์ดแล้ว (UC-4)`
-          : `Classified ${count} projects as non-software and excluded from public dashboard (UC-4)`,
+          ? `จำแนก ${count} โครงการเป็นไม่ใช่ซอฟต์แวร์ และนำออกจากแดชบอร์ดแล้ว`
+          : `Classified ${count} projects as non-software and excluded from public dashboard`,
       );
     } catch {
       showToast('Error updating selected projects');
@@ -504,7 +504,7 @@ export default function AdminPage() {
             body: JSON.stringify({
               isSoftwareRelated: true,
               classificationReviewStatus: 'APPROVED',
-              classificationReviewNote: 'Admin bulk confirmed software-related (UC-4)',
+              classificationReviewNote: 'Admin bulk confirmed software-related',
             }),
           });
           if (!res.ok) {
@@ -546,8 +546,8 @@ export default function AdminPage() {
     const count = selectedIds.size;
     const confirmed = window.confirm(
       language === 'th'
-        ? `คุณแน่ใจหรือไม่ว่าต้องการลบ ${count} โครงการที่เลือกออกจากฐานข้อมูลอย่างถาวร? (UC-4 A5)`
-        : `Are you sure you want to permanently delete ${count} selected projects from the database? (UC-4 A5)`,
+        ? `คุณแน่ใจหรือไม่ว่าต้องการลบ ${count} โครงการที่เลือกออกจากฐานข้อมูลอย่างถาวร?`
+        : `Are you sure you want to permanently delete ${count} selected projects from the database?`,
     );
     if (!confirmed) return;
 
@@ -579,8 +579,8 @@ export default function AdminPage() {
       setSelectedIds(new Set());
       showToast(
         language === 'th'
-          ? `ลบ ${count} โครงการออกจากฐานข้อมูลเรียบร้อยแล้ว (UC-4 A5)`
-          : `Permanently deleted ${count} projects from database (UC-4 A5)`,
+          ? `ลบ ${count} โครงการออกจากฐานข้อมูลเรียบร้อยแล้ว`
+          : `Permanently deleted ${count} projects from database`,
       );
     } catch {
       showToast('Error deleting selected projects');
@@ -1271,7 +1271,7 @@ export default function AdminPage() {
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
                 >
                   <span>✗</span>
-                  <span>{language === 'th' ? 'จำแนกเป็นไม่ใช่ซอฟต์แวร์ (UC-4)' : 'Mark Non-Software (UC-4)'}</span>
+                  <span>{language === 'th' ? 'จำแนกเป็นไม่ใช่ซอฟต์แวร์' : 'Mark Non-Software'}</span>
                 </button>
                 <button
                   type="button"
@@ -1361,7 +1361,7 @@ export default function AdminPage() {
                 setCurrentPage(1);
               }}
             >
-              <span>{language === 'th' ? 'ไม่ใช่ซอฟต์แวร์ (UC-4)' : 'Non-Software'}</span>
+              <span>{language === 'th' ? 'ไม่ใช่ซอฟต์แวร์' : 'Non-Software'}</span>
               <span className="pill-count">{triageCounts.nonSoftware}</span>
             </button>
           </div>
@@ -1425,9 +1425,9 @@ export default function AdminPage() {
                         : undefined,
                 }}
               >
-                <option value="All">{language === 'th' ? 'ทุกสถานะ (All)' : 'All Status (UC-4)'}</option>
+                <option value="All">{language === 'th' ? 'ทุกสถานะ (All)' : 'All Status'}</option>
                 <option value="Software">{language === 'th' ? '✓ ซอฟต์แวร์เท่านั้น' : '✓ Software Only'}</option>
-                <option value="Non-Software">{language === 'th' ? '✗ ไม่ใช่ซอฟต์แวร์ (UC-4)' : '✗ Non-Software (UC-4)'}</option>
+                <option value="Non-Software">{language === 'th' ? '✗ ไม่ใช่ซอฟต์แวร์' : '✗ Non-Software'}</option>
               </select>
 
               {/* Sort By selector */}
@@ -1487,7 +1487,7 @@ export default function AdminPage() {
                   <th>{L('projectName')}</th>
                   <th>{L('department')}</th>
                   <th>{L('category')}</th>
-                  <th style={{ width: 130 }}>{language === 'th' ? 'สถานะ UC-4' : 'UC-4 Status'}</th>
+                  <th style={{ width: 130 }}>{language === 'th' ? 'สถานะ' : 'Status'}</th>
                   <th style={{ textAlign: 'right' }}>{L('budget')}</th>
                   <th>{L('deadline')}</th>
                   <th>AI Match</th>
@@ -1572,8 +1572,8 @@ export default function AdminPage() {
                               className="admin-sw-badge non-software"
                               title={
                                 language === 'th'
-                                  ? 'ไม่ใช่ซอฟต์แวร์ — คัดแยกออกจากแดชบอร์ดค้นหาตาม UC-4'
-                                  : 'Non-Software — Excluded from dashboard per UC-4'
+                                  ? 'ไม่ใช่ซอฟต์แวร์ — คัดแยกออกจากแดชบอร์ดค้นหา'
+                                  : 'Non-Software — Excluded from dashboard'
                               }
                             >
                               ✗ {language === 'th' ? 'ไม่ใช่ซอฟต์แวร์' : 'Non-SW'}
@@ -1649,8 +1649,8 @@ export default function AdminPage() {
                               }}
                               title={
                                 language === 'th'
-                                  ? 'จำแนกเป็นไม่ใช่ซอฟต์แวร์ (UC-4)'
-                                  : 'Classify as Non-Software (UC-4)'
+                                  ? 'จำแนกเป็นไม่ใช่ซอฟต์แวร์'
+                                  : 'Classify as Non-Software'
                               }
                               id={`classifyNonSwBtn_${project.externalId}`}
                               style={{

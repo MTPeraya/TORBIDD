@@ -10,6 +10,8 @@ import {
 } from '../canonicalize';
 import {
   ProjectFiltersSchema,
+  ProcurementFiltersSchema,
+  SafeSearchQuerySchema,
   BookmarkCreateSchema,
   SettingsUpdateSchema,
   AiClassifySchema,
@@ -118,6 +120,26 @@ describe('ASVS V1.1.1: Input Canonicalization Architecture', () => {
       const secondPass = schema.parse(firstPass);
       expect(firstPass).toBe('Test');
       expect(secondPass).toBe('Test');
+    });
+
+    it('rejects NoSQL injection payloads such as {"$gt":""} in search queries', () => {
+      expect(SafeSearchQuerySchema.safeParse('{"$gt":""}').success).toBe(false);
+      expect(SafeSearchQuerySchema.safeParse('{"$ne":null}').success).toBe(false);
+      expect(SafeSearchQuerySchema.safeParse('$gt').success).toBe(false);
+
+      const projectFilterResult = ProjectFiltersSchema.safeParse({ search: '{"$gt":""}' });
+      expect(projectFilterResult.success).toBe(false);
+
+      const procurementFilterResult = ProcurementFiltersSchema.safeParse({ search: '{"$gt":""}' });
+      expect(procurementFilterResult.success).toBe(false);
+    });
+
+    it('accepts legitimate search queries in SafeSearchQuerySchema', () => {
+      const legitimateResult = ProcurementFiltersSchema.safeParse({ search: 'ปัญญาประดิษฐ์' });
+      expect(legitimateResult.success).toBe(true);
+      if (legitimateResult.success) {
+        expect(legitimateResult.data.search).toBe('ปัญญาประดิษฐ์');
+      }
     });
   });
 });

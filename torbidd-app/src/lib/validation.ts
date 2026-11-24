@@ -21,9 +21,20 @@ export const VALID_CATEGORIES = [
   'Information System',
 ] as const;
 
+/** Pattern to detect NoSQL / MongoDB operator injection in user input strings (ASVS V5.3.4 & V1.1.1) */
+const NOSQL_INJECTION_PATTERN = /([{"']|^)\$[a-zA-Z]+/;
+
+export const SafeSearchQuerySchema = canonicalString(
+  z.string()
+    .max(200)
+    .refine((val) => !NOSQL_INJECTION_PATTERN.test(val), {
+      message: 'Invalid search query: operator injection pattern detected',
+    }),
+);
+
 export const ProjectFiltersSchema = z
   .object({
-    search: canonicalString(z.string().max(200)).optional(),
+    search: SafeSearchQuerySchema.optional(),
     department: canonicalString(z.string().max(200)).optional(),
     agency: canonicalString(z.string().max(200)).optional(),
     agencies: z.union([canonicalString(z.string()), z.array(canonicalString(z.string()))]).optional(),
@@ -83,7 +94,7 @@ export const ProjectFiltersSchema = z
 
 export const ProcurementFiltersSchema = z
   .object({
-    search: canonicalString(z.string().max(200)).optional(),
+    search: SafeSearchQuerySchema.optional(),
     department: canonicalString(z.string().max(200)).optional(),
     agency: canonicalString(z.string().max(200)).optional(),
     agencies: z.union([canonicalString(z.string()), z.array(canonicalString(z.string()))]).optional(),
@@ -136,7 +147,7 @@ export const HistoricalFiltersSchema = z.object({
     .optional(),
   department: canonicalString(z.string().max(200)).optional(),
   year: z.coerce.number().int().min(2000).max(2200).optional(),
-  search: canonicalString(z.string().max(200)).optional(),
+  search: SafeSearchQuerySchema.optional(),
   stats: z.enum(['true', 'false']).optional(),
   agencies: z.enum(['true', 'false']).optional(),
 });
