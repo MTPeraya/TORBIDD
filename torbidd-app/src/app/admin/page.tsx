@@ -1382,7 +1382,7 @@ export default function AdminPage() {
               />
             </div>
 
-            <div className="admin-filters-wrap" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className="admin-filters-wrap">
               {/* Category Filter */}
               <select
                 className="admin-select-filter"
