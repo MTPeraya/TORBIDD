@@ -8006,7 +8006,8 @@ body.dark-mode .eval-guidance-chip.badge-low {
 }
 
 .tab-pane-content {
-  animation: fadeIn 0.25s ease-in-out;
+  opacity: 1;
+  animation: fadeIn 0.25s ease-in-out forwards;
 }
 
 @keyframes fadeIn {

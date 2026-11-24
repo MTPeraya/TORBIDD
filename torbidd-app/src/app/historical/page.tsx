@@ -341,8 +341,9 @@ export default function HistoricalPage() {
         </button>
       </div>
 
-      {/* TAB 1: Benchmark & Outlier Analysis — always mounted, hidden via CSS */}
-      <div className="tab-pane-content" style={{ display: activeTab === 'benchmark' ? 'block' : 'none' }}>
+      {/* TAB 1: Benchmark & Outlier Analysis */}
+      {activeTab === 'benchmark' && (
+        <div className="tab-pane-content">
           {/* Interactive Announced Budget Reasonableness Checker */}
           <BudgetReasonablenessChecker projects={projects} historicalData={historicalData} />
 
@@ -413,19 +414,25 @@ export default function HistoricalPage() {
             <ComparisonChart projects={projects} />
           </div>
         </div>
+      )}
 
-      {/* TAB 2: Similar Procurements & Scope Estimator — always mounted, hidden via CSS */}
-      <div className="tab-pane-content" style={{ display: activeTab === 'similar' ? 'block' : 'none' }}>
+      {/* TAB 2: Similar Procurements & Scope Estimator */}
+      {activeTab === 'similar' && (
+        <div className="tab-pane-content">
           <SimilarProcurementEstimator projects={projects} historicalData={historicalData} />
         </div>
+      )}
 
-      {/* TAB 3: Cross-Agency Budget Comparison — always mounted, hidden via CSS */}
-      <div className="tab-pane-content" style={{ display: activeTab === 'agencies' ? 'block' : 'none' }}>
+      {/* TAB 3: Cross-Agency Budget Comparison */}
+      {activeTab === 'agencies' && (
+        <div className="tab-pane-content">
           <AgencyComparisonView agencyMetrics={agencyMetrics} />
         </div>
+      )}
 
-      {/* TAB 4: Historical Data Explorer — always mounted, hidden via CSS */}
-      <div className="tab-pane-content" style={{ display: activeTab === 'explorer' ? 'block' : 'none' }}>
+      {/* TAB 4: Historical Data Explorer */}
+      {activeTab === 'explorer' && (
+        <div className="tab-pane-content">
           <div className="chart-container hist-explorer-container">
             <div className="chart-header hist-explorer-header">
               <div>
@@ -616,6 +623,7 @@ export default function HistoricalPage() {
             </span>
           </div>
         </div>
+      )}
 
       {/* Largest Tender Inspector Modal from KPI Card */}
       {kpiModalProject && (
