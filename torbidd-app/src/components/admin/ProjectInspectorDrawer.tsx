@@ -57,6 +57,21 @@ function DrawerInnerContent({
     project.classificationReviewStatus === 'PENDING_REVIEW' ||
     !project.classificationReviewStatus;
 
+  const getScopeSnippet = () => {
+    if (!project.scope) return null;
+    if (typeof project.scope === 'string') return project.scope;
+    if (typeof project.scope === 'object') {
+      const scopeObj = project.scope as { th?: string[] | string; en?: string[] | string };
+      const list = language === 'th' ? (scopeObj.th || scopeObj.en) : (scopeObj.en || scopeObj.th);
+      if (Array.isArray(list)) {
+        return list.slice(0, 3).join(' • ');
+      }
+      if (typeof list === 'string') return list;
+    }
+    return null;
+  };
+  const scopeSnippet = getScopeSnippet();
+
   const handleQuickSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -176,12 +191,12 @@ function DrawerInnerContent({
             )}
 
             {/* Scope excerpt if available */}
-            {project.scope && (
+            {scopeSnippet && (
               <div className="admin-scope-snippet">
                 <span className="admin-scope-label">
                   {language === 'th' ? 'ขอบเขตงาน (Scope):' : 'Scope Summary:'}
                 </span>
-                <p className="admin-scope-text">{project.scope}</p>
+                <p className="admin-scope-text">{scopeSnippet}</p>
               </div>
             )}
 

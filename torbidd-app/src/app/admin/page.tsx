@@ -11,6 +11,7 @@ import { ProjectFormModal } from '@/components/admin/ProjectFormModal';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
 import { ClassificationReviewPanel } from '@/components/admin/ClassificationReviewPanel';
 import { ConfirmNonSoftwareModal } from '@/components/admin/ConfirmNonSoftwareModal';
+import { ProjectInspectorDrawer } from '@/components/admin/ProjectInspectorDrawer';
 import { translateProcurementType } from '@/services/translation/dictionary';
 
 interface AdminStats {
@@ -51,8 +52,14 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Software' | 'Non-Software'>('All');
+  const [triageFilter, setTriageFilter] = useState<'ALL' | 'NEEDS_REVIEW' | 'SOFTWARE' | 'NON_SOFTWARE'>('ALL');
+  const [sortBy, setSortBy] = useState<'deadline' | 'budget_desc' | 'budget_asc' | 'id'>('deadline');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+
+  // Split-pane inspector state
+  const [inspectingProject, setInspectingProject] = useState<Project | null>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   // Selection state (UC-4)
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
@@ -247,9 +254,91 @@ export default function AdminPage() {
             : p,
         ),
       );
+      if (
+        inspectingProject &&
+        (inspectingProject.externalId === targetId ||
+          (inspectingProject as unknown as { _id?: string })._id === targetId)
+      ) {
+        setInspectingProject((prev) =>
+          prev ? { ...prev, ...updated, isSoftwareRelated: Boolean(data.isSoftwareRelated ?? prev.isSoftwareRelated) } : null,
+        );
+      }
       showToast(L('adminSaveSuccess'));
     } catch (err: unknown) {
       throw err;
+    }
+  };
+
+  // Quick edit save handler for ProjectInspectorDrawer
+  const handleQuickSaveProject = async (id: string | number, updates: Partial<Project>) => {
+    try {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Failed to update project');
+      }
+
+      const updated = result.data as Project;
+      setProjects((prev) =>
+        prev.map((p) => {
+          const pid = p.externalId || (p as unknown as { _id: string })._id;
+          if (String(pid) === String(id)) {
+            const merged = { ...p, ...updated, ...updates };
+            return merged;
+          }
+          return p;
+        }),
+      );
+      setInspectingProject((prev) => (prev ? { ...prev, ...updated, ...updates } : null));
+      showToast(L('adminSaveSuccess'));
+    } catch (err: unknown) {
+      throw err;
+    }
+  };
+
+  // Handle software confirmation directly from Inspector Drawer
+  const handleConfirmSoftwareFromInspector = async (project: Project) => {
+    const targetId = project.externalId || (project as unknown as { _id: string })._id;
+    try {
+      const res = await fetch(`/api/projects/${targetId}/classification`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isSoftwareRelated: true,
+          category: project.category || 'Website',
+          classificationReviewStatus: 'APPROVED',
+          classificationReviewNote: 'Admin confirmed software from inspector',
+        }),
+      });
+      if (!res.ok) {
+        await fetch(`/api/projects/${targetId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isSoftwareRelated: true }),
+        });
+      }
+
+      setProjects((prev) =>
+        prev.map((p) => {
+          const pid = p.externalId || (p as unknown as { _id: string })._id;
+          if (String(pid) === String(targetId)) {
+            return { ...p, isSoftwareRelated: true, classificationReviewStatus: 'APPROVED' };
+          }
+          return p;
+        }),
+      );
+      setInspectingProject((prev) =>
+        prev ? { ...prev, isSoftwareRelated: true, classificationReviewStatus: 'APPROVED' } : null,
+      );
+      showToast(
+        language === 'th' ? 'ยืนยันจำแนกเป็นซอฟต์แวร์เรียบร้อยแล้ว' : 'Confirmed as software-related',
+      );
+    } catch {
+      showToast('Error updating classification');
     }
   };
 
@@ -538,9 +627,9 @@ export default function AdminPage() {
     }
   };
 
-  // Filtered projects for Project Table
+  // Filtered and sorted projects for Project Table
   const filteredProjects = useMemo(() => {
-    return projects.filter((p) => {
+    const list = projects.filter((p) => {
       const q = searchQuery.toLowerCase();
       const titleMatch =
         !searchQuery ||
@@ -553,16 +642,49 @@ export default function AdminPage() {
 
       const categoryMatch = categoryFilter === 'All' || p.category === categoryFilter;
 
-      const statusMatch =
-        statusFilter === 'All'
-          ? true
-          : statusFilter === 'Software'
-            ? p.isSoftwareRelated !== false
-            : p.isSoftwareRelated === false;
+      let statusMatch = true;
+      if (triageFilter === 'NEEDS_REVIEW') {
+        statusMatch =
+          p.classificationReviewStatus === 'PENDING_REVIEW' ||
+          !p.classificationReviewStatus ||
+          p.isSoftwareRelated === false;
+      } else if (triageFilter === 'SOFTWARE') {
+        statusMatch = p.isSoftwareRelated !== false;
+      } else if (triageFilter === 'NON_SOFTWARE') {
+        statusMatch = p.isSoftwareRelated === false;
+      } else {
+        statusMatch =
+          statusFilter === 'All'
+            ? true
+            : statusFilter === 'Software'
+              ? p.isSoftwareRelated !== false
+              : p.isSoftwareRelated === false;
+      }
 
       return titleMatch && categoryMatch && statusMatch;
     });
-  }, [projects, searchQuery, categoryFilter, statusFilter]);
+
+    return list.sort((a, b) => {
+      if (sortBy === 'budget_desc') return (b.budget || 0) - (a.budget || 0);
+      if (sortBy === 'budget_asc') return (a.budget || 0) - (b.budget || 0);
+      if (sortBy === 'id') return String(b.externalId).localeCompare(String(a.externalId));
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+    });
+  }, [projects, searchQuery, categoryFilter, statusFilter, triageFilter, sortBy]);
+
+  // Derived triage metrics for filter pills
+  const triageCounts = useMemo(() => {
+    const total = projects.length;
+    const needsReview = projects.filter(
+      (p) =>
+        p.classificationReviewStatus === 'PENDING_REVIEW' ||
+        !p.classificationReviewStatus ||
+        p.isSoftwareRelated === false,
+    ).length;
+    const software = projects.filter((p) => p.isSoftwareRelated !== false).length;
+    const nonSoftware = projects.filter((p) => p.isSoftwareRelated === false).length;
+    return { total, needsReview, software, nonSoftware };
+  }, [projects]);
 
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / pageSize));
@@ -1089,6 +1211,57 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Triage Quick Filter Pills */}
+          <div className="admin-triage-pills" role="tablist" aria-label="Triage quick filters">
+            <button
+              type="button"
+              className={`admin-triage-pill ${triageFilter === 'ALL' && statusFilter === 'All' ? 'active' : ''}`}
+              onClick={() => {
+                setTriageFilter('ALL');
+                setStatusFilter('All');
+                setCurrentPage(1);
+              }}
+            >
+              <span>{language === 'th' ? 'ทั้งหมด (All Projects)' : 'All Projects'}</span>
+              <span className="pill-count">{triageCounts.total}</span>
+            </button>
+            <button
+              type="button"
+              className={`admin-triage-pill needs-review ${triageFilter === 'NEEDS_REVIEW' ? 'active' : ''}`}
+              onClick={() => {
+                setTriageFilter('NEEDS_REVIEW');
+                setCurrentPage(1);
+              }}
+            >
+              <span>{language === 'th' ? 'รอตรวจสอบ (Needs Review)' : 'Needs Review'}</span>
+              <span className="pill-count">{triageCounts.needsReview}</span>
+            </button>
+            <button
+              type="button"
+              className={`admin-triage-pill ${triageFilter === 'SOFTWARE' || (triageFilter === 'ALL' && statusFilter === 'Software') ? 'active' : ''}`}
+              onClick={() => {
+                setTriageFilter('SOFTWARE');
+                setStatusFilter('Software');
+                setCurrentPage(1);
+              }}
+            >
+              <span>{language === 'th' ? 'ซอฟต์แวร์เท่านั้น' : 'Software Only'}</span>
+              <span className="pill-count">{triageCounts.software}</span>
+            </button>
+            <button
+              type="button"
+              className={`admin-triage-pill ${triageFilter === 'NON_SOFTWARE' || (triageFilter === 'ALL' && statusFilter === 'Non-Software') ? 'active' : ''}`}
+              onClick={() => {
+                setTriageFilter('NON_SOFTWARE');
+                setStatusFilter('Non-Software');
+                setCurrentPage(1);
+              }}
+            >
+              <span>{language === 'th' ? 'ไม่ใช่ซอฟต์แวร์ (UC-4)' : 'Non-Software'}</span>
+              <span className="pill-count">{triageCounts.nonSoftware}</span>
+            </button>
+          </div>
+
           <div className="admin-table-controls">
             <div className="admin-search-wrap">
               {ICONS.search}
@@ -1149,6 +1322,23 @@ export default function AdminPage() {
                 <option value="All">{language === 'th' ? 'ทุกสถานะ (All)' : 'All Status (UC-4)'}</option>
                 <option value="Software">{language === 'th' ? '✓ ซอฟต์แวร์เท่านั้น' : '✓ Software Only'}</option>
                 <option value="Non-Software">{language === 'th' ? '✗ ไม่ใช่ซอฟต์แวร์ (UC-4)' : '✗ Non-Software (UC-4)'}</option>
+              </select>
+
+              {/* Sort By selector */}
+              <select
+                className="admin-select-filter"
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as typeof sortBy);
+                  setCurrentPage(1);
+                }}
+                id="adminSortBySelect"
+                aria-label="Sort projects"
+              >
+                <option value="deadline">{language === 'th' ? 'เรียงตาม: วันสิ้นสุด' : 'Sort: Deadline'}</option>
+                <option value="budget_desc">{language === 'th' ? 'เรียงตาม: งบประมาณสูง-ต่ำ' : 'Sort: Budget High-Low'}</option>
+                <option value="budget_asc">{language === 'th' ? 'เรียงตาม: งบประมาณต่ำ-สูง' : 'Sort: Budget Low-High'}</option>
+                <option value="id">{language === 'th' ? 'เรียงตาม: รหัส ID' : 'Sort: Project ID'}</option>
               </select>
 
               {/* Page size selector */}
@@ -1213,15 +1403,25 @@ export default function AdminPage() {
                     const dept = language === 'th' ? project.department.th : project.department.en;
                     const isClosed = new Date(project.deadline) < new Date();
                     const isSw = project.isSoftwareRelated !== false;
+                    const isInspecting =
+                      inspectingProject &&
+                      (inspectingProject.externalId === project.externalId ||
+                        (inspectingProject as unknown as { _id?: string })._id ===
+                          (project as unknown as { _id?: string })._id);
 
                     return (
                       <tr
                         key={pid}
+                        className={`admin-table-row-clickable ${isInspecting ? 'admin-table-row-active' : ''}`}
+                        onClick={() => {
+                          setInspectingProject(project);
+                          setInspectorOpen(true);
+                        }}
                         style={{
                           background: isSelected ? 'rgba(59, 130, 246, 0.05)' : undefined,
                         }}
                       >
-                        <td style={{ textAlign: 'center' }}>
+                        <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -1237,6 +1437,7 @@ export default function AdminPage() {
                             href={`/opportunities/${project.externalId}`}
                             className="admin-project-link"
                             title="View public detail"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             {title}
                           </Link>
@@ -1303,12 +1504,26 @@ export default function AdminPage() {
                             {project.aiConfidence || 'High'}
                           </span>
                         </td>
-                        <td>
+                        <td onClick={(e) => e.stopPropagation()}>
                           <div className="admin-actions-cell">
                             <button
                               type="button"
+                              className="admin-icon-action-btn inspect"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInspectingProject(project);
+                                setInspectorOpen(true);
+                              }}
+                              title={language === 'th' ? 'เปิดแผงตรวจสอบข้อมูล (Inspect)' : 'Inspect Project'}
+                              id={`inspectProjectBtn_${project.externalId}`}
+                            >
+                              {ICONS.search}
+                            </button>
+                            <button
+                              type="button"
                               className="admin-icon-action-btn edit"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setEditingProject(project);
                                 setFormMode('edit');
                                 setFormModalOpen(true);
@@ -1321,7 +1536,8 @@ export default function AdminPage() {
                             <button
                               type="button"
                               className="admin-icon-action-btn classify-non-sw"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setNonSoftwareProject(project);
                                 setNonSoftwareModalOpen(true);
                               }}
@@ -1341,7 +1557,8 @@ export default function AdminPage() {
                             <button
                               type="button"
                               className="admin-icon-action-btn delete"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setDeletingProject(project);
                                 setDeleteModalOpen(true);
                               }}
@@ -1355,6 +1572,7 @@ export default function AdminPage() {
                               className="admin-icon-action-btn"
                               title={L('viewDetail')}
                               target="_blank"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               {ICONS.externalLink}
                             </Link>
@@ -1645,6 +1863,25 @@ export default function AdminPage() {
         }}
         onConfirm={handleConfirmNonSoftware}
         project={nonSoftwareProject}
+      />
+
+      {/* Split-Pane Inspector Drawer */}
+      <ProjectInspectorDrawer
+        project={inspectingProject}
+        isOpen={inspectorOpen}
+        onClose={() => setInspectorOpen(false)}
+        onSaveQuickEdit={handleQuickSaveProject}
+        onConfirmSoftware={handleConfirmSoftwareFromInspector}
+        onRequestNonSoftwareModal={(p) => {
+          setNonSoftwareProject(p);
+          setNonSoftwareModalOpen(true);
+        }}
+        onOpenFullEditModal={(p) => {
+          setEditingProject(p);
+          setFormMode('edit');
+          setFormModalOpen(true);
+        }}
+        availableDepartments={availableDepartments}
       />
     </div>
   );

@@ -258,6 +258,37 @@ describe('AdminPage component', () => {
     expect(screen.getByRole('button', { name: /ซอฟต์แวร์ \(Software\)|Software-Related/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ไม่ใช่ซอฟต์แวร์ \(Non-Software\)|Non-Software/i })).toBeInTheDocument();
   });
+
+  it('renders triage filter pills in projects tab', async () => {
+    await renderAdminPage();
+    const projectsTabBtn = screen.getByRole('button', { name: /จัดการโครงการ|Project Management/i });
+    await React.act(async () => {
+      fireEvent.click(projectsTabBtn);
+    });
+
+    expect(screen.getByRole('button', { name: /ทั้งหมด|All Projects/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /รอตรวจสอบ|Needs Review/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ซอฟต์แวร์เท่านั้น|Software Only/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ไม่ใช่ซอฟต์แวร์|Non-Software/i })).toBeInTheDocument();
+  });
+
+  it('opens inspector drawer when clicking a project row', async () => {
+    await renderAdminPage();
+    const projectsTabBtn = screen.getByRole('button', { name: /จัดการโครงการ|Project Management/i });
+    await React.act(async () => {
+      fireEvent.click(projectsTabBtn);
+    });
+
+    const projectRow = screen.getByText(/Smart Portal/i).closest('tr');
+    expect(projectRow).toBeInTheDocument();
+
+    await React.act(async () => {
+      fireEvent.click(projectRow!);
+    });
+
+    expect(screen.getByRole('complementary', { name: /Project Inspector and Quick Editor/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /บันทึกข้อมูลด่วน|Save Quick Edits/i })).toBeInTheDocument();
+  });
 });
 
 
