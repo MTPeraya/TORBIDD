@@ -6196,6 +6196,383 @@ body.dark-mode .admin-icon-action-btn {
   background: rgba(239, 68, 68, 0.08);
 }
 
+/* ==========================================================================
+   ADMIN SPLIT-PANE TRIAGE & INSPECTOR DRAWER STYLES
+   ========================================================================== */
+.admin-triage-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.admin-triage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-triage-pill:hover {
+  border-color: var(--primary-600);
+  color: var(--primary-700);
+  background: var(--primary-30);
+}
+
+.admin-triage-pill.active {
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+  color: var(--white);
+  box-shadow: 0 2px 6px rgba(39, 115, 165, 0.25);
+}
+
+.admin-triage-pill .pill-count {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--gray-200);
+  color: var(--gray-800);
+  font-weight: 700;
+}
+
+.admin-triage-pill.active .pill-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--white);
+}
+
+.admin-triage-pill.needs-review:not(.active) {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.admin-triage-pill.needs-review:not(.active) .pill-count {
+  background: rgba(245, 158, 11, 0.2);
+  color: #b45309;
+}
+
+.admin-table-row-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.admin-table-row-clickable:hover {
+  background: rgba(39, 115, 165, 0.04) !important;
+}
+
+.admin-table-row-active {
+  background: rgba(39, 115, 165, 0.09) !important;
+  box-shadow: inset 3px 0 0 var(--primary-600);
+}
+
+/* Slide-Over Inspector Drawer Overlay */
+.admin-inspector-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.admin-inspector-drawer {
+  width: 520px;
+  max-width: 100vw;
+  height: 100vh;
+  background: var(--white);
+  box-shadow: -8px 0 32px rgba(15, 23, 42, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: hidden;
+  border-left: 1px solid var(--gray-200);
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.admin-inspector-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--gray-200);
+  background: var(--gray-50);
+}
+
+.admin-inspector-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-inspector-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-inspector-id {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-700);
+  background: rgba(39, 115, 165, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.admin-inspector-source-tag {
+  font-size: 11.5px;
+  color: var(--gray-600);
+  background: var(--gray-200);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.admin-inspector-fiscal {
+  font-size: 11.5px;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+.admin-inspector-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.admin-inspector-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--gray-500);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.admin-inspector-close-btn:hover {
+  background: var(--gray-200);
+  color: var(--gray-900);
+}
+
+.admin-inspector-close-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-inspector-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-inspector-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-inspector-section-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.admin-triage-status-display {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-triage-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-review-pill.pending {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.admin-tech-pill-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-tech-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.admin-tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-tech-tag {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--primary-800);
+  background: rgba(39, 115, 165, 0.08);
+  border: 1px solid rgba(39, 115, 165, 0.2);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.admin-scope-snippet {
+  background: var(--gray-50);
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+}
+
+.admin-scope-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gray-600);
+  margin-bottom: 4px;
+}
+
+.admin-scope-text {
+  font-size: 12.5px;
+  color: var(--gray-800);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.admin-triage-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.admin-drawer-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-drawer-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.admin-drawer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-drawer-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.admin-drawer-input,
+.admin-drawer-select,
+.admin-drawer-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--gray-900);
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.admin-drawer-input:focus,
+.admin-drawer-select:focus,
+.admin-drawer-textarea:focus {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(39, 115, 165, 0.15);
+}
+
+.admin-drawer-textarea {
+  resize: vertical;
+}
+
+.admin-budget-hint {
+  font-size: 11.5px;
+  color: var(--primary-700);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.admin-drawer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.admin-save-indicator.positive {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.admin-drawer-footer-link {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
 /* Bulk Action Bar & Selection (UC-4) */
 .admin-bulk-bar {
   display: flex;
