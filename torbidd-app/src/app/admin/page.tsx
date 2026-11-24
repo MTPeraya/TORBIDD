@@ -9,7 +9,6 @@ import { Project } from '@/types/project';
 import { formatTHB } from '@/lib/utils';
 import { ProjectFormModal } from '@/components/admin/ProjectFormModal';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
-import { ClassificationReviewPanel } from '@/components/admin/ClassificationReviewPanel';
 import { ConfirmNonSoftwareModal } from '@/components/admin/ConfirmNonSoftwareModal';
 import { ProjectInspectorDrawer } from '@/components/admin/ProjectInspectorDrawer';
 import { translateProcurementType } from '@/services/translation/dictionary';
@@ -44,7 +43,7 @@ export default function AdminPage() {
   const { L, language } = useLanguage();
   const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'classification' | 'crawler' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'crawler' | 'audit'>('overview');
   const [projects, setProjects] = useState<Project[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
 
@@ -936,6 +935,68 @@ export default function AdminPage() {
           </div>
           <h1 className="admin-title">{L('adminTitle')}</h1>
           <p className="admin-subtitle">{L('adminSub')}</p>
+
+          {/* Key Stats Strip */}
+          <div className="admin-header-stats-strip" aria-label="Admin overview statistics">
+            <div
+              className="admin-header-stat-chip"
+              onClick={() => {
+                setActiveTab('projects');
+                setTriageFilter('ALL');
+                setStatusFilter('All');
+                setCurrentPage(1);
+              }}
+              id="adminHeaderStatTotal"
+              title={language === 'th' ? 'ดูโครงการทั้งหมด' : 'View all projects'}
+            >
+              <span className="stat-label">{language === 'th' ? 'โครงการทั้งหมด' : 'Total'}</span>
+              <span className="stat-value">{triageCounts.total}</span>
+            </div>
+            <div
+              className="admin-header-stat-chip warning"
+              onClick={() => {
+                setActiveTab('projects');
+                setTriageFilter('NEEDS_REVIEW');
+                setCurrentPage(1);
+              }}
+              id="adminHeaderStatNeedsReview"
+              title={language === 'th' ? 'ดูรายการที่รอตรวจสอบ' : 'View projects needing review'}
+            >
+              <span className="stat-dot warning"></span>
+              <span className="stat-label">{language === 'th' ? 'รอตรวจสอบ' : 'Needs Review'}</span>
+              <span className="stat-value warning">{triageCounts.needsReview}</span>
+            </div>
+            <div
+              className="admin-header-stat-chip success"
+              onClick={() => {
+                setActiveTab('projects');
+                setTriageFilter('SOFTWARE');
+                setStatusFilter('Software');
+                setCurrentPage(1);
+              }}
+              id="adminHeaderStatSoftware"
+              title={language === 'th' ? 'ดูเฉพาะโครงการซอฟต์แวร์' : 'View software-related'}
+            >
+              <span className="stat-dot success"></span>
+              <span className="stat-label">{language === 'th' ? 'ซอฟต์แวร์' : 'Software'}</span>
+              <span className="stat-value success">{triageCounts.software}</span>
+            </div>
+            <div
+              className="admin-header-stat-chip danger"
+              onClick={() => {
+                setActiveTab('projects');
+                setTriageFilter('NON_SOFTWARE');
+                setStatusFilter('Non-Software');
+                setCurrentPage(1);
+              }}
+              id="adminHeaderStatNonSoftware"
+              title={language === 'th' ? 'ดูโครงการที่ไม่ใช่ซอฟต์แวร์' : 'View non-software'}
+            >
+              <span className="stat-dot danger"></span>
+              <span className="stat-label">{language === 'th' ? 'ไม่ใช่ซอฟต์แวร์' : 'Non-Software'}</span>
+              <span className="stat-value danger">{triageCounts.nonSoftware}</span>
+            </div>
+          </div>
         </div>
 
         <div className="admin-header-actions">
@@ -1008,16 +1069,6 @@ export default function AdminPage() {
         >
           {ICONS.terminal}
           <span>{L('adminTabCrawler')}</span>
-        </button>
-
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === 'classification' ? 'active' : ''}`}
-          onClick={() => setActiveTab('classification')}
-          id="adminTabClassificationBtn"
-        >
-          {ICONS.sparkles}
-          <span>{L('adminTabClassification')}</span>
         </button>
 
         <button
@@ -1875,11 +1926,6 @@ export default function AdminPage() {
             </div>
           </div>
         </section>
-      )}
-
-      {/* TAB 5: CLASSIFICATION REVIEW (UC-10) */}
-      {activeTab === 'classification' && (
-        <ClassificationReviewPanel onToast={showToast} />
       )}
 
       {/* MODALS */}

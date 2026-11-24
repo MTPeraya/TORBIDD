@@ -289,6 +289,16 @@ describe('AdminPage component', () => {
     expect(screen.getByRole('complementary', { name: /Project Inspector and Quick Editor/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /บันทึกข้อมูลด่วน|Save Quick Edits/i })).toBeInTheDocument();
   });
+
+  it('renders quick stats strip in header and does not render classification tab', async () => {
+    await renderAdminPage();
+    expect(screen.getByLabelText(/Admin overview statistics/i)).toBeInTheDocument();
+    expect(document.getElementById('adminHeaderStatTotal')).toBeInTheDocument();
+    expect(document.getElementById('adminHeaderStatNeedsReview')).toBeInTheDocument();
+    expect(document.getElementById('adminHeaderStatSoftware')).toBeInTheDocument();
+    expect(document.getElementById('adminHeaderStatNonSoftware')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ตรวจสอบการจำแนกประเภท|Classification Review/i })).not.toBeInTheDocument();
+  });
 });
 
 

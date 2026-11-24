@@ -5610,6 +5610,118 @@ body.dark-mode .admin-badge-mode {
   margin: 0;
 }
 
+.admin-header-stats-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-header-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  font-size: 12.5px;
+  color: var(--gray-700);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.admin-header-stat-chip:hover {
+  background: var(--gray-200);
+  transform: translateY(-1px);
+}
+
+.admin-header-stat-chip .stat-label {
+  color: var(--gray-600);
+}
+
+.admin-header-stat-chip .stat-value {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--gray-900);
+}
+
+.admin-header-stat-chip.warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #b45309;
+}
+
+.admin-header-stat-chip.warning:hover {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.admin-header-stat-chip.warning .stat-label {
+  color: #b45309;
+}
+
+.admin-header-stat-chip.warning .stat-value {
+  color: #d97706;
+}
+
+.admin-header-stat-chip.success {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #047857;
+}
+
+.admin-header-stat-chip.success:hover {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.admin-header-stat-chip.success .stat-label {
+  color: #047857;
+}
+
+.admin-header-stat-chip.success .stat-value {
+  color: #10b981;
+}
+
+.admin-header-stat-chip.danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #b91c1c;
+}
+
+.admin-header-stat-chip.danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.admin-header-stat-chip.danger .stat-label {
+  color: #b91c1c;
+}
+
+.admin-header-stat-chip.danger .stat-value {
+  color: #ef4444;
+}
+
+.admin-header-stat-chip .stat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.admin-header-stat-chip .stat-dot.warning {
+  background: #f59e0b;
+}
+
+.admin-header-stat-chip .stat-dot.success {
+  background: #10b981;
+}
+
+.admin-header-stat-chip .stat-dot.danger {
+  background: #ef4444;
+}
+
 .admin-header-actions {
   display: flex;
   align-items: center;
