@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Project } from '@/types/project';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -9,12 +10,19 @@ import { ProjectCarousel } from '@/components/ui/ProjectCarousel';
 import { isClosingSoon } from '@/lib/utils';
 import { fetchPublicProjects } from '@/lib/public-project-cache';
 import { isContractAwarded } from '@/services/procurement-filter';
+import {
+  HomeFilterTab,
+  filterHomeProjects,
+  getHomeOpportunitiesUrl,
+} from '@/components/home/HomeFilterLogic';
+import { HomeWorkflowSection } from '@/components/home/HomeWorkflowSection';
 
 export default function HomePage() {
   const router = useRouter();
   const { language, L } = useLanguage();
   const [projects, setProjects] = useState<Project[]>([]);
   const [searchVal, setSearchVal] = useState('');
+  const [activeFilterTab, setActiveFilterTab] = useState<HomeFilterTab>('all');
 
   const loadProjects = useCallback(() => {
     fetchPublicProjects<{ data?: Project[] }>('/api/projects?limit=1000&all=true')
@@ -30,9 +38,23 @@ export default function HomePage() {
     loadProjects();
   }, [loadProjects]);
 
-  const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
+  const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
   const closingCount = projects.filter((p) => !isContractAwarded(p) && isClosingSoon(p.deadline)).length;
-  const recentProjects = projects.slice(0, 8);
+  const highValueCount = projects.filter((p) => (p.budget || 0) >= 10_000_000).length;
+  const aiDataCount = projects.filter((p) => p.category === 'AI' || p.category === 'Data Analytics').length;
+
+  const filteredProjects = useMemo(() => {
+    return filterHomeProjects(projects, activeFilterTab);
+  }, [projects, activeFilterTab]);
+
+  const filteredBudget = useMemo(() => {
+    return filteredProjects.reduce((sum, p) => sum + (p.budget || 0), 0);
+  }, [filteredProjects]);
+
+  // Cap at top 8 items for the carousel display
+  const carouselProjects = useMemo(() => {
+    return filteredProjects.slice(0, 8);
+  }, [filteredProjects]);
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +63,10 @@ export default function HomePage() {
     } else {
       router.push('/opportunities');
     }
+  };
+
+  const handleViewAll = () => {
+    router.push(getHomeOpportunitiesUrl(activeFilterTab));
   };
 
   return (
@@ -147,16 +173,107 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Recent Tenders Section */}
+      {/* Upgraded Section Below Core Capabilities: Live Tender Showcase + Workflow + Footer */}
       <div className="home-bottom-section">
         <div className="home-bottom-content">
-          <div className="anim-fade-up anim-delay-3">
-            <ProjectCarousel projects={recentProjects} />
+          {/* Live Showcase Header with Filter Pills and Dynamic CTA */}
+          <div className="home-showcase-header anim-fade-up anim-delay-3">
+            <div className="home-showcase-title-group">
+              <h2 className="home-showcase-title">{L('liveShowcaseTitle')}</h2>
+              <p className="home-showcase-subtitle">{L('liveShowcaseSubtitle')}</p>
+            </div>
+
+            <div className="home-showcase-controls">
+              <div className="home-filter-pills" role="tablist" aria-label="Tender filter options">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeFilterTab === 'all'}
+                  className={`home-filter-pill ${activeFilterTab === 'all' ? 'active' : ''}`}
+                  onClick={() => setActiveFilterTab('all')}
+                >
+                  <span>{L('tabFilterAll')}</span>
+                  <span className="home-filter-count">{projects.length}</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeFilterTab === 'closingSoon'}
+                  className={`home-filter-pill ${activeFilterTab === 'closingSoon' ? 'active' : ''}`}
+                  onClick={() => setActiveFilterTab('closingSoon')}
+                >
+                  <span>{L('tabFilterClosingSoon')}</span>
+                  <span className="home-filter-count">{closingCount}</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeFilterTab === 'highValue'}
+                  className={`home-filter-pill ${activeFilterTab === 'highValue' ? 'active' : ''}`}
+                  onClick={() => setActiveFilterTab('highValue')}
+                >
+                  <span>{L('tabFilterHighValue')}</span>
+                  <span className="home-filter-count">{highValueCount}</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeFilterTab === 'aiData'}
+                  className={`home-filter-pill ${activeFilterTab === 'aiData' ? 'active' : ''}`}
+                  onClick={() => setActiveFilterTab('aiData')}
+                >
+                  <span>{L('tabFilterAiData')}</span>
+                  <span className="home-filter-count">{aiDataCount}</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="home-view-all-btn"
+                onClick={handleViewAll}
+                title={L('viewAllOpportunitiesBtn')}
+              >
+                <span>
+                  {language === 'th'
+                    ? `ดูทั้งหมด ${filteredProjects.length} โครงการ (฿${(filteredBudget / 1_000_000).toFixed(0)}M) →`
+                    : `View all ${filteredProjects.length} tenders (฿${(filteredBudget / 1_000_000).toFixed(0)}M) →`}
+                </span>
+              </button>
+            </div>
           </div>
 
-          {/* Website Maker Contact Footer (Direct in Website) */}
+          {/* Carousel rendering the top 8 filtered items */}
+          <div className="anim-fade-up anim-delay-3" style={{ marginBottom: 48 }}>
+            <ProjectCarousel projects={carouselProjects} />
+          </div>
+
+          {/* "How TORBIDD Works" 3-Step Journey Banner */}
+          <HomeWorkflowSection />
+
+          {/* Upgraded Website Maker Contact & Affiliation Footer */}
           <footer className="home-footer anim-fade-up anim-delay-3" id="contact-footer">
             <div className="footer-direct-wrapper">
+              <div className="footer-nav-row">
+                <div className="footer-brand-title">TORBIDD</div>
+                <div className="footer-quick-links">
+                  <Link href="/" className="footer-link">
+                    {L('navHome')}
+                  </Link>
+                  <Link href="/opportunities" className="footer-link">
+                    {L('navDashboard')}
+                  </Link>
+                  <Link href="/historical" className="footer-link">
+                    {L('navHistorical')}
+                  </Link>
+                  <Link href="/saved" className="footer-link">
+                    {L('navSaved')}
+                  </Link>
+                </div>
+              </div>
+
               <div className="footer-direct-bottom">
                 <div className="footer-copyright-text">
                   © 2026 TORBIDD · Department of Computer Engineering, Faculty of Engineering, Kasetsart University

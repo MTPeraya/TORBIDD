@@ -88,7 +88,7 @@ blob-report/
 *.csr
 *.srl
 
-
+.agent/
 SKILL.md
 DESIGN.md
 AGENTS.md
