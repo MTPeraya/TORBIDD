@@ -222,6 +222,14 @@ export default function AdminPage() {
           next.delete(targetId);
           return next;
         });
+        if (
+          inspectingProject &&
+          (inspectingProject.externalId === targetId ||
+            (inspectingProject as unknown as { _id?: string })._id === targetId)
+        ) {
+          setInspectorOpen(false);
+          setInspectingProject(null);
+        }
         showToast(
           language === 'th'
             ? 'ลบโครงการออกจากฐานข้อมูลเรียบร้อยแล้ว (ตามนโยบาย UC-4 A5)'
@@ -367,6 +375,14 @@ export default function AdminPage() {
           next.delete(targetId);
           return next;
         });
+        if (
+          inspectingProject &&
+          (inspectingProject.externalId === targetId ||
+            (inspectingProject as unknown as { _id?: string })._id === targetId)
+        ) {
+          setInspectorOpen(false);
+          setInspectingProject(null);
+        }
         showToast(
           language === 'th'
             ? 'ลบโครงการออกจากฐานข้อมูลเรียบร้อยแล้ว (ตามนโยบาย UC-4 A5)'
@@ -405,6 +421,15 @@ export default function AdminPage() {
               : p,
           ),
         );
+        if (
+          inspectingProject &&
+          (inspectingProject.externalId === targetId ||
+            (inspectingProject as unknown as { _id?: string })._id === targetId)
+        ) {
+          setInspectingProject((prev) =>
+            prev ? { ...prev, isSoftwareRelated: false, classificationReviewStatus: 'APPROVED' } : null,
+          );
+        }
         showToast(
           language === 'th'
             ? 'ยืนยันจำแนกเป็นไม่ใช่ซอฟต์แวร์ และนำออกจากแดชบอร์ดสาธารณะแล้ว (UC-4)'
@@ -542,6 +567,16 @@ export default function AdminPage() {
         }),
       );
 
+      if (
+        inspectingProject &&
+        selectedIds.has(
+          inspectingProject.externalId || (inspectingProject as unknown as { _id: string })._id,
+        )
+      ) {
+        setInspectorOpen(false);
+        setInspectingProject(null);
+      }
+
       setSelectedIds(new Set());
       showToast(
         language === 'th'
@@ -580,6 +615,14 @@ export default function AdminPage() {
         next.delete(targetId);
         return next;
       });
+      if (
+        inspectingProject &&
+        (inspectingProject.externalId === targetId ||
+          (inspectingProject as unknown as { _id?: string })._id === targetId)
+      ) {
+        setInspectorOpen(false);
+        setInspectingProject(null);
+      }
       showToast(L('adminDeleteSuccess'));
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Deletion failed');
@@ -1305,7 +1348,9 @@ export default function AdminPage() {
                 className="admin-select-filter"
                 value={statusFilter}
                 onChange={(e) => {
-                  setStatusFilter(e.target.value as 'All' | 'Software' | 'Non-Software');
+                  const val = e.target.value as 'All' | 'Software' | 'Non-Software';
+                  setStatusFilter(val);
+                  setTriageFilter(val === 'All' ? 'ALL' : val === 'Software' ? 'SOFTWARE' : 'NON_SOFTWARE');
                   setCurrentPage(1);
                 }}
                 id="adminStatusFilterSelect"
@@ -1877,6 +1922,7 @@ export default function AdminPage() {
           setNonSoftwareModalOpen(true);
         }}
         onOpenFullEditModal={(p) => {
+          setInspectorOpen(false);
           setEditingProject(p);
           setFormMode('edit');
           setFormModalOpen(true);

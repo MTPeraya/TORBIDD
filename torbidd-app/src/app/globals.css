@@ -11259,4 +11259,13 @@ body.dark-mode .hide-closed-toggle-btn.active .toggle-count-badge {
   color: #38bdf8;
 }
 
+@media (max-width: 768px) {
+  .admin-inspector-drawer {
+    width: 100vw;
+  }
+  .admin-drawer-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
 

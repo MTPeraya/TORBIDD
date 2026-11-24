@@ -45,11 +45,12 @@ function DrawerInnerContent({
   const [departmentTh, setDepartmentTh] = useState(() => project.department?.th || '');
   const [category, setCategory] = useState<ProjectCategory>(() => project.category || 'Website');
   const [budget, setBudget] = useState<number>(() => project.budget || 0);
-  const [deadline, setDeadline] = useState(() =>
-    project.deadline ? new Date(project.deadline).toISOString().split('T')[0] : '',
-  );
+  const safeIsoDate = (d?: string) =>
+    d && !isNaN(Date.parse(d)) ? new Date(d).toISOString().split('T')[0] : '';
+  const [deadline, setDeadline] = useState(() => safeIsoDate(project.deadline));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const targetId = project.externalId || (project as unknown as { _id: string })._id;
   const isSoftware = project.isSoftwareRelated !== false;
@@ -76,6 +77,7 @@ function DrawerInnerContent({
     e.preventDefault();
     setIsSubmitting(true);
     setSaveSuccess(false);
+    setSaveError(null);
     try {
       await onSaveQuickEdit(targetId, {
         title: {
@@ -88,10 +90,14 @@ function DrawerInnerContent({
         },
         category,
         budget,
-        deadline: deadline ? new Date(deadline).toISOString() : project.deadline,
+        deadline: safeIsoDate(deadline)
+          ? new Date(deadline).toISOString()
+          : project.deadline,
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ');
     } finally {
       setIsSubmitting(false);
     }
@@ -360,6 +366,11 @@ function DrawerInnerContent({
             {saveSuccess && (
               <span className="admin-save-indicator positive">
                 {ICONS.check} {language === 'th' ? 'บันทึกสำเร็จ' : 'Saved'}
+              </span>
+            )}
+            {saveError && (
+              <span className="admin-save-indicator negative">
+                {language === 'th' ? saveError : 'Save failed'}
               </span>
             )}
             <button
