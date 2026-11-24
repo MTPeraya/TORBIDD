@@ -5,10 +5,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { IngestionDiscoverSchema } from '@/lib/validation';
 import { IngestionService } from '@/services/ingestion/ingestion.service';
+import { getAuthSessionFromRequest } from '@/lib/auth';
+import { requireAdmin } from '@/lib/authorization/backend';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  // Admin authorization for ingestion routes (T-06)
+  const authUser = getAuthSessionFromRequest(req);
+  const adminCheck = requireAdmin(authUser);
+  if (!adminCheck.ok) {
+    return adminCheck.response;
+  }
+
   try {
     let body = {};
     try {

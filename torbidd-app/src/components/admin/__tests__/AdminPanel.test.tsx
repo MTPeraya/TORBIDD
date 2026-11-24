@@ -167,8 +167,8 @@ describe('AdminPage component', () => {
       fireEvent.click(projectsTabBtn);
     });
 
-    // Verify UC-4 table column header exists
-    expect(screen.getByText(/สถานะ UC-4|UC-4 Status/i)).toBeInTheDocument();
+    // Verify table column header exists
+    expect(screen.getByRole('columnheader', { name: /สถานะ|Status/i })).toBeInTheDocument();
 
     // Verify status filter exists
     const statusSelect = screen.getByDisplayValue(/ทุกสถานะ|All Status/i);

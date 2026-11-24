@@ -415,8 +415,11 @@ export async function getAdminProjectStats(): Promise<{
 }> {
   await connectToDatabase();
   const [projects, procurementProjects] = await Promise.all([
-    Project.find().lean(),
-    ProcurementProject.find().lean().catch(() => []),
+    Project.find().select('budget deadline category aiConfidence aiMetadata').lean(),
+    ProcurementProject.find()
+      .select('budget contractPrice medianPrice deadline winnerName status extractionStatus is_software software_category ai_confidence')
+      .lean()
+      .catch(() => []),
   ]);
   const now = new Date();
 
@@ -424,8 +427,17 @@ export async function getAdminProjectStats(): Promise<{
     totalProjects: projects.length + procurementProjects.length,
     totalBudget:
       projects.reduce((acc, p) => acc + (p.budget || 0), 0) +
-      procurementProjects.reduce((acc, p) => acc + (p.budget || 0), 0),
-    activeProjects: projects.filter((p) => new Date(p.deadline) >= now).length + procurementProjects.length,
+      procurementProjects.reduce((acc, p) => acc + (p.budget || p.contractPrice || p.medianPrice || 0), 0),
+    activeProjects:
+      projects.filter((p) => p.deadline && new Date(p.deadline) >= now).length +
+      procurementProjects.filter((pp) => {
+        if (pp.winnerName) return false;
+        const rawStatus = String(pp.status || '').toLowerCase();
+        if (rawStatus.includes('ปิดรับ') || rawStatus.includes('closed') || rawStatus.includes('ทำสัญญา') || rawStatus.includes('ยกเลิก')) {
+          return false;
+        }
+        return !pp.deadline || new Date(pp.deadline) >= now;
+      }).length,
     aiEnrichedCount:
       projects.filter((p) => !!p.aiMetadata?.model || !!p.aiConfidence).length +
       procurementProjects.filter((p) => p.extractionStatus === 'EXTRACTED').length,
