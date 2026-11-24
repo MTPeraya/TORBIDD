@@ -929,17 +929,53 @@ export default function AdminPage() {
       {/* Admin Header */}
       <header className="admin-header">
         <div className="admin-header-main">
-          <div className="admin-badge-mode">
-            <span className="admin-status-pulse"></span>
-            {L('adminBadgeMode')}
-          </div>
           <h1 className="admin-title">{L('adminTitle')}</h1>
           <p className="admin-subtitle">{L('adminSub')}</p>
+        </div>
 
-          {/* Key Stats Strip */}
-          <div className="admin-header-stats-strip" aria-label="Admin overview statistics">
+        <div className="admin-header-right-panel">
+          <div className="admin-header-actions">
+            <div className="admin-last-sync-badge" title="เวลาดึงข้อมูลล่าสุดจากทั้ง 3 แหล่ง (CKAN, BMA, e-GP)">
+              <span className="admin-sync-indicator-dot"></span>
+              <span className="admin-last-sync-label">
+                {language === 'th' ? 'ดึงข้อมูลล่าสุด:' : 'Last Pulled:'}
+              </span>
+              <strong className="admin-last-sync-time">
+                {formatDateTime(effectiveLastPullTime)}
+              </strong>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-secondary admin-sync-btn"
+              onClick={handleTriggerSync}
+              disabled={syncing}
+              id="adminTriggerSyncBtn"
+              title="ซิงค์ข้อมูลจากทั้ง 3 แหล่ง (CKAN, BMA e-GP, National e-GP)"
+            >
+              <span className={syncing ? 'admin-spin' : ''}>{ICONS.refreshCw}</span>
+              <span>{syncing ? L('adminSyncing') : (language === 'th' ? 'ซิงค์ 3 แหล่งเดี๋ยวนี้' : 'Sync All 3 Sources')}</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setEditingProject(null);
+                setFormMode('create');
+                setFormModalOpen(true);
+              }}
+              id="adminCreateProjectBtn"
+            >
+              {ICONS.plus}
+              <span>{L('adminAddProject')}</span>
+            </button>
+          </div>
+
+          {/* Triage KPI Stat Cards ("Old Box" Style) */}
+          <div className="admin-header-kpi-row" aria-label="Admin overview statistics">
             <div
-              className="admin-header-stat-chip"
+              className={`admin-header-kpi-card ${triageFilter === 'ALL' && statusFilter === 'All' ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('projects');
                 setTriageFilter('ALL');
@@ -949,11 +985,15 @@ export default function AdminPage() {
               id="adminHeaderStatTotal"
               title={language === 'th' ? 'ดูโครงการทั้งหมด' : 'View all projects'}
             >
-              <span className="stat-label">{language === 'th' ? 'โครงการทั้งหมด' : 'Total'}</span>
-              <span className="stat-value">{triageCounts.total}</span>
+              <div className="admin-kpi-icon blue">{ICONS.file}</div>
+              <div className="admin-kpi-info">
+                <span className="admin-kpi-label">{language === 'th' ? 'โครงการทั้งหมด' : 'Total'}</span>
+                <span className="admin-kpi-value">{triageCounts.total}</span>
+              </div>
             </div>
+
             <div
-              className="admin-header-stat-chip warning"
+              className={`admin-header-kpi-card warning ${triageFilter === 'NEEDS_REVIEW' ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('projects');
                 setTriageFilter('NEEDS_REVIEW');
@@ -962,12 +1002,15 @@ export default function AdminPage() {
               id="adminHeaderStatNeedsReview"
               title={language === 'th' ? 'ดูรายการที่รอตรวจสอบ' : 'View projects needing review'}
             >
-              <span className="stat-dot warning"></span>
-              <span className="stat-label">{language === 'th' ? 'รอตรวจสอบ' : 'Needs Review'}</span>
-              <span className="stat-value warning">{triageCounts.needsReview}</span>
+              <div className="admin-kpi-icon amber">{ICONS.sparkles}</div>
+              <div className="admin-kpi-info">
+                <span className="admin-kpi-label">{language === 'th' ? 'รอตรวจสอบ' : 'Needs Review'}</span>
+                <span className="admin-kpi-value amber">{triageCounts.needsReview}</span>
+              </div>
             </div>
+
             <div
-              className="admin-header-stat-chip success"
+              className={`admin-header-kpi-card success ${triageFilter === 'SOFTWARE' || (triageFilter === 'ALL' && statusFilter === 'Software') ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('projects');
                 setTriageFilter('SOFTWARE');
@@ -977,12 +1020,15 @@ export default function AdminPage() {
               id="adminHeaderStatSoftware"
               title={language === 'th' ? 'ดูเฉพาะโครงการซอฟต์แวร์' : 'View software-related'}
             >
-              <span className="stat-dot success"></span>
-              <span className="stat-label">{language === 'th' ? 'ซอฟต์แวร์' : 'Software'}</span>
-              <span className="stat-value success">{triageCounts.software}</span>
+              <div className="admin-kpi-icon emerald">{ICONS.check}</div>
+              <div className="admin-kpi-info">
+                <span className="admin-kpi-label">{language === 'th' ? 'ซอฟต์แวร์' : 'Software'}</span>
+                <span className="admin-kpi-value emerald">{triageCounts.software}</span>
+              </div>
             </div>
+
             <div
-              className="admin-header-stat-chip danger"
+              className={`admin-header-kpi-card danger ${triageFilter === 'NON_SOFTWARE' || (triageFilter === 'ALL' && statusFilter === 'Non-Software') ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('projects');
                 setTriageFilter('NON_SOFTWARE');
@@ -992,49 +1038,13 @@ export default function AdminPage() {
               id="adminHeaderStatNonSoftware"
               title={language === 'th' ? 'ดูโครงการที่ไม่ใช่ซอฟต์แวร์' : 'View non-software'}
             >
-              <span className="stat-dot danger"></span>
-              <span className="stat-label">{language === 'th' ? 'ไม่ใช่ซอฟต์แวร์' : 'Non-Software'}</span>
-              <span className="stat-value danger">{triageCounts.nonSoftware}</span>
+              <div className="admin-kpi-icon red">{ICONS.x}</div>
+              <div className="admin-kpi-info">
+                <span className="admin-kpi-label">{language === 'th' ? 'ไม่ใช่ซอฟต์แวร์' : 'Non-Software'}</span>
+                <span className="admin-kpi-value red">{triageCounts.nonSoftware}</span>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="admin-header-actions">
-          <div className="admin-last-sync-badge" title="เวลาดึงข้อมูลล่าสุดจากทั้ง 3 แหล่ง (CKAN, BMA, e-GP)">
-            <span className="admin-sync-indicator-dot"></span>
-            <span className="admin-last-sync-label">
-              {language === 'th' ? 'ดึงข้อมูลล่าสุด:' : 'Last Pulled:'}
-            </span>
-            <strong className="admin-last-sync-time">
-              {formatDateTime(effectiveLastPullTime)}
-            </strong>
-          </div>
-
-          <button
-            type="button"
-            className="btn btn-secondary admin-sync-btn"
-            onClick={handleTriggerSync}
-            disabled={syncing}
-            id="adminTriggerSyncBtn"
-            title="ซิงค์ข้อมูลจากทั้ง 3 แหล่ง (CKAN, BMA e-GP, National e-GP)"
-          >
-            <span className={syncing ? 'admin-spin' : ''}>{ICONS.refreshCw}</span>
-            <span>{syncing ? L('adminSyncing') : (language === 'th' ? 'ซิงค์ 3 แหล่งเดี๋ยวนี้' : 'Sync All 3 Sources')}</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              setEditingProject(null);
-              setFormMode('create');
-              setFormModalOpen(true);
-            }}
-            id="adminCreateProjectBtn"
-          >
-            {ICONS.plus}
-            <span>{L('adminAddProject')}</span>
-          </button>
         </div>
       </header>
 
