@@ -11,35 +11,25 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // Initializer runs once on mount ('use client' guarantees window exists)
+  const [theme] = useState<Theme>('light');
+
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('torbidd_theme') as Theme;
-      if (saved === 'dark' || saved === 'light') {
-        if (saved === 'dark') {
-          document.body.classList.add('dark-mode');
-        } else {
-          document.body.classList.remove('dark-mode');
-        }
-        return saved;
-      }
+      document.body.classList.remove('dark-mode');
+      localStorage.removeItem('torbidd_theme');
     }
-    return 'light';
-  });
+  }, []);
 
   const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    localStorage.setItem('torbidd_theme', next);
-    if (next === 'dark') {
-      document.body.classList.add('dark-mode');
-    } else {
+    // Dark mode removed: locked to light mode
+    if (typeof window !== 'undefined') {
       document.body.classList.remove('dark-mode');
+      localStorage.removeItem('torbidd_theme');
     }
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: 'light', toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

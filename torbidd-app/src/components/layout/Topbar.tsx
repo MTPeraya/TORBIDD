@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ICONS } from '@/components/ui/Icons';
 
@@ -47,7 +46,6 @@ export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { language, setLanguage, L } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
   const { user: authUser, isAuthenticated, isAdmin, logout: authLogout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -208,17 +206,6 @@ export function Topbar() {
             EN
           </button>
         </div>
-
-        {/* Theme toggle */}
-        <button
-          type="button"
-          className="topbar-icon-btn"
-          id="themeToggleBtn"
-          onClick={toggleTheme}
-          title={theme === 'dark' ? L('lightMode') : L('darkMode')}
-        >
-          {theme === 'dark' ? ICONS.sun : ICONS.moon}
-        </button>
 
         {/* Notifications button */}
         <Link
