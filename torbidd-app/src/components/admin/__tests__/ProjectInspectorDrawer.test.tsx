@@ -6,7 +6,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Project } from '@/types/project';
 
 const mockProject: Project = {
-  externalId: 'BMA-2025-001',
+  externalId: 101,
   title: { th: 'ระบบบริการดิจิทัล กทม.', en: 'BMA Digital Portal' },
   department: { th: 'สำนักยุทธศาสตร์และประเมินผล', en: 'Strategy Dept' },
   category: 'Website',
@@ -16,8 +16,17 @@ const mockProject: Project = {
   isSoftwareRelated: true,
   aiConfidence: 'High',
   requiredTechnologies: ['React', 'Next.js', 'PostgreSQL'],
-  scope: 'พัฒนาระบบเว็บพอร์ทัลเพื่อการให้บริการประชาชน',
-  fiscalYear: '2569',
+  scope: {
+    th: ['พัฒนาระบบเว็บพอร์ทัลเพื่อการให้บริการประชาชน'],
+    en: ['Web portal development'],
+  },
+  fiscalYear: 2569,
+  description: { th: 'รายละเอียด', en: 'Description' },
+  qualifications: { th: [], en: [] },
+  historicalAvg: 12000000,
+  sourceDocument: 'doc.pdf',
+  processedDate: '2026-08-01',
+  publishDate: '2026-08-01',
 };
 
 describe('ProjectInspectorDrawer', () => {
@@ -52,7 +61,7 @@ describe('ProjectInspectorDrawer', () => {
         />
       </LanguageProvider>
     );
-    expect(screen.getByText(/BMA-2025-001/)).toBeInTheDocument();
+    expect(screen.getByText(/101/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: /ระบบบริการดิจิทัล กทม./ })).toBeInTheDocument();
     expect(screen.getByText('React')).toBeInTheDocument();
     expect(screen.getByText('Next.js')).toBeInTheDocument();
@@ -81,7 +90,7 @@ describe('ProjectInspectorDrawer', () => {
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(handleSave).toHaveBeenCalledWith('BMA-2025-001', expect.objectContaining({
+      expect(handleSave).toHaveBeenCalledWith(101, expect.objectContaining({
         title: expect.objectContaining({ th: 'ระบบบริการดิจิทัล กทม. ฉบับแก้ไข' }),
       }));
     });
