@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext } from 'react';
 import { Theme } from '@/types/settings';
 
 interface ThemeContextValue {
@@ -11,8 +11,6 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme] = useState<Theme>('light');
-
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       document.body.classList.remove('dark-mode');
