@@ -221,9 +221,18 @@ export function BudgetReasonablenessChecker({
             </div>
           </div>
 
-          <div className={`eval-status-badge ${statusBadgeClass}`}>
-            <span className="status-dot" />
-            <span className="status-label">{statusText}</span>
+          <div className="eval-status-column">
+            <div className={`eval-status-badge ${statusBadgeClass}`}>
+              <span className="status-dot" />
+              <span className="status-label">{statusText}</span>
+            </div>
+            <div className={`eval-guidance-chip ${statusBadgeClass}`}>
+              {evaluation.status === 'high_outlier'
+                ? L('histGuidanceHigh')
+                : evaluation.status === 'low_outlier'
+                  ? L('histGuidanceLow')
+                  : L('histGuidanceReasonable')}
+            </div>
           </div>
         </div>
 

@@ -15,6 +15,7 @@ import { formatBudget, formatBudgetFull, getCategoryAvg, getOutlierStatus } from
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels';
 import { translateProcurementType } from '@/services/translation/dictionary';
 import { fetchPublicProjects } from '@/lib/public-project-cache';
+import { ICONS } from '@/components/ui/Icons';
 
 export default function HistoricalPage() {
   const router = useRouter();
@@ -36,6 +37,16 @@ export default function HistoricalPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [kpiModalProject, setKpiModalProject] = useState<HistoricalProject | null>(null);
+
+  // Escape key handler for KPI modal
+  useEffect(() => {
+    if (!kpiModalProject) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setKpiModalProject(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [kpiModalProject]);
 
   // Client-side auth guard (middleware is the primary guard)
   useEffect(() => {
@@ -94,7 +105,7 @@ export default function HistoricalPage() {
       null,
     );
 
-    // Calculate outlier rate
+    // Calculate outlier rate using canonical corridor
     let outlierCount = 0;
     historicalData.forEach((d) => {
       const catAvg = getCategoryAvg(d.category, historicalData);
@@ -191,17 +202,36 @@ export default function HistoricalPage() {
   if (authLoading || !isAuthenticated) return null;
 
   return (
-    <div className="page-content">
-      {/* Page Header */}
-      <div className="page-header">
-        <h1 className="page-title">{L('historicalTitle')}</h1>
-        <p className="page-subtitle">{L('historicalSub')}</p>
+    <div className="page-content hist-studio-page">
+      {/* Studio Header & Meta Bar */}
+      <div className="hist-studio-header anim-fade-up">
+        <div className="hist-header-left">
+          <div className="hist-meta-pill">
+            <span className="hist-meta-dot pulse"></span>
+            <span>{L('histLastUpdatedBadge')}</span>
+          </div>
+          <h1 className="page-title">{L('historicalTitle')}</h1>
+          <p className="page-subtitle">{L('historicalSub')}</p>
+        </div>
+        <div className="hist-header-actions">
+          <button
+            type="button"
+            className="btn-export-csv"
+            onClick={handleExportCSV}
+            title={L('exportCSV')}
+          >
+            📥 {L('exportCSV')}
+          </button>
+        </div>
       </div>
 
       {/* Top Level KPI Stat Cards */}
-      <div className="historical-kpi-grid">
-        <div className="kpi-card">
-          <span className="kpi-label">{L('kpiTotalHistoricalSpend')}</span>
+      <div className="historical-kpi-grid anim-fade-up">
+        <div className="kpi-card hist-kpi-card">
+          <div className="kpi-card-header">
+            <span className="kpi-label">{L('kpiTotalHistoricalSpend')}</span>
+            <span className="kpi-badge-pill primary">{L('kpiPillTotalSpend')}</span>
+          </div>
           <strong className="kpi-value text-primary">
             {formatBudget(kpiStats.totalSpend, language)}
           </strong>
@@ -210,8 +240,11 @@ export default function HistoricalPage() {
           </span>
         </div>
 
-        <div className="kpi-card">
-          <span className="kpi-label">{L('kpiAvgProjectSize')}</span>
+        <div className="kpi-card hist-kpi-card">
+          <div className="kpi-card-header">
+            <span className="kpi-label">{L('kpiAvgProjectSize')}</span>
+            <span className="kpi-badge-pill neutral">{L('kpiPillMeanBenchmark')}</span>
+          </div>
           <strong className="kpi-value">
             {formatBudget(kpiStats.avgSpend, language)}
           </strong>
@@ -221,7 +254,7 @@ export default function HistoricalPage() {
         </div>
 
         <div
-          className={`kpi-card ${kpiStats.maxBudgetProject ? 'clickable' : ''}`}
+          className={`kpi-card hist-kpi-card ${kpiStats.maxBudgetProject ? 'clickable' : ''}`}
           onClick={() => {
             if (kpiStats.maxBudgetProject) {
               setKpiModalProject(kpiStats.maxBudgetProject);
@@ -243,7 +276,10 @@ export default function HistoricalPage() {
               : undefined
           }
         >
-          <span className="kpi-label">{L('kpiHighestTender')}</span>
+          <div className="kpi-card-header">
+            <span className="kpi-label">{L('kpiHighestTender')}</span>
+            <span className="kpi-badge-pill warning">{L('kpiPillMaxAward')} 👁️</span>
+          </div>
           <strong className="kpi-value text-warning">
             {formatBudget(kpiStats.maxBudget, language)}
           </strong>
@@ -254,8 +290,11 @@ export default function HistoricalPage() {
           </span>
         </div>
 
-        <div className="kpi-card">
-          <span className="kpi-label">{L('kpiOutlierRate')}</span>
+        <div className="kpi-card hist-kpi-card">
+          <div className="kpi-card-header">
+            <span className="kpi-label">{L('kpiOutlierRate')}</span>
+            <span className="kpi-badge-pill danger">{L('kpiPillCorridor')}</span>
+          </div>
           <strong className="kpi-value text-error">
             {kpiStats.outlierRate}%
           </strong>
@@ -265,46 +304,50 @@ export default function HistoricalPage() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="dashboard-tab-bar">
+      {/* High-Clarity Segmented Studio Tab Navigation */}
+      <div className="historical-segmented-tabs anim-fade-up">
         <button
           type="button"
-          className={`dash-tab-btn ${activeTab === 'benchmark' ? 'active' : ''}`}
+          className={`hist-tab-btn ${activeTab === 'benchmark' ? 'active' : ''}`}
           onClick={() => setActiveTab('benchmark')}
         >
-          {L('tabBenchmark')}
+          <span className="hist-tab-icon">{ICONS.chart}</span>
+          <span>{L('tabBenchmark')}</span>
         </button>
         <button
           type="button"
-          className={`dash-tab-btn ${activeTab === 'similar' ? 'active' : ''}`}
+          className={`hist-tab-btn ${activeTab === 'similar' ? 'active' : ''}`}
           onClick={() => setActiveTab('similar')}
         >
-          {L('tabSimilar')}
+          <span className="hist-tab-icon">{ICONS.search}</span>
+          <span>{L('tabSimilar')}</span>
         </button>
         <button
           type="button"
-          className={`dash-tab-btn ${activeTab === 'agencies' ? 'active' : ''}`}
+          className={`hist-tab-btn ${activeTab === 'agencies' ? 'active' : ''}`}
           onClick={() => setActiveTab('agencies')}
         >
-          {L('tabAgencies')}
+          <span className="hist-tab-icon">{ICONS.dashboard}</span>
+          <span>{L('tabAgencies')}</span>
         </button>
         <button
           type="button"
-          className={`dash-tab-btn ${activeTab === 'explorer' ? 'active' : ''}`}
+          className={`hist-tab-btn ${activeTab === 'explorer' ? 'active' : ''}`}
           onClick={() => setActiveTab('explorer')}
         >
-          {L('tabExplorer')}
+          <span className="hist-tab-icon">{ICONS.file}</span>
+          <span>{L('tabExplorer')}</span>
+          <span className="hist-tab-count">{filteredHistorical.length}</span>
         </button>
       </div>
 
-      {/* TAB 1: Benchmark & Outlier Analysis (User Story 1) */}
-      {activeTab === 'benchmark' && (
-        <div className="tab-pane-content">
+      {/* TAB 1: Benchmark & Outlier Analysis — always mounted, hidden via CSS */}
+      <div className="tab-pane-content" style={{ display: activeTab === 'benchmark' ? 'block' : 'none' }}>
           {/* Interactive Announced Budget Reasonableness Checker */}
           <BudgetReasonablenessChecker projects={projects} historicalData={historicalData} />
 
           {/* Chart 1: Historical Budgets Bar Chart */}
-          <div className="chart-container" style={{ marginTop: 24 }}>
+          <div className="chart-container" style={{ marginTop: 28 }}>
             <div className="chart-header">
               <h2 className="chart-title">{L('budgetChart')}</h2>
               <div className="chart-filters">
@@ -356,7 +399,7 @@ export default function HistoricalPage() {
           </div>
 
           {/* Chart 2: Current Projects vs Historical Average */}
-          <div className="chart-container" style={{ marginTop: 24 }}>
+          <div className="chart-container" style={{ marginTop: 28 }}>
             <h2
               className="chart-title"
               style={{
@@ -370,27 +413,21 @@ export default function HistoricalPage() {
             <ComparisonChart projects={projects} />
           </div>
         </div>
-      )}
 
-      {/* TAB 2: Similar Procurements & Scope Estimator (User Story 2) */}
-      {activeTab === 'similar' && (
-        <div className="tab-pane-content">
+      {/* TAB 2: Similar Procurements & Scope Estimator — always mounted, hidden via CSS */}
+      <div className="tab-pane-content" style={{ display: activeTab === 'similar' ? 'block' : 'none' }}>
           <SimilarProcurementEstimator projects={projects} historicalData={historicalData} />
         </div>
-      )}
 
-      {/* TAB 3: Cross-Agency Budget Comparison (User Story 3) */}
-      {activeTab === 'agencies' && (
-        <div className="tab-pane-content">
+      {/* TAB 3: Cross-Agency Budget Comparison — always mounted, hidden via CSS */}
+      <div className="tab-pane-content" style={{ display: activeTab === 'agencies' ? 'block' : 'none' }}>
           <AgencyComparisonView agencyMetrics={agencyMetrics} />
         </div>
-      )}
 
-      {/* TAB 4: Historical Data Explorer */}
-      {activeTab === 'explorer' && (
-        <div className="tab-pane-content">
-          <div className="chart-container">
-            <div className="chart-header">
+      {/* TAB 4: Historical Data Explorer — always mounted, hidden via CSS */}
+      <div className="tab-pane-content" style={{ display: activeTab === 'explorer' ? 'block' : 'none' }}>
+          <div className="chart-container hist-explorer-container">
+            <div className="chart-header hist-explorer-header">
               <div>
                 <h2 className="chart-title">{L('historicalData')}</h2>
                 <span className="text-muted-sm">
@@ -439,7 +476,7 @@ export default function HistoricalPage() {
                   type="button"
                   className="btn-export-csv"
                   onClick={handleExportCSV}
-                  title="Download CSV"
+                  title={L('exportCSV')}
                 >
                   📥 {L('exportCSV')}
                 </button>
@@ -466,7 +503,7 @@ export default function HistoricalPage() {
                         colSpan={7}
                         style={{
                           textAlign: 'center',
-                          padding: '36px 16px',
+                          padding: '48px 16px',
                           color: 'var(--text-secondary)',
                           fontSize: '0.9rem',
                         }}
@@ -478,103 +515,118 @@ export default function HistoricalPage() {
                     </tr>
                   ) : (
                     filteredHistorical.map((d, index) => {
-                    const catAvg = getCategoryAvg(d.category, historicalData);
-                    const outlierStatus = getOutlierStatus(d.budget, catAvg);
-                    const rowKey = d._id || String(index);
-                    const isExpanded = expandedRowId === rowKey;
+                      const catAvg = getCategoryAvg(d.category, historicalData);
+                      const outlierStatus = getOutlierStatus(d.budget, catAvg);
+                      const rowKey = d._id || String(index);
+                      const isExpanded = expandedRowId === rowKey;
 
-                    let outlierText = L('outlierNormal');
-                    if (outlierStatus === 'high') outlierText = L('outlierHigh');
-                    if (outlierStatus === 'low') outlierText = L('outlierLow');
+                      let outlierText = L('outlierNormal');
+                      if (outlierStatus === 'high') outlierText = L('outlierHigh');
+                      if (outlierStatus === 'low') outlierText = L('outlierLow');
 
-                    return (
-                      <React.Fragment key={rowKey}>
-                        <tr
-                          className={`explorer-row ${isExpanded ? 'row-expanded' : ''}`}
-                          onClick={() => setExpandedRowId(isExpanded ? null : rowKey)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <td style={{ fontWeight: 600, color: 'var(--gray-950)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: '0.8rem', color: 'var(--gray-400)' }}>
-                                {isExpanded ? '▼' : '►'}
-                              </span>
-                              <span>{getLocalized(d.title) as string}</span>
-                            </div>
-                          </td>
-                          <td>{getLocalized(d.department) as string}</td>
-                          <td>
-                            <span className="tag category">
-                              {CATEGORY_LABELS[language][d.category]}
-                            </span>
-                          </td>
-                          <td>{d.year + (language === 'th' ? 543 : 0)}</td>
-                          <td style={{ fontWeight: 700, color: 'var(--gray-950)' }}>
-                            {formatBudgetFull(d.budget, language)}
-                          </td>
-                          <td>
-                            <span className={`outlier-badge ${outlierStatus}`}>{outlierText}</span>
-                          </td>
-                          <td>
-                            <span className="expand-indicator">
-                              {isExpanded ? (language === 'th' ? 'ย่อ' : 'Collapse') : (language === 'th' ? 'ขยาย' : 'Expand')}
-                            </span>
-                          </td>
-                        </tr>
-
-                        {isExpanded && (
-                          <tr className="expanded-details-row">
-                            <td colSpan={7}>
-                              <div className="row-expansion-content">
-                                {d.description && (
-                                  <div className="expansion-block">
-                                    <strong>{L('projectDesc')}:</strong>{' '}
-                                    {getLocalized(d.description) as string}
-                                  </div>
-                                )}
-
-                                {d.awardedVendor && (
-                                  <div className="expansion-block">
-                                    <strong>{L('awardedVendorLabel')}:</strong>{' '}
-                                    <span style={{ color: 'var(--success)', fontWeight: 600 }}>
-                                      {getLocalized(d.awardedVendor) as string}
-                                    </span>{' '}
-                                    ({(language === 'en' ? translateProcurementType(d.procurementType) : d.procurementType) || 'e-Bidding'})
-                                  </div>
-                                )}
-
-                                {d.scope && (
-                                  <div className="expansion-block">
-                                    <strong>{L('scopeOfWork')}:</strong>
-                                    <ul className="expansion-scope-list">
-                                      {(d.scope[language] || d.scope.th || []).map((s, si) => (
-                                        <li key={si}>✓ {s}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
+                      return (
+                        <React.Fragment key={rowKey}>
+                          <tr
+                            className={`explorer-row ${isExpanded ? 'row-expanded' : ''}`}
+                            onClick={() => setExpandedRowId(isExpanded ? null : rowKey)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setExpandedRowId(isExpanded ? null : rowKey);
+                              }
+                            }}
+                            tabIndex={0}
+                            role="button"
+                            aria-expanded={isExpanded}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <td style={{ fontWeight: 600, color: 'var(--gray-950)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--primary-600)', transition: 'transform 0.2s' }}>
+                                  {isExpanded ? '▼' : '►'}
+                                </span>
+                                <span>{getLocalized(d.title) as string}</span>
                               </div>
                             </td>
+                            <td>{getLocalized(d.department) as string}</td>
+                            <td>
+                              <span className="tag category">
+                                {CATEGORY_LABELS[language][d.category]}
+                              </span>
+                            </td>
+                            <td>{d.year + (language === 'th' ? 543 : 0)}</td>
+                            <td style={{ fontWeight: 700, color: 'var(--gray-950)' }}>
+                              {formatBudgetFull(d.budget, language)}
+                            </td>
+                            <td>
+                              <span className={`outlier-badge ${outlierStatus}`}>{outlierText}</span>
+                            </td>
+                            <td>
+                              <span className="expand-indicator">
+                                {isExpanded ? (language === 'th' ? 'ย่อ' : 'Collapse') : (language === 'th' ? 'ขยาย' : 'Expand')}
+                              </span>
+                            </td>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  }))}
+
+                          {isExpanded && (
+                            <tr className="expanded-details-row">
+                              <td colSpan={7}>
+                                <div className="row-expansion-content">
+                                  {d.description && (
+                                    <div className="expansion-block">
+                                      <strong>{L('projectDesc')}:</strong>{' '}
+                                      {getLocalized(d.description) as string}
+                                    </div>
+                                  )}
+
+                                  {d.awardedVendor && (
+                                    <div className="expansion-block">
+                                      <strong>{L('awardedVendorLabel')}:</strong>{' '}
+                                      <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                                        {getLocalized(d.awardedVendor) as string}
+                                      </span>{' '}
+                                      ({(language === 'en' ? translateProcurementType(d.procurementType) : d.procurementType) || 'e-Bidding'})
+                                    </div>
+                                  )}
+
+                                  {d.scope && (
+                                    <div className="expansion-block">
+                                      <strong>{L('scopeOfWork')}:</strong>
+                                      <ul className="expansion-scope-list">
+                                        {(d.scope[language] || d.scope.th || []).map((s, si) => (
+                                          <li key={si}>✓ {s}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
 
-            <span className="analysis-disclaimer" style={{ marginTop: 14 }}>
+            <span className="analysis-disclaimer" style={{ marginTop: 16 }}>
               {L('budgetDisclaimer')}
             </span>
           </div>
         </div>
-      )}
 
       {/* Largest Tender Inspector Modal from KPI Card */}
       {kpiModalProject && (
         <div className="modal-backdrop" onClick={() => setKpiModalProject(null)}>
-          <div className="modal-content-card" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-content-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="kpi-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <div>
                 <span className="modal-category">
@@ -583,7 +635,7 @@ export default function HistoricalPage() {
                     : L('kpiHighestTender')}{' '}
                   · {kpiModalProject.year + (language === 'th' ? 543 : 0)}
                 </span>
-                <h3 className="modal-title">{getLocalized(kpiModalProject.title) as string}</h3>
+                <h3 id="kpi-modal-title" className="modal-title">{getLocalized(kpiModalProject.title) as string}</h3>
                 <span className="modal-dept">
                   {kpiModalProject.department ? (getLocalized(kpiModalProject.department) as string) : ''}
                 </span>
@@ -592,7 +644,8 @@ export default function HistoricalPage() {
                 type="button"
                 className="modal-close-btn"
                 onClick={() => setKpiModalProject(null)}
-                title="Close"
+                title="Close modal"
+                aria-label="Close modal"
               >
                 ✕
               </button>
