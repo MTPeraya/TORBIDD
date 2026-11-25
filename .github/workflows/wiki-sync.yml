@@ -1,0 +1,160 @@
+# =============================================================================
+# GitHub Wiki & docs/wiki/ Bidirectional Sync Workflow
+# =============================================================================
+# Automatically synchronizes documentation between the repository's GitHub Wiki
+# (https://github.com/<owner>/<repo>.wiki.git) and docs/wiki/ in the main branch.
+#
+# Triggers:
+#   - gollum: Fired when wiki pages are created/updated on GitHub web UI.
+#   - push: Fired when changes to docs/wiki/** are pushed to the main branch.
+#   - workflow_dispatch: Manual trigger with direction control.
+#
+# Safety & Loop Guard:
+#   - Commits made by this bot use "[wiki-sync] [skip ci]" prefix.
+#   - Push trigger ignores any commits containing "[wiki-sync]" or "[skip ci]".
+#   - Sequential concurrency queue prevents race conditions.
+# =============================================================================
+
+name: Wiki Bidirectional Sync
+
+on:
+  gollum:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/wiki/**'
+  workflow_dispatch:
+    inputs:
+      direction:
+        description: 'Sync Direction'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - 'auto'
+          - 'wiki-to-repo'
+          - 'repo-to-wiki'
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Bidirectional Sync
+    runs-on: ubuntu-latest
+
+    # Prevent loop: If a push event was triggered by our own sync bot, skip this job
+    if: >
+      github.event_name != 'push' ||
+      (!contains(github.event.head_commit.message, '[wiki-sync]') && !contains(github.event.head_commit.message, '[skip ci]'))
+
+    env:
+      AUTH_TOKEN: ${{ secrets.WIKI_SYNC_PAT || secrets.GITHUB_TOKEN }}
+
+    steps:
+      # ── Checkout Repository ────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.WIKI_SYNC_PAT || secrets.GITHUB_TOKEN }}
+
+      # ── Configure Git Identity ─────────────────────────────────────────────
+      - name: Configure Git Bot Identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # ── Determine Sync Direction ───────────────────────────────────────────
+      - name: Determine Sync Action
+        id: mode
+        run: |
+          EVENT="${{ github.event_name }}"
+          INPUT_DIR="${{ github.event.inputs.direction || 'auto' }}"
+
+          echo "Triggered by event: ${EVENT}"
+          echo "Input direction: ${INPUT_DIR}"
+
+          TARGET_DIR="none"
+
+          if [[ "${EVENT}" == "gollum" ]]; then
+            TARGET_DIR="wiki-to-repo"
+          elif [[ "${EVENT}" == "push" ]]; then
+            TARGET_DIR="repo-to-wiki"
+          elif [[ "${EVENT}" == "workflow_dispatch" ]]; then
+            if [[ "${INPUT_DIR}" == "auto" ]]; then
+              echo "Auto-detecting difference between Wiki and docs/wiki/..."
+              TEMP_WIKI="$(mktemp -d)"
+              AUTH_WIKI_URL="https://x-access-token:${AUTH_TOKEN}@github.com/${{ github.repository }}.wiki.git"
+              git clone --depth 1 "${AUTH_WIKI_URL}" "${TEMP_WIKI}" --quiet
+
+              DIFF_OUT="$(diff -r -u -x '.git' docs/wiki/ "${TEMP_WIKI}" || true)"
+              rm -rf "${TEMP_WIKI}"
+
+              if [[ -z "${DIFF_OUT}" ]]; then
+                echo "Repository and Wiki are already in perfect sync."
+                TARGET_DIR="none"
+              else
+                # Default to wiki-to-repo on manual auto to preserve any live wiki edits
+                TARGET_DIR="wiki-to-repo"
+              fi
+            else
+              TARGET_DIR="${INPUT_DIR}"
+            fi
+          fi
+
+          echo "action=${TARGET_DIR}" >> $GITHUB_OUTPUT
+          echo "Resolved sync action: ${TARGET_DIR}"
+
+      # ── Sync: GitHub Wiki → Repository docs/wiki/ ──────────────────────────
+      - name: Sync Wiki to Repository
+        if: steps.mode.outputs.action == 'wiki-to-repo'
+        run: |
+          echo "==> Syncing from GitHub Wiki into docs/wiki/..."
+          AUTH_WIKI_URL="https://x-access-token:${AUTH_TOKEN}@github.com/${{ github.repository }}.wiki.git"
+          TEMP_WIKI="$(mktemp -d)"
+
+          git clone --depth 1 "${AUTH_WIKI_URL}" "${TEMP_WIKI}"
+
+          mkdir -p docs/wiki
+          rsync -av --delete --exclude '.git' "${TEMP_WIKI}/" docs/wiki/
+          rm -rf "${TEMP_WIKI}"
+
+          git add docs/wiki/
+          if git diff --staged --quiet; then
+            echo "No changes between Wiki and docs/wiki/. Nothing to commit."
+          else
+            git commit -m "[wiki-sync] [skip ci] Sync GitHub Wiki to docs/wiki"
+            git push origin main
+            echo "Successfully synced Wiki changes to repository."
+          fi
+
+      # ── Sync: Repository docs/wiki/ → GitHub Wiki ──────────────────────────
+      - name: Sync Repository to Wiki
+        if: steps.mode.outputs.action == 'repo-to-wiki'
+        run: |
+          echo "==> Syncing from docs/wiki/ into GitHub Wiki..."
+          AUTH_WIKI_URL="https://x-access-token:${AUTH_TOKEN}@github.com/${{ github.repository }}.wiki.git"
+          TEMP_WIKI="$(mktemp -d)"
+
+          git clone "${AUTH_WIKI_URL}" "${TEMP_WIKI}"
+
+          mkdir -p docs/wiki
+          rsync -av --delete --exclude '.git' docs/wiki/ "${TEMP_WIKI}/"
+
+          cd "${TEMP_WIKI}"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes between docs/wiki/ and Wiki. Nothing to commit."
+          else
+            git commit -m "[wiki-sync] Sync docs/wiki to GitHub Wiki"
+            git push origin master
+            echo "Successfully pushed docs/wiki changes to GitHub Wiki."
+          fi
+          cd -
+          rm -rf "${TEMP_WIKI}"
