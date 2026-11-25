@@ -102,7 +102,7 @@ jobs:
       # ── Trivy security scan ───────────────────────────────────────────────
       - name: Scan image with Trivy
         id: trivy
-        uses: aquasecurity/trivy-action@v0.30.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'torbidd-app:ci'       # scan the locally-built image, not registry :latest
           format: 'sarif'
@@ -131,11 +131,12 @@ jobs:
 
       # ── Push to GHCR (only if scan passed + on main) ──────────────────────
       - name: Push image to GHCR
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.push_image)
         uses: docker/build-push-action@v6
         with:
           context: ./torbidd-app
           file: ./torbidd-app/Dockerfile
-          push: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.push_image) }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
