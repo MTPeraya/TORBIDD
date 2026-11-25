@@ -108,6 +108,8 @@ export interface DeadlineReminderEmailPayload {
     department?: { th: string; en: string } | string;
     budget?: number;
     deadline: Date | string;
+    category?: string;
+    description?: { th: string; en: string } | string;
   };
   daysRemaining: number;
 }

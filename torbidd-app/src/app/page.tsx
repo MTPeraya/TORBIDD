@@ -273,14 +273,7 @@ export default function HomePage() {
                   </Link>
                 </div>
               </div>
-
-              <div className="footer-direct-bottom">
-                <div className="footer-copyright-text">
-                  © 2026 TORBIDD · Department of Computer Engineering, Faculty of Engineering, Kasetsart University
-                </div>
-                <div className="analysis-disclaimer">{L('disclaimer')}</div>
               </div>
-            </div>
           </footer>
         </div>
       </div>

@@ -44,10 +44,10 @@ export class EmailDeliveryService {
   }
 
   private initTransporter(): void {
-    const host = process.env.SMTP_HOST;
+    const host = process.env.SMTP_HOST?.trim();
     const port = Number(process.env.SMTP_PORT || 587);
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    const user = process.env.SMTP_USER?.trim();
+    const pass = process.env.SMTP_PASS?.trim();
     const secure = process.env.SMTP_SECURE === 'true' || port === 465;
 
     if (host && user && pass) {
@@ -301,6 +301,9 @@ ${detailUrl}
     text: string;
     html: string;
   }): Promise<EmailSendResult> {
+    if (!this.isConfigured) {
+      this.initTransporter();
+    }
     const from = process.env.EMAIL_FROM || 'TORBIDD Procurement Alerts <notifications@torbidd.gov.th>';
 
     try {
