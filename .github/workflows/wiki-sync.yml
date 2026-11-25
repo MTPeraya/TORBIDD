@@ -59,7 +59,7 @@ jobs:
     steps:
       # ── Checkout Repository ────────────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.WIKI_SYNC_PAT || secrets.GITHUB_TOKEN }}
