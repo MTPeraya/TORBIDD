@@ -102,7 +102,7 @@ jobs:
       # ── Trivy security scan ───────────────────────────────────────────────
       - name: Scan image with Trivy
         id: trivy
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.30.0
         with:
           image-ref: 'torbidd-app:ci'       # scan the locally-built image, not registry :latest
           format: 'sarif'
@@ -123,7 +123,7 @@ jobs:
 
       # ── Upload SARIF to GitHub Security tab ───────────────────────────────
       - name: Upload Trivy SARIF report
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() && steps.sarif_check.outputs.exists == 'true'
         continue-on-error: true             # don't fail job on SARIF upload errors
         with:
