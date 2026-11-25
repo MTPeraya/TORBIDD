@@ -3,13 +3,14 @@
 ### 🏠 Project Overview
 - [Home](Home)
 - [Documentation Guidelines](Project-Source-of-Truth-&-Documentation-Guidelines)
-- [Software Requirements (SRS)](https://github.com/MTPeraya/TORBIDD/blob/main/docs/TORBIDD%20SRS.pdf)
+- [Software Requirements (SRS)](https://github.com/MTPeraya/TORBIDD/blob/main/docs/TORBIDD_SRS.pdf)
 - [Technical Decisions (ADR)](Technical-Decisions)
 
 ### 🏗️ System Design (SDD)
 - [System Architecture](System-Architecture)
 - [Database Design](Database-Design)
 - [API Documentation](API-Documentation)
+- [Security Considerations](Security-Considerations)
 - [Deployment Architecture](Deployment-Architecture)
 
 ### 📋 Requirements & Features
