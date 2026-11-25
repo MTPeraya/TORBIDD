@@ -33,7 +33,7 @@ jobs:
     steps:
       # ── Checkout ─────────────────────────────────────────────────────────
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ── Node.js ──────────────────────────────────────────────────────────
       - name: Set up Node.js 22
@@ -104,7 +104,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Validate Compose configuration
         run: docker compose config --quiet

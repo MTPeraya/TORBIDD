@@ -46,7 +46,7 @@ jobs:
     steps:
       # ── Checkout ──────────────────────────────────────────────────────────
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ── Dynamic lowercase image name ─────────────────────────────────────
       - name: Set lowercased image name
@@ -89,7 +89,9 @@ jobs:
           file: ./torbidd-app/Dockerfile
           push: false                       # push only after scan passes
           load: true                        # load into local daemon for Trivy
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            torbidd-app:ci
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to:   type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
@@ -100,14 +102,13 @@ jobs:
       # ── Trivy security scan ───────────────────────────────────────────────
       - name: Scan image with Trivy
         id: trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          image-ref: 'torbidd-app:ci'       # scan the locally-built image, not registry :latest
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
-          exit-code: '1'          # fail the job on any HIGH/CRITICAL finding
-        continue-on-error: true   # upload SARIF even if scan finds issues
+          exit-code: '0'                    # report findings without failing the job
 
       # ── Check SARIF exists ───────────────────────────────────────────────
       - name: Check SARIF file exists
@@ -124,16 +125,18 @@ jobs:
       - name: Upload Trivy SARIF report
         uses: github/codeql-action/upload-sarif@v4
         if: always() && steps.sarif_check.outputs.exists == 'true'
+        continue-on-error: true             # don't fail job on SARIF upload errors
         with:
           sarif_file: trivy-results.sarif
 
       # ── Push to GHCR (only if scan passed + on main) ──────────────────────
       - name: Push image to GHCR
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.push_image)
         uses: docker/build-push-action@v6
         with:
           context: ./torbidd-app
           file: ./torbidd-app/Dockerfile
-          push: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.push_image) }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
